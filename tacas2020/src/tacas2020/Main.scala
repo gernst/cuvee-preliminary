@@ -1,9 +1,9 @@
 package tacas2020
 
+import java.io.File
+import java.io.FileInputStream
+
 import scala.io.StdIn
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.FileReader
 
 object Main {
   import Parser.script
@@ -11,23 +11,20 @@ object Main {
 
   object solver extends Solver
 
-  var _in = new BufferedReader(new InputStreamReader(System.in))
-  var _out = System.out
-
   def in() = {
-    var line = _in.readLine()
-    if(line != null) line = line.trim
+    var line = StdIn.readLine()
+    if (line != null) line = line.trim
     line
   }
 
   def out(any: Any) {
-    _out.println(any)
-    _out.flush()
+    Console.println(any)
+    Console.flush()
   }
 
-  def cmd(line: String) {
+  def cmd(input: String) {
     try {
-      val cmds = script parse line
+      val cmds = script parse input
       val msgs = solver.exec(cmds)
       for (msg <- msgs)
         out(msg)
@@ -49,8 +46,20 @@ object Main {
     }
   }
 
+  def read(in: File) {
+    val length = in.length
+    val buf = new Array[Byte](length.toInt)
+    val stream = new FileInputStream(in)
+    val read = stream.read(buf)
+    ensure(read == length, "short read", in.getPath)
+    stream.close()
+    val content = new String(buf, "UTF-8")
+    cmd(content)
+  }
+
   def main(args: Array[String]) {
-    _in = new BufferedReader(new FileReader("test.smt2"))
-    repl()
+    // repl()
+    read(new File("add.smt2"))
+    out(solver.top)
   }
 }

@@ -87,10 +87,10 @@ object Id extends (String => Id) {
 
   val ite = Id("ite")
 
-  val exp = Id("^")
+  val exp = Id("exp")
   val times = Id("*")
   val divBy = Id("/")
-  val mod = Id("%")
+  val mod = Id("mod")
 
   val uminus = Id("-")
   val plus = Id("+")
@@ -136,6 +136,13 @@ case class Eq(left: Expr, right: Expr) extends Expr {
   def rename(re: Map[Id, Id]) = Eq(left rename re, right rename re)
   def subst(su: Map[Id, Expr]) = Eq(left subst su, right subst su)
   override def toString = "(= " + left + " " + right + ")"
+}
+
+
+object Imp extends ((Expr, Expr) => Expr) {
+  def apply(left: Expr, right: Expr): App = {
+    App(Id.imp, left, right)
+  }
 }
 
 case class Ite(test: Expr, left: Expr, right: Expr) extends Expr {
@@ -314,15 +321,15 @@ case class DeclareSort(sort: Sort, arity: Int) extends Cmd {
 }
 
 case class DefineSort(sort: Sort, args: List[Sort], body: Type) extends Cmd {
-  override def toString = "(declare-fun " + sort + " " + args.mkString(" (", " ", ") ") + body + ")"
+  override def toString = "(declare-fun " + sort + args.mkString(" (", " ", ") ") + body + ")"
 }
 
 case class DeclareFun(id: Id, args: List[Type], res: Type) extends Cmd {
-  override def toString = "(declare-fun " + id + " " + args.mkString(" (", " ", ") ") + res + ")"
+  override def toString = "(declare-fun " + id + args.mkString(" (", " ", ") ") + res + ")"
 }
 
 case class DefineFun(id: Id, args: List[Formal], res: Type, body: Expr) extends Cmd {
-  override def toString = "(declare-fun " + id + " " + args.mkString(" (", " ", ") ") + res + " " + body + ")"
+  override def toString = "(declare-fun " + id + args.mkString(" (", " ", ") ") + res + " " + body + ")"
 }
 
 

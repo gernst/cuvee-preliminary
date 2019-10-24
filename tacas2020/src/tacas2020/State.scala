@@ -13,6 +13,17 @@ case class State(
   override def toString = {
     rlog.reverse.mkString("", "\n", "\n")
   }
+  
+  def env = {
+    val su = funs collect {
+      case (id, (Nil, typ)) => (id, id)
+    }
+    val ty = funs collect {
+      case (id, (Nil, typ)) => (id, typ)
+    }
+    
+    Env(su, ty)
+  }
 
   def log(cmd: Cmd) = {
     copy(
@@ -47,7 +58,7 @@ case class State(
       funs = funs + (id -> (args, res)),
       fundefs = fundefs + (id -> (ids, body)))
   }
-
+  
   def assert(expr: Expr) = {
     copy(
       asserts = expr :: asserts)

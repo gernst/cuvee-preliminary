@@ -6,7 +6,7 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
 
   def check(xs: Iterable[Id]) {
     for (x <- xs)
-      ensure(su contains x, "undeclared program variable", x, xs)
+      ensure(su contains x, "undeclared program variable", x, su.keySet)
   }
 
   def bind(fs: List[Formal]): Env = {
@@ -29,9 +29,9 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
     val env = Env(su ++ re, ty)
     (formals.toList, env)
   }
-  
+
   override def toString = {
-    val strings = su map { case (x,e) => Let(x, e) }
+    val strings = su map { case (x, e) => Let(x, e) }
     strings.mkString("(", " ", ")")
   }
 }

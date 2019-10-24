@@ -47,12 +47,6 @@ class Solver {
     cmds flatMap exec
   }
 
-  def assert(st: State, expr: Expr): State = {
-    import Eval.eval
-    val _expr = eval(expr, Env.empty, List.empty, st)
-    st assert _expr
-  }
-
   def exec(cmd: Cmd): List[String] = cmd match {
     case Exit =>
       exit()
@@ -79,7 +73,10 @@ class Solver {
       ack()
 
     case Assert(expr) =>
-      map(cmd, assert(_, expr))
+      import Eval.eval
+      val _expr = eval(expr, top.env, List.empty, top)
+      val _cmd = Assert(_expr)
+      map(_cmd, _ assert _expr)
       ack()
 
     case DeclareSort(sort, arity) =>

@@ -25,7 +25,7 @@ package object tacas2020 {
   implicit class StringOps(self: String) {
     def __(index: Option[Int]): String = index match {
       case None => self
-      case Some(index) => this.toString + index
+      case Some(index) => self.toString + index
     }
   }
 

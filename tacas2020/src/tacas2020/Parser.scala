@@ -11,21 +11,24 @@ object Parser {
     "(" ~ p ~ ")"
   }
 
-  val name = S("[A-Za-z][A-Za-z0-9]*")
+  val name = S("[A-Za-z_][A-Za-z0-9_]*")
+  val op = L("-") | L("+") | L("-") | L("<=") | L("<") | L(">=") | L(">")
 
   val typ: Parser[Type] = P(sort)
+  val types = typ *
 
   val sort = P(Sort(name))
 
-  val expr: Parser[Expr] = P(id | num | parens(bind_ | eq_ | ite_ | old_ | wp_ | box_ | dia_ | app_))
+  val expr: Parser[Expr] = P(id | num | parens(bind_ | imp_ | eq_ | ite_ | old_ | wp_ | box_ | dia_ | app_))
   val exprs = P(expr +)
 
-  val id = P(Id(name))
+  val id = P(Id(name | op))
   val ids = P(id *)
 
   val num = P(Num(bigint))
 
   val old_ = P(Old("old" ~ expr))
+  val imp_ = P(Imp("=>" ~ expr ~ expr))
   val eq_ = P(Eq("=" ~ expr ~ expr))
   val ite_ = P(Ite("ite" ~ expr ~ expr ~ expr))
 
@@ -59,7 +62,7 @@ object Parser {
   val post = P(":postcondition" ~ expr)
   val while_ = P(While("while" ~ expr ~ block ~ term ~ pre ~ post))
 
-  val cmd: Parser[Cmd] = P(parens(exit_ | reset_ | push_ | pop_ | assert_ | get_assertions_))
+  val cmd: Parser[Cmd] = P(parens(exit_ | reset_ | push_ | pop_ | assert_ | get_assertions_ | declare_const_ | declare_fun_))
 
   val exit_ = P(Exit("exit"))
   val reset_ = P(Reset("reset"))
@@ -69,6 +72,9 @@ object Parser {
   val assert_ = P(Assert("assert" ~ expr))
 
   val get_assertions_ = P(GetAssertions("get-assertions"))
+
+  val declare_const_ = P(DeclareFun("declare-const" ~ id ~ ret(Nil) ~ typ))
+  val declare_fun_ = P(DeclareFun("declare-fun" ~ id ~ parens(types) ~ typ))
 
   val cmds = P(cmd *)
   val script = P(cmds $)
