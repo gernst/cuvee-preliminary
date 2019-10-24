@@ -14,12 +14,14 @@ object Parser {
   val name = S("[A-Za-z_][A-Za-z0-9_]*")
   val op = L("-") | L("+") | L("-") | L("<=") | L("<") | L(">=") | L(">")
 
-  val typ: Parser[Type] = P(sort)
+  val typ: Parser[Type] = P(sort | parens(array_ | list_))
   val types = typ *
 
   val sort = P(Sort(name))
+  val array_ = P(Type.array("Array" ~ typ ~ typ))
+  val list_ = P(Type.list("List" ~ typ))
 
-  val expr: Parser[Expr] = P(id | num | parens(bind_ | imp_ | eq_ | ite_ | old_ | wp_ | box_ | dia_ | app_))
+  val expr: Parser[Expr] = P(id | num | parens(bind_ | imp_ | eq_ | ite_ | select_ | store_ | old_ | wp_ | box_ | dia_ | app_))
   val exprs = P(expr +)
 
   val id = P(Id(name | op))
@@ -31,6 +33,9 @@ object Parser {
   val imp_ = P(Imp("=>" ~ expr ~ expr))
   val eq_ = P(Eq("=" ~ expr ~ expr))
   val ite_ = P(Ite("ite" ~ expr ~ expr ~ expr))
+
+  val select_ = P(Select("select" ~ expr ~ expr))
+  val store_ = P(Store("store" ~ expr ~ expr ~ expr))
 
   val app_ = P(Apps(exprs))
 

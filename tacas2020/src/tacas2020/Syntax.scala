@@ -24,12 +24,14 @@ object Type extends Alpha[Type, Sort] {
     def free = elem.free
     def rename(re: Map[Sort, Sort]) = list(elem rename re)
     def subst(ty: Map[Sort, Type]) = list(elem subst ty)
+    override def toString = "(List " + elem + ")"
   }
 
   case class array(dom: Type, ran: Type) extends Type {
     def free = ran.free ++ dom.free
     def rename(re: Map[Sort, Sort]) = array(dom rename re, ran rename re)
     def subst(ty: Map[Sort, Type]) = array(dom subst ty, ran subst ty)
+    override def toString = "(Array " + dom + " " + ran + ")"
   }
 }
 
@@ -66,8 +68,8 @@ sealed trait Expr extends Expr.term {
   def last = App(Id.last, this)
   def init = App(Id.init, this)
 
-  def select(index: Expr) = App(Id.select, this, index)
-  def store(index: Expr, arg: Expr) = App(Id.store, this, index, arg)
+  def select(index: Expr) = Select(this, index)
+  def store(index: Expr, arg: Expr) = Store(this, index, arg)
 }
 
 object Expr extends Alpha[Expr, Id] {
@@ -114,9 +116,6 @@ object Id extends (String => Id) {
   val tail = Id("tail")
   val last = Id("last")
   val init = Id("init")
-
-  val select = Id("apply")
-  val store = Id("updated")
 }
 
 case class Formal(id: Id, typ: Type) {
@@ -145,10 +144,24 @@ object Imp extends ((Expr, Expr) => Expr) {
 }
 
 case class Ite(test: Expr, left: Expr, right: Expr) extends Expr {
-  def free = left.free ++ right.free
+  def free = test.free ++ left.free ++ right.free
   def rename(re: Map[Id, Id]) = Ite(test rename re, left rename re, right rename re)
   def subst(su: Map[Id, Expr]) = Ite(test subst su, left subst su, right subst su)
   override def toString = "(ite " + test + " " + left + " " + right + ")"
+}
+
+case class Select(array: Expr, index: Expr) extends Expr {
+  def free = array.free ++ index.free
+  def rename(re: Map[Id, Id]) = Select(array rename re, index rename re)
+  def subst(su: Map[Id, Expr]) = Select(array subst su, index subst su)
+  override def toString = "(select " + array + " " + index + ")"
+}
+
+case class Store(array: Expr, index: Expr, value: Expr) extends Expr {
+  def free = array.free ++ index.free ++ value.free
+  def rename(re: Map[Id, Id]) = Store(array rename re, index rename re, value rename re)
+  def subst(su: Map[Id, Expr]) = Store(array subst su, index subst su, value subst su)
+  override def toString = "(store " + array + " " + index + " " + value + ")"
 }
 
 case class App(fun: Id, args: List[Expr]) extends Expr {

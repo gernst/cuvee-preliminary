@@ -74,6 +74,12 @@ object Eval {
     case Ite(test, left, right) =>
       Ite(eval(test, env, old, st), eval(left, env, old, st), eval(right, env, old, st))
 
+    case Select(array, index) =>
+      Select(eval(array, env, old, st), eval(index, env, old, st))
+
+    case Store(array, index, value) =>
+      Store(eval(array, env, old, st), eval(index, env, old, st), eval(value, env, old, st))
+
     case App(id, args) if (st.funs contains id) =>
       val (types, res) = st funs id
       ensure(args.length == types.length, "wrong number of arguments", expr, env, st)
