@@ -7,12 +7,7 @@ case class State(
   funs: Map[Id, (List[Type], Type)],
   fundefs: Map[Id, (List[Id], Expr)],
 
-  asserts: List[Expr],
-  rlog: List[Cmd]) {
-
-  override def toString = {
-    rlog.reverse.mkString("\n")
-  }
+  asserts: List[Expr]) {
   
   def env = {
     val su = funs collect {
@@ -24,12 +19,7 @@ case class State(
     
     Env(su, ty)
   }
-
-  def log(cmd: Cmd) = {
-    copy(
-      rlog = cmd :: rlog)
-  }
-
+  
   def declare(sort: Sort, arity: Int) = {
     ensure(!(sorts contains sort), "sort already defined", sort)
     copy(
@@ -107,6 +97,5 @@ object State {
       Id.store -> Fun.store */),
     fundefs = Map(),
 
-    asserts = Nil,
-    rlog = Nil)
+    asserts = Nil)
 }

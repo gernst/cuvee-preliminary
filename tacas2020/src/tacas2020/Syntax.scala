@@ -314,6 +314,11 @@ case class SetLogic(logic: String) extends Cmd {
   override def toString = "(set-logic " + logic + ")"
 }
 
+
+object GetModel extends Cmd {
+  override def toString = "(get-model)"
+}
+
 case object Exit extends Cmd {
   override def toString = "(exit)"
 }
@@ -373,8 +378,11 @@ case class DeclareFun(id: Id, args: List[Type], res: Type) extends Cmd {
 }
 
 case class DefineFun(id: Id, args: List[Formal], res: Type, body: Expr) extends Cmd {
-  override def toString = "(declare-fun " + id + args.mkString(" (", " ", ") ") + res + " " + body + ")"
+  override def toString = "(define-fun " + id + args.mkString(" (", " ", ") ") + res + " " + body + ")"
 }
 
+case class DefineFunRec(id: Id, args: List[Formal], res: Type, body: Expr) extends Cmd {
+  override def toString = "(define-fun-rec " + id + args.mkString(" (", " ", ") ") + res + " " + body + ")"
+}
 
 

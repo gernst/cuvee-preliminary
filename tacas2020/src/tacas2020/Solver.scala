@@ -1,8 +1,13 @@
 package tacas2020
 
 class Solver {
+  var rlog: List[Cmd] = Nil
   var states: List[State] = _
   reset()
+
+  override def toString = {
+    rlog.reverse.mkString("\n")
+  }
 
   def top = states.head
 
@@ -26,16 +31,15 @@ class Solver {
     states = st :: states
   }
 
-  def ack() = {
+  def ack(cmd: Cmd) = {
+    rlog = cmd :: rlog
     List()
   }
 
-  def map(cmd: Cmd, action: State => State) {
+  def map(action: State => State) {
     val st0 = pop()
     try {
-      val st1 = action(st0)
-      val st2 = st1 log cmd
-      push(st2)
+      push(action(st0))
     } catch {
       case e: Throwable =>
         push(st0)
@@ -53,15 +57,18 @@ class Solver {
 
     case Reset =>
       reset()
-      ack()
+      ack(cmd)
 
     case Push =>
       push(top)
-      ack()
+      ack(cmd)
 
     case Pop =>
       pop()
-      ack()
+      ack(cmd)
+
+    case GetModel =>
+      ack(cmd)
 
     case GetAssertions =>
       val asserts = top.asserts.reverse
@@ -69,34 +76,38 @@ class Solver {
         yield "(assert " + assert + ")"
 
     case CheckSat =>
-      map(cmd, x => x)
-      ack()
+      map(x => x)
+      ack(cmd)
 
     case SetLogic(logic) =>
-      map(cmd, x => x)
-      ack()
+      map(x => x)
+      ack(cmd)
 
     case Assert(expr) =>
       import Eval.eval
       val _expr = eval(expr, top.env, List.empty, top)
       val _cmd = Assert(_expr)
-      map(_cmd, _ assert _expr)
-      ack()
+      map(_ assert _expr)
+      ack(_cmd)
 
     case DeclareSort(sort, arity) =>
-      map(cmd, _ declare (sort, arity))
-      ack()
+      map(_ declare (sort, arity))
+      ack(cmd)
 
     case DefineSort(sort, args, body) =>
-      map(cmd, _ define (sort, args, body))
-      ack()
+      map(_ define (sort, args, body))
+      ack(cmd)
 
     case DeclareFun(id, args, res) =>
-      map(cmd, _ declare (id, args, res))
-      ack()
+      map(_ declare (id, args, res))
+      ack(cmd)
 
     case DefineFun(id, args, res, body) =>
-      map(cmd, _ define (id, args, res, body))
-      ack()
+      map(_ define (id, args, res, body))
+      ack(cmd)
+
+    case DefineFunRec(id, args, res, body) =>
+      map(_ define (id, args, res, body))
+      ack(cmd)
   }
 }

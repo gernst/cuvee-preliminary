@@ -64,7 +64,7 @@ object Main {
     stream.close()
     val content = new String(buf, "UTF-8")
     cmd(content)
-    out(solver.top)
+    out(solver)
     solver = null
   }
 
