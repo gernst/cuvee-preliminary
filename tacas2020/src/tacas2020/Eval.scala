@@ -25,7 +25,7 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
   def havoc(xs: Iterable[Id]): (List[Formal], Env) = {
     check(xs)
     val re = Expr.fresh(xs)
-    val formals = xs map (x => Formal(x, ty(x)))
+    val formals = xs map (x => Formal(x rename re, ty(x)))
     val env = Env(su ++ re, ty)
     (formals.toList, env)
   }
@@ -88,11 +88,11 @@ object Eval {
     case WP(Block(prog), post) =>
       wp(prog, post, env, old, st)
 
-    /* case Box(prog, post) =>
-      box(prog.open, post, st, env)
+    case Box(Block(prog), post) =>
+      box(prog, post, env, old, st)
 
-    case Dia(prog, post) =>
-      dia(prog.open, post, st, env) */
+    case Dia(Block(prog), post) =>
+      dia(prog, post, env, old, st)
   }
 
   def wp(progs: List[Prog], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
@@ -125,28 +125,29 @@ object Eval {
       val (formals, env1) = env0 havoc mod
 
       val _test = eval(test, env1, env1 :: old, st)
-      val decrease = test ==> ((0 <= term) && term < Old(term))
+      val decrease = test ==> (0 <= term && term < Old(term))
 
-      val spec = Spec(mod_, phi, !test && psi)
       val hyp = Spec(mod_, decrease && phi, !test && psi)
 
-      val _phi = eval(phi, env0, old, st)
-      val _psi = eval(psi, env1, env0 :: old, st)
+      val _phi0 = eval(phi, env0, old, st)
+      val _phi1 = eval(phi, env1, old, st)
+      val _psi1 = eval(psi, env1, env1 :: old, st)
 
-      val use = _phi && Forall(formals, _psi ==> wp(rest, post, env1, old, st))
-      val base = Forall(formals, !_test ==> _psi)
-      val step = Forall(formals, _test ==> wp(body.progs ++ List(hyp), psi, env1, env0 :: old, st))
+      val use = _phi0 && Forall(formals, _psi1 ==> wp(rest, post, env1, old, st))
+      val base = Forall(formals, (!_test && _phi1) ==> _psi1)
+      val step = Forall(formals, (_test && _phi1) ==> wp(body.progs ++ List(hyp), psi, env1, env1 :: old, st))
 
       use && base && step
   }
 
-  /* def box(progs: List[Prog], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
+  def box(progs: List[Prog], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
     case Nil =>
       val _psi = eval(post, env0, old, st)
       _psi
 
-    case Assign(xs, es) :: rest =>
-      val _es = es map (eval(_, env0, old, st))
+    case Assign(lets) :: rest =>
+      val pairs = lets map (eval(_, env0, old, st))
+      val (xs, _es) = pairs unzip
       val env1 = env0 assign (xs, _es)
       box(rest, post, env1, old, st)
 
@@ -161,6 +162,25 @@ object Eval {
       val _left = _test ==> box(left ++ rest, post, env0, old, st)
       val _right = !_test ==> box(right ++ rest, post, env0, old, st)
       _left && _right
+
+    case While(test, body, term, phi, psi) :: rest =>
+      val mod = body.mod
+      val mod_ = mod.toList
+
+      val (formals, env1) = env0 havoc mod
+
+      val _test = eval(test, env1, env1 :: old, st)
+
+      val hyp = Spec(mod_, phi, !test && psi)
+
+      val _phi1 = eval(phi, env1, old, st)
+      val _psi1 = eval(psi, env1, env1 :: old, st)
+
+      val use = Forall(formals, _psi1 ==> box(rest, post, env1, old, st))
+      val base = Forall(formals, (!_test && _phi1) ==> _psi1)
+      val step = Forall(formals, (_test && _phi1) ==> box(body.progs ++ List(hyp), psi, env1, env1 :: old, st))
+
+      use && base && step
   }
 
   def dia(progs: List[Prog], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
@@ -168,8 +188,9 @@ object Eval {
       val _psi = eval(post, env0, old, st)
       _psi
 
-    case Assign(xs, es) :: rest =>
-      val _es = es map (eval(_, env0, old, st))
+    case Assign(lets) :: rest =>
+      val pairs = lets map (eval(_, env0, old, st))
+      val (xs, _es) = pairs unzip
       val env1 = env0 assign (xs, _es)
       dia(rest, post, env1, old, st)
 
@@ -184,5 +205,26 @@ object Eval {
       val _left = _test && dia(left ++ rest, post, env0, old, st)
       val _right = !_test && dia(right ++ rest, post, env0, old, st)
       _left || _right
-  } */
+
+    case While(test, body, term, phi, psi) :: rest =>
+      val mod = body.mod
+      val mod_ = mod.toList
+
+      val (formals, env1) = env0 havoc mod
+
+      val _test = eval(test, env1, env1 :: old, st)
+      val decrease = test ==> (0 <= term && term < Old(term))
+
+      val hyp = Spec(mod_, decrease && phi, !test && psi)
+
+      val _phi0 = eval(phi, env0, old, st)
+      val _phi1 = eval(phi, env1, old, st)
+      val _psi1 = eval(psi, env1, env1 :: old, st)
+
+      val use = _phi0 && Exists(formals, _psi1 && dia(rest, post, env1, old, st))
+      val base = Forall(formals, (!_test && _phi1) ==> _psi1)
+      val step = Forall(formals, (_test && _phi1) ==> wp(body.progs ++ List(hyp), psi, env1, env1 :: old, st))
+
+      use && base && step
+  }
 }

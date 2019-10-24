@@ -11,7 +11,7 @@ case class State(
   rlog: List[Cmd]) {
 
   override def toString = {
-    rlog.reverse.mkString("", "\n", "\n")
+    rlog.reverse.mkString("\n")
   }
   
   def env = {
