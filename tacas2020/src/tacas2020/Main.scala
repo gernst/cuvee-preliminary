@@ -78,7 +78,7 @@ object Main {
     } while (line != null)
   }
 
-  def run(args: List[String], files: List[String]): Unit = args match {
+  def run(args: List[String], files: List[String] = Nil): Unit = args match {
     case Nil if files.isEmpty =>
       repl()
 
@@ -101,10 +101,13 @@ object Main {
         val stdout = pr.getInputStream
         val stderr = pr.getErrorStream
         val stdin = new PrintStream(pr.getOutputStream)
+
+        val old = _out
         _out = stdin
         read(file)
         out("(exit)")
-        _out = System.out
+        _out = old
+
         drain(stdout)
         drain(stderr)
         stdin.close()
@@ -122,6 +125,6 @@ object Main {
   }
 
   def main(args: Array[String]) {
-    run(args.toList, Nil)
+    run(args.toList)
   }
 }
