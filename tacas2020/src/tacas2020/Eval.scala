@@ -9,6 +9,14 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
       ensure(su contains x, "undeclared program variable", x, xs)
   }
 
+  def bind(fs: List[Formal]): Env = {
+    val xs = fs map (_.id)
+    val ts = fs map (_.typ)
+    val re = Expr.id(xs)
+    val xt = xs zip ts
+    Env(su ++ re, ty ++ xt)
+  }
+
   def assign(xs: List[Id], es: List[Expr]): Env = {
     check(xs)
     Env(su ++ (xs zip es), ty)
@@ -36,6 +44,9 @@ object Eval {
       ensure(args.isEmpty, "not constant", expr, env, st)
       id
 
+    case id: Id =>
+      error("unknown identifier", expr, env, st)
+
     case Old(expr) =>
       old match {
         case Nil =>
@@ -43,9 +54,6 @@ object Eval {
         case env :: old =>
           eval(expr, env, old, st)
       }
-
-    case id: Id =>
-      error("unknown identifier", expr, env, st)
 
     case App(id, args) if (st.funs contains id) =>
       val (types, res) = st funs id
@@ -55,15 +63,8 @@ object Eval {
     case App(id, args) =>
       throw Error("unknown function", expr, env, st)
 
-    /* case expr @ All(params, body) =>
-      val ids = expr.bound
-      val _env = st arbitrary params
-      Bind.all(ids map _env, eval(body, st, env ++ _env))
-
-    case expr @ Ex(params, body) =>
-      val ids = expr.bound
-      val _env = st arbitrary params
-      Bind.ex(ids map _env, eval(body, st, env ++ _env)) */
+    case expr @ Bind(quant, formals, body) =>
+      Bind(quant, formals, eval(body, env bind formals, old, st))
 
     case WP(Block(prog), post) =>
       wp(prog, post, env, old, st)
