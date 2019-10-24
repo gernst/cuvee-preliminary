@@ -4,10 +4,14 @@ class Solver {
   var states: List[State] = _
   reset()
 
-  val top = states.head
+  def top = states.head
 
   def reset() {
     states = List(State.default)
+  }
+
+  def exit() {
+    System.exit(0)
   }
 
   def pop() = {
@@ -21,9 +25,21 @@ class Solver {
     states = st :: states
   }
 
+  def map(cmd: Cmd, action: State => State) {
+    val st0 = pop()
+    val st1 = action(st0)
+    val st2 = st1 log cmd
+    push(st2)
+  }
+
+  def exec(cmds: List[Cmd]) {
+    for (cmd <- cmds)
+      exec(cmd)
+  }
+
   def exec(cmd: Cmd) = cmd match {
     case Exit =>
-      System.exit(0)
+      exit()
 
     case Reset =>
       reset()
@@ -34,28 +50,24 @@ class Solver {
     case Pop =>
       pop
 
+    case GetAssertions =>
+      val asserts = top.asserts.reverse
+      for (assert <- asserts)
+        out("(assert " + assert + ")")
+
     case Assert(expr) =>
-      val state = pop()
-      push(state assert expr)
+      map(cmd, _ assert expr)
 
     case DeclareSort(sort, arity) =>
-      val state = pop()
-      push(state declare (sort, arity))
+      map(cmd, _ declare (sort, arity))
 
     case DefineSort(sort, args, body) =>
-      val state = pop()
-      push(state define (sort, args, body))
-
-    case DeclareFun(id, Nil, res) =>
-      val state = pop()
-      push(state declare (id, res))
+      map(cmd, _ define (sort, args, body))
 
     case DeclareFun(id, args, res) =>
-      val state = pop()
-      push(state declare (id, args, res))
+      map(cmd, _ declare (id, args, res))
 
     case DefineFun(id, args, res, body) =>
-      val state = pop()
-      push(state define (id, args, res, body))
+      map(cmd, _ define (id, args, res, body))
   }
 }

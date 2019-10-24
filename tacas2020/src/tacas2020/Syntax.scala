@@ -4,76 +4,170 @@ sealed trait Type extends Type.term {
 
 }
 
-case class Sort(name: String, index: Option[Int] = None) extends Type with Type.x {
+case class Sort(name: String, index: Option[Int]) extends Type with Type.x {
   def this(name: String) = this(name, None)
   def fresh(index: Int) = Sort(name, Some(index))
   override def toString = name __ index
 }
 
-object Sort {
+object Sort extends (String => Sort) {
   val int = Sort("Int")
   val bool = Sort("Bool")
+
+  def apply(name: String): Sort = {
+    Sort(name, None)
+  }
 }
 
 object Type extends Alpha[Type, Sort] {
   case class list(elem: Type) extends Type {
     def free = elem.free
-    def rename(re: TRen) = list(elem rename re)
-    def subst(ty: Typing) = list(elem subst ty)
+    def rename(re: Map[Sort, Sort]) = list(elem rename re)
+    def subst(ty: Map[Sort, Type]) = list(elem subst ty)
   }
 
   case class array(dom: Type, ran: Type) extends Type {
     def free = ran.free ++ dom.free
-    def rename(re: TRen) = array(dom rename re, ran rename re)
-    def subst(ty: Typing) = array(dom subst ty, ran subst ty)
+    def rename(re: Map[Sort, Sort]) = array(dom rename re, ran rename re)
+    def subst(ty: Map[Sort, Type]) = array(dom subst ty, ran subst ty)
   }
 }
 
 sealed trait Expr extends Expr.term {
+  def ?(left: Expr, right: Expr) = App(Id.ite, this, left, right)
 
+  def ^(that: Expr) = App(Id.exp, this, that)
+  def *(that: Expr) = App(Id.times, this, that)
+  def /(that: Expr) = App(Id.divBy, this, that)
+  def %(that: Expr) = App(Id.mod, this, that)
+
+  def unary_- = App(Id.uminus, this)
+  def +(that: Expr) = App(Id.plus, this, that)
+  def -(that: Expr) = App(Id.minus, this, that)
+  def ===(that: Expr) = App(Id._eq, this, that)
+  def !==(that: Expr) = !(this === that)
+
+  def <=(that: Expr) = App(Id.le, this, that)
+  def <(that: Expr) = App(Id.lt, this, that)
+  def >=(that: Expr) = App(Id.ge, this, that)
+  def >(that: Expr) = App(Id.gt, this, that)
+
+  def unary_! = App(Id.not, this)
+  def &&(that: Expr) = App(Id.and, this, that)
+  def ||(that: Expr) = App(Id.or, this, that)
+  def ==>(that: Expr) = App(Id.imp, this, that)
+
+  def isNil = this === App(Id.nil)
+  def ::(that: Expr) = App(Id.cons, that, this)
+
+  def in(that: Expr) = App(Id.in, this, that)
+  def head = App(Id.head, this)
+  def tail = App(Id.tail, this)
+  def last = App(Id.last, this)
+  def init = App(Id.init, this)
+
+  def select(index: Expr) = App(Id.select, this, index)
+  def store(index: Expr, arg: Expr) = App(Id.store, this, index, arg)
 }
 
 object Expr extends Alpha[Expr, Id] {
 
 }
 
-case class Id(name: String, index: Option[Int] = None) extends Expr with Expr.x {
+case class Id(name: String, index: Option[Int]) extends Expr with Expr.x {
   def this(name: String) = this(name, None)
   def fresh(index: Int) = Id(name, Some(index))
   override def toString = name __ index
 }
 
+object Id extends (String => Id) {
+  def apply(name: String): Id = {
+    Id(name, None)
+  }
+
+  val ite = Id("ite")
+
+  def _false = Id("false")
+  def _true = Id("true")
+
+  val exp = Id("^")
+  val times = Id("*")
+  val divBy = Id("/")
+  val mod = Id("%")
+
+  val uminus = Id("-")
+  val plus = Id("+")
+  val minus = Id("-")
+
+  val _eq = Id("=")
+  val le = Id("<=")
+  val lt = Id("<")
+  val ge = Id(">=")
+  val gt = Id(">")
+
+  val not = Id("not")
+  val and = Id("and")
+  val or = Id("or")
+  val imp = Id("=>")
+
+  val nil = Id("nil")
+  val cons = Id("cons")
+  val in = Id("in")
+  val head = Id("head")
+  val tail = Id("tail")
+  val last = Id("last")
+  val init = Id("init")
+
+  val select = Id("apply")
+  val store = Id("updated")
+}
+
 case class Formal(id: Id, typ: Type) {
-  def rename(re: Ren) = Formal(id rename re, typ)
+  def rename(re: Map[Id, Id]) = Formal(id rename re, typ)
   override def toString = "(" + id + " " + typ + ")"
 }
 
 case class Num(value: BigInt) extends Expr {
   def free = Set()
-  def rename(re: Ren) = this
-  def subst(su: Subst) = this
+  def rename(re: Map[Id, Id]) = this
+  def subst(su: Map[Id, Expr]) = this
   override def toString = value.toString
 }
 
 case class App(fun: Id, args: List[Expr]) extends Expr {
   ensure(!args.isEmpty, "no arguments", this)
   def free = Set(args flatMap (_.free): _*)
-  def rename(re: Ren) = App(fun, args map (_ rename re))
-  def subst(su: Subst) = App(fun, args map (_ subst su))
+  def rename(re: Map[Id, Id]) = App(fun, args map (_ rename re))
+  def subst(su: Map[Id, Expr]) = App(fun, args map (_ subst su))
   override def toString = "(" + fun + " " + args.mkString(" ") + ")"
+}
+
+object App {
+  def apply(fun: Id, args: Expr*): App = {
+    App(fun, args.toList)
+  }
+}
+
+object Apps extends (List[Expr] => Expr) {
+  def apply(exprs: List[Expr]): Expr = exprs match {
+    case Nil => error("empty application")
+    case List(expr) => expr
+    case (fun: Id) :: args => App(fun, args)
+    case _ => error("higher-order application", exprs)
+  }
 }
 
 case class Old(expr: Expr) extends Expr {
   def free = expr.free
-  def rename(re: Ren) = Old(expr rename re)
-  def subst(su: Subst) = Old(expr subst su)
+  def rename(re: Map[Id, Id]) = Old(expr rename re)
+  def subst(su: Map[Id, Expr]) = Old(expr subst su)
 }
 
 sealed trait Quant {
-  def apply(params: List[Formal], body: Expr) = {
-    if (params.isEmpty) body
+  def apply(formals: List[Formal], body: Expr) = {
+    if (formals.isEmpty) body
     else if (body == True) body
-    else Bind(this, params, body)
+    else Bind(this, formals, body)
   }
 }
 
@@ -89,42 +183,42 @@ case class Bind(quant: Quant, formals: List[Formal], body: Expr) extends Expr wi
   ensure(!formals.isEmpty, "empty binding", this)
   def bound = Set(formals map (_.id): _*)
   def free = body.free -- bound
-  def rename(a: Ren, re: Ren): Bind = Bind(quant, formals map (_ rename a), body rename re)
-  def subst(a: Ren, su: Subst): Bind = Bind(quant, formals map (_ rename a), body subst su)
+  def rename(a: Map[Id, Id], re: Map[Id, Id]): Bind = Bind(quant, formals map (_ rename a), body rename re)
+  def subst(a: Map[Id, Id], su: Map[Id, Expr]): Bind = Bind(quant, formals map (_ rename a), body subst su)
   override def toString = "(" + quant + formals.mkString(" (", " ", ") ") + body + ")"
 }
 
 case class WP(prog: Block, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
-  def rename(re: Ren) = WP(prog rename re, post rename re)
-  def subst(su: Subst) = ???
+  def rename(re: Map[Id, Id]) = WP(prog rename re, post rename re)
+  def subst(su: Map[Id, Expr]) = ???
   override def toString = "(wp " + prog + " " + post + ")"
 }
 
 case class Box(prog: Block, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
-  def rename(re: Ren) = Box(prog rename re, post rename re)
-  def subst(su: Subst) = ???
+  def rename(re: Map[Id, Id]) = Box(prog rename re, post rename re)
+  def subst(su: Map[Id, Expr]) = ???
   override def toString = "(box " + prog + " " + post + ")"
 }
 
 case class Dia(prog: Block, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
-  def rename(re: Ren) = Dia(prog rename re, post rename re)
-  def subst(su: Subst) = ???
+  def rename(re: Map[Id, Id]) = Dia(prog rename re, post rename re)
+  def subst(su: Map[Id, Expr]) = ???
   override def toString = "(dia " + prog + " " + post + ")"
 }
 
 sealed trait Prog {
   def mod: Set[Id]
   def read: Set[Id]
-  def rename(re: Ren): Prog
+  def rename(re: Map[Id, Id]): Prog
 }
 
 case class Block(progs: List[Prog]) {
   def mod = Set(progs flatMap (_.mod): _*)
   def read = Set(progs flatMap (_.read): _*)
-  def rename(re: Ren) = Block(progs map (_ rename re))
+  def rename(re: Map[Id, Id]) = Block(progs map (_ rename re))
   def ++(that: Block) = Block(this.progs ++ that.progs)
   override def toString = "(block " + progs.mkString(" ") + ")"
 }
@@ -140,7 +234,7 @@ case class Assign(xs: List[Id], es: List[Expr]) extends Prog {
   ensure(xs.length == es.length, "unbalanced assignment", this)
   def mod = xs.toSet
   def read = Set(es flatMap (_.free): _*)
-  def rename(re: Ren) = Assign(xs map (_ rename re), es map (_ rename re))
+  def rename(re: Map[Id, Id]) = Assign(xs map (_ rename re), es map (_ rename re))
   override def toString = "(assign " + xs.mkString("(", " ", ")") + " " + es.mkString("(", " ", ")") + ")"
 }
 
@@ -155,23 +249,24 @@ object Assign {
   }
 }
 
-case class Spec(mod: Set[Id], pre: Expr, post: Expr) extends Prog {
+case class Spec(xs: List[Id], pre: Expr, post: Expr) extends Prog {
+  def mod = xs.toSet
   def read = pre.free ++ (post.free -- mod)
-  def rename(re: Ren) = Spec(mod map (_ rename re), pre rename re, post rename re)
-  override def toString = "(spec " + mod.mkString(" (", " ", ") ") + pre + post + ")"
+  def rename(re: Map[Id, Id]) = Spec(xs map (_ rename re), pre rename re, post rename re)
+  override def toString = "(spec " + xs.mkString(" (", " ", ") ") + pre + post + ")"
 }
 
 case class If(test: Expr, left: Block, right: Block) extends Prog {
   def mod = left.mod ++ right.mod
   def read = test.free ++ left.read ++ right.read
-  def rename(re: Ren) = If(test rename re, left rename re, right rename re)
+  def rename(re: Map[Id, Id]) = If(test rename re, left rename re, right rename re)
   override def toString = "(if " + test + " " + left + " " + right + ")"
 }
 
-case class While(test: Expr, body: Block, term: Expr, pre: Expr, post: Expr) {
+case class While(test: Expr, body: Block, term: Expr, pre: Expr, post: Expr) extends Prog {
   def mod = body.mod
   def read = test.free ++ body.read
-  def rename(re: Ren) = While(test rename re, body rename re, term rename re, pre rename re, post rename re)
+  def rename(re: Map[Id, Id]) = While(test rename re, body rename re, term rename re, pre rename re, post rename re)
   override def toString = "(while " + test + " " + body + " :termination " + term + " :invariant " + pre + " :post " + post + ")"
 }
 
@@ -193,6 +288,10 @@ case object Push extends Cmd {
 
 case object Pop extends Cmd {
   override def toString = "(pop)"
+}
+
+case object GetAssertions extends Cmd {
+  override def toString = "(get-assertions)"
 }
 
 case object CheckSat extends Cmd {

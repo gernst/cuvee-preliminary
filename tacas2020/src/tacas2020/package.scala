@@ -1,15 +1,29 @@
+import scala.io.StdIn
+
 package object tacas2020 {
-  case class Error(info: Any*) extends Exception
+  def in() = {
+    StdIn.readLine()
+  }
+
+  def out(any: Any) {
+    Console.println(any)
+    Console.flush()
+  }
+
+  case class Error(info: Any*) extends Exception {
+    override def toString = {
+      val strings = info map ("\"" + _ + "\"")
+      strings.mkString("(error ", " ", ")")
+    }
+  }
+
+  def error(info: Any*) = {
+    throw Error(info)
+  }
 
   def ensure(test: Boolean, info: Any*) = {
     if (!test) throw Error(info)
   }
-
-  type TRen = Map[Sort, Sort]
-  type Typing = Map[Sort, Type]
-
-  type Ren = Map[Id, Id]
-  type Subst = Map[Id, Expr]
 
   val True = Id("true")
   val False = Id("false")

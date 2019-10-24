@@ -4,35 +4,43 @@ case class State(
   sorts: Map[Sort, Int],
   sortdefs: Map[Sort, (List[Sort], Type)],
 
-  consts: Map[Id, Type],
   funs: Map[Id, (List[Type], Type)],
   fundefs: Map[Id, (List[Id], Expr)],
 
-  asserts: List[Expr]) {
+  asserts: List[Expr],
+  rlog: List[Cmd]) {
+
+  override def toString = {
+    rlog.reverse.mkString("", "\n", "\n")
+  }
+
+  def log(cmd: Cmd) = {
+    copy(
+      rlog = cmd :: rlog)
+  }
 
   def declare(sort: Sort, arity: Int) = {
+    ensure(!(sorts contains sort), "sort already defined", sort)
     copy(
       sorts = sorts + (sort -> arity))
   }
 
   def define(sort: Sort, args: List[Sort], body: Type) = {
+    ensure(!(sorts contains sort), "sort already defined", sort)
     val arity = args.length
     copy(
       sorts = sorts + (sort -> arity),
       sortdefs = sortdefs + (sort -> (args, body)))
   }
 
-  def declare(id: Id, res: Type) = {
-    copy(
-      consts = consts + (id -> res))
-  }
-
   def declare(id: Id, args: List[Type], res: Type) = {
+    ensure(!(funs contains id), "function already defined", id)
     copy(
       funs = funs + (id -> (args, res)))
   }
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr) = {
+    ensure(!(funs contains id), "const already defined", id)
     val args = formals map (_.typ)
     val ids = formals map (_.id)
     copy(
@@ -53,12 +61,11 @@ object State {
       Sort.int -> 0),
     sortdefs = Map(),
 
-    consts = Map(
-      True -> Sort.bool,
-      False -> Sort.bool),
-
-    funs = Map(),
+    funs = Map(
+      True -> (List(), Sort.bool),
+      False -> (List(), Sort.bool)),
     fundefs = Map(),
 
-    asserts = Nil)
+    asserts = Nil,
+    rlog = Nil)
 }
