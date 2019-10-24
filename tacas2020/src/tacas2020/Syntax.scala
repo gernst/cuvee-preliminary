@@ -87,9 +87,6 @@ object Id extends (String => Id) {
 
   val ite = Id("ite")
 
-  def _false = Id("false")
-  def _true = Id("true")
-
   val exp = Id("^")
   val times = Id("*")
   val divBy = Id("/")
@@ -134,6 +131,20 @@ case class Num(value: BigInt) extends Expr {
   override def toString = value.toString
 }
 
+case class Eq(left: Expr, right: Expr) extends Expr {
+  def free = left.free ++ right.free
+  def rename(re: Map[Id, Id]) = Eq(left rename re, right rename re)
+  def subst(su: Map[Id, Expr]) = Eq(left subst su, right subst su)
+  override def toString = "(= " + left + " " + right + ")"
+}
+
+case class Ite(test: Expr, left: Expr, right: Expr) extends Expr {
+  def free = left.free ++ right.free
+  def rename(re: Map[Id, Id]) = Ite(test rename re, left rename re, right rename re)
+  def subst(su: Map[Id, Expr]) = Ite(test subst su, left subst su, right subst su)
+  override def toString = "(ite " + test + " " + left + " " + right + ")"
+}
+
 case class App(fun: Id, args: List[Expr]) extends Expr {
   ensure(!args.isEmpty, "no arguments", this)
   def free = Set(args flatMap (_.free): _*)
@@ -161,6 +172,7 @@ case class Old(expr: Expr) extends Expr {
   def free = expr.free
   def rename(re: Map[Id, Id]) = Old(expr rename re)
   def subst(su: Map[Id, Expr]) = Old(expr subst su)
+  override def toString = "(old " + expr + ")"
 }
 
 sealed trait Quant {
@@ -229,24 +241,19 @@ object Block extends (List[Prog] => Block) {
   }
 }
 
-case class Assign(xs: List[Id], es: List[Expr]) extends Prog {
-  ensure(!xs.isEmpty, "empty assignment", this)
-  ensure(xs.length == es.length, "unbalanced assignment", this)
-  def mod = xs.toSet
-  def read = Set(es flatMap (_.free): _*)
-  def rename(re: Map[Id, Id]) = Assign(xs map (_ rename re), es map (_ rename re))
-  override def toString = "(assign " + xs.mkString("(", " ", ")") + " " + es.mkString("(", " ", ")") + ")"
+case class Let(x: Id, e: Expr) {
+  def mod = Set(x)
+  def free = e.free
+  def rename(re: Map[Id, Id]) = Let(x rename re, e rename re)
+  override def toString = "(" + x + " " + e + ")"
 }
 
-object Assign extends (List[(Id, Expr)] => Assign) {
-  def apply(x: Id, e: Expr): Assign = {
-    Assign(List(x), List(e))
-  }
-
-  def apply(xes: List[(Id, Expr)]): Assign = {
-    val (xs, es) = xes.unzip
-    Assign(xs, es)
-  }
+case class Assign(lets: List[Let]) extends Prog {
+  ensure(!lets.isEmpty, "empty assignment", this)
+  def mod = Set(lets flatMap (_.mod): _*)
+  def read = Set(lets flatMap (_.free): _*)
+  def rename(re: Map[Id, Id]) = Assign(lets map (_ rename re))
+  override def toString = "(assign " + lets.mkString(" ") + ")"
 }
 
 case class Spec(xs: List[Id], pre: Expr, post: Expr) extends Prog {

@@ -63,7 +63,37 @@ object State {
 
     funs = Map(
       True -> (List(), Sort.bool),
-      False -> (List(), Sort.bool)),
+      False -> (List(), Sort.bool),
+
+      Id.exp -> (List(Sort.int, Sort.int), Sort.int),
+      Id.times ->(List(Sort.int, Sort.int), Sort.int),
+      Id.divBy -> (List(Sort.int, Sort.int), Sort.int),
+      Id.mod -> (List(Sort.int, Sort.int), Sort.int),
+
+      Id.uminus -> (List(Sort.int), Sort.int),
+      Id.plus -> (List(Sort.int, Sort.int), Sort.int),
+      Id.minus -> (List(Sort.int, Sort.int), Sort.int),
+
+      Id.le -> (List(Sort.int, Sort.int), Sort.bool),
+      Id.lt -> (List(Sort.int, Sort.int), Sort.bool),
+      Id.ge -> (List(Sort.int, Sort.int), Sort.bool),
+      Id.gt -> (List(Sort.int, Sort.int), Sort.bool),
+
+      Id.not -> (List(Sort.bool), Sort.bool),
+      Id.and -> (List(Sort.bool, Sort.bool), Sort.bool),
+      Id.or -> (List(Sort.bool, Sort.bool), Sort.bool),
+      Id.imp -> (List(Sort.bool, Sort.bool), Sort.bool),
+
+      /* Id.nil -> Fun.nil,
+      Id.cons -> Fun.cons,
+      Id.in -> Fun.in,
+      Id.head -> Fun.head,
+      Id.tail -> Fun.tail,
+      Id.last -> Fun.last,
+      Id.init -> Fun.init,
+
+      Id.select -> Fun.select,
+      Id.store -> Fun.store */),
     fundefs = Map(),
 
     asserts = Nil,

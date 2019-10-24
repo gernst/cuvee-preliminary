@@ -10,8 +10,9 @@ class Solver {
     states = List(State.default)
   }
 
-  def exit() {
+  def exit(): Nothing = {
     System.exit(0)
+    ??? // unreachable
   }
 
   def pop() = {
@@ -25,49 +26,76 @@ class Solver {
     states = st :: states
   }
 
+  def ack() = {
+    List()
+  }
+
   def map(cmd: Cmd, action: State => State) {
     val st0 = pop()
-    val st1 = action(st0)
-    val st2 = st1 log cmd
-    push(st2)
+    try {
+      val st1 = action(st0)
+      val st2 = st1 log cmd
+      push(st2)
+    } catch {
+      case e: Throwable =>
+        push(st0)
+        throw e
+    }
   }
 
-  def exec(cmds: List[Cmd]) {
-    for (cmd <- cmds)
-      exec(cmd)
+  def exec(cmds: List[Cmd]): List[String] = {
+    cmds flatMap exec
   }
 
-  def exec(cmd: Cmd) = cmd match {
+  def assert(st: State, expr: Expr): State = {
+    import Eval.eval
+    val _expr = eval(expr, Env.empty, List.empty, st)
+    st assert _expr
+  }
+
+  def exec(cmd: Cmd): List[String] = cmd match {
     case Exit =>
       exit()
 
     case Reset =>
       reset()
+      ack()
 
     case Push =>
       push(top)
+      ack()
 
     case Pop =>
-      pop
+      pop()
+      ack()
 
     case GetAssertions =>
       val asserts = top.asserts.reverse
       for (assert <- asserts)
-        out("(assert " + assert + ")")
+        yield "(assert " + assert + ")"
+
+    case CheckSat =>
+      map(cmd, x => x)
+      ack()
 
     case Assert(expr) =>
-      map(cmd, _ assert expr)
+      map(cmd, assert(_, expr))
+      ack()
 
     case DeclareSort(sort, arity) =>
       map(cmd, _ declare (sort, arity))
+      ack()
 
     case DefineSort(sort, args, body) =>
       map(cmd, _ define (sort, args, body))
+      ack()
 
     case DeclareFun(id, args, res) =>
       map(cmd, _ declare (id, args, res))
+      ack()
 
     case DefineFun(id, args, res, body) =>
       map(cmd, _ define (id, args, res, body))
+      ack()
   }
 }

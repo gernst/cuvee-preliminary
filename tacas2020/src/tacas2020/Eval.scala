@@ -29,9 +29,22 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
     val env = Env(su ++ re, ty)
     (formals.toList, env)
   }
+  
+  override def toString = {
+    val strings = su map { case (x,e) => Let(x, e) }
+    strings.mkString("(", " ", ")")
+  }
+}
+
+object Env {
+  val empty = Env(Map.empty, Map.empty)
 }
 
 object Eval {
+  def eval(let: Let, env: Env, old: List[Env], st: State): (Id, Expr) = let match {
+    case Let(x, e) => (x, eval(e, env, old, st))
+  }
+
   def eval(expr: Expr, env: Env, old: List[Env], st: State): Expr = expr match {
     case num: Num =>
       num
@@ -41,19 +54,25 @@ object Eval {
 
     case id: Id if (st.funs contains id) =>
       val (args, res) = st funs id
-      ensure(args.isEmpty, "not constant", expr, env, st)
+      ensure(args.isEmpty, "not constant", expr, env)
       id
 
     case id: Id =>
-      error("unknown identifier", expr, env, st)
+      error("unknown identifier", expr, env)
 
-    case Old(expr) =>
+    case Old(inner) =>
       old match {
         case Nil =>
-          error("no old state", expr, env, st)
+          error("no old state", expr, env)
         case env :: old =>
-          eval(expr, env, old, st)
+          eval(inner, env, old, st)
       }
+
+    case Eq(left, right) =>
+      Eq(eval(left, env, old, st), eval(right, env, old, st))
+
+    case Ite(test, left, right) =>
+      Ite(eval(test, env, old, st), eval(left, env, old, st), eval(right, env, old, st))
 
     case App(id, args) if (st.funs contains id) =>
       val (types, res) = st funs id
@@ -61,7 +80,7 @@ object Eval {
       App(id, args map (eval(_, env, old, st)))
 
     case App(id, args) =>
-      throw Error("unknown function", expr, env, st)
+      error("unknown function", expr, env, st)
 
     case expr @ Bind(quant, formals, body) =>
       Bind(quant, formals, eval(body, env bind formals, old, st))
@@ -81,8 +100,9 @@ object Eval {
       val _psi = eval(post, env0, old, st)
       _psi
 
-    case Assign(xs, es) :: rest =>
-      val _es = es map (eval(_, env0, old, st))
+    case Assign(lets) :: rest =>
+      val pairs = lets map (eval(_, env0, old, st))
+      val (xs, _es) = pairs unzip
       val env1 = env0 assign (xs, _es)
       wp(rest, post, env1, old, st)
 
