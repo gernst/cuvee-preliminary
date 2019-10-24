@@ -223,7 +223,7 @@ case class Block(progs: List[Prog]) {
   override def toString = "(block " + progs.mkString(" ") + ")"
 }
 
-object Block {
+object Block extends (List[Prog] => Block) {
   def apply(progs: Prog*): Block = {
     Block(progs.toList)
   }
@@ -238,7 +238,7 @@ case class Assign(xs: List[Id], es: List[Expr]) extends Prog {
   override def toString = "(assign " + xs.mkString("(", " ", ")") + " " + es.mkString("(", " ", ")") + ")"
 }
 
-object Assign {
+object Assign extends (List[(Id, Expr)] => Assign) {
   def apply(x: Id, e: Expr): Assign = {
     Assign(List(x), List(e))
   }
@@ -267,7 +267,7 @@ case class While(test: Expr, body: Block, term: Expr, pre: Expr, post: Expr) ext
   def mod = body.mod
   def read = test.free ++ body.read
   def rename(re: Map[Id, Id]) = While(test rename re, body rename re, term rename re, pre rename re, post rename re)
-  override def toString = "(while " + test + " " + body + " :termination " + term + " :invariant " + pre + " :post " + post + ")"
+  override def toString = "(while " + test + " " + body + " :termination " + term + " :precondition " + pre + " :post " + post + ")"
 }
 
 sealed trait Cmd {

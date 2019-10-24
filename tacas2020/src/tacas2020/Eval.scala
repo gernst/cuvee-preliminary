@@ -14,12 +14,12 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
     Env(su ++ (xs zip es), ty)
   }
 
-  def havoc(xs: List[Id]): (List[Formal], Env) = {
+  def havoc(xs: Iterable[Id]): (List[Formal], Env) = {
     check(xs)
     val re = Expr.fresh(xs)
     val formals = xs map (x => Formal(x, ty(x)))
     val env = Env(su ++ re, ty)
-    (formals, env)
+    (formals.toList, env)
   }
 }
 
@@ -77,19 +77,19 @@ object Eval {
 
   def wp(progs: List[Prog], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
     case Nil =>
-      val _post = eval(post, env0, old, st)
-      _post
+      val _psi = eval(post, env0, old, st)
+      _psi
 
     case Assign(xs, es) :: rest =>
       val _es = es map (eval(_, env0, old, st))
       val env1 = env0 assign (xs, _es)
       wp(rest, post, env1, old, st)
 
-    case Spec(mod, phi, psi) :: rest =>
-      val _pre = eval(phi, env0, old, st)
-      val (formals, env1) = env0 havoc mod
-      val _post = eval(psi, env1, old, st)
-      _pre && Forall(formals, _post ==> wp(rest, post, env1, old, st))
+    case Spec(xs, phi, psi) :: rest =>
+      val (formals, env1) = env0 havoc xs
+      val _phi = eval(phi, env0, old, st)
+      val _psi = eval(psi, env1, env0 :: old, st)
+      _phi && Forall(formals, _psi ==> wp(rest, post, env1, old, st))
 
     case If(test, Block(left), Block(right)) :: rest =>
       val _test = eval(test, env0, old, st)
@@ -97,55 +97,71 @@ object Eval {
       val _right = !_test ==> wp(right ++ rest, post, env0, old, st)
       _left && _right
 
-    case While(test, body, term, pre, post) :: rest =>
-      ???
+    case While(test, body, term, phi, psi) :: rest =>
+      val mod = body.mod
+      val mod_ = mod.toList
+
+      val (formals, env1) = env0 havoc mod
+
+      val _test = eval(test, env1, env1 :: old, st)
+      val decrease = test ==> ((0 <= term) && term < Old(term))
+
+      val spec = Spec(mod_, phi, !test && psi)
+      val hyp = Spec(mod_, decrease && phi, !test && psi)
+
+      val _phi = eval(phi, env0, old, st)
+      val _psi = eval(psi, env1, env0 :: old, st)
+
+      val use = _phi && Forall(formals, _psi ==> wp(rest, post, env1, old, st))
+      val base = Forall(formals, !_test ==> _psi)
+      val step = Forall(formals, _test ==> wp(body.progs ++ List(hyp), psi, env1, env0 :: old, st))
+
+      use && base && step
   }
-  
-  def box(progs: List[Prog], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
+
+  /* def box(progs: List[Prog], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
     case Nil =>
-      val _post = eval(post, env0, old, st)
-      _post
+      val _psi = eval(post, env0, old, st)
+      _psi
 
     case Assign(xs, es) :: rest =>
       val _es = es map (eval(_, env0, old, st))
       val env1 = env0 assign (xs, _es)
-      box(rest,  post, env1, old, st)
-
+      box(rest, post, env1, old, st)
 
     case Spec(mod, phi, psi) :: rest =>
-      val _pre = eval(phi, env0, old, st)
       val (formals, env1) = env0 havoc mod
-      val _post = eval(psi, env1, old, st)
-      _pre ==> Forall(formals, _post ==> box(rest, post,  env0, old, st))
+      val _phi = eval(phi, env0, old, st)
+      val _psi = eval(psi, env1, env0 :: old, st)
+      _phi ==> Forall(formals, _psi ==> box(rest, post, env0, old, st))
 
     case If(test, Block(left), Block(right)) :: rest =>
       val _test = eval(test, env0, old, st)
-      val _left = _test ==> box(left ++ rest, post,  env0, old, st)
-      val _right = !_test ==> box(right ++ rest, post,  env0, old, st)
+      val _left = _test ==> box(left ++ rest, post, env0, old, st)
+      val _right = !_test ==> box(right ++ rest, post, env0, old, st)
       _left && _right
   }
 
   def dia(progs: List[Prog], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
     case Nil =>
-      val _post = eval(post, env0, old, st)
-      _post
+      val _psi = eval(post, env0, old, st)
+      _psi
 
     case Assign(xs, es) :: rest =>
       val _es = es map (eval(_, env0, old, st))
       val env1 = env0 assign (xs, _es)
       dia(rest, post, env1, old, st)
 
-
     case Spec(mod, phi, psi) :: rest =>
-      val _pre = eval(phi, env0, old, st)
       val (formals, env1) = env0 havoc mod
-      val _post = eval(psi, env1, old, st)
-      _pre && Exists(formals, _post && dia(rest, post,  env0, old, st))
+      val _phi = eval(phi, env0, old, st)
+      val _psi = eval(psi, env1, env0 :: old, st)
+      _phi && Exists(formals, _psi && dia(rest, post, env0, old, st))
 
     case If(test, Block(left), Block(right)) :: rest =>
       val _test = eval(test, env0, old, st)
-      val _left = _test && dia(left ++ rest, post,  env0, old, st)
-      val _right = !_test && dia(right ++ rest, post,  env0, old, st)
+      val _left = _test && dia(left ++ rest, post, env0, old, st)
+      val _right = !_test && dia(right ++ rest, post, env0, old, st)
       _left || _right
-  }
+  } */
 }

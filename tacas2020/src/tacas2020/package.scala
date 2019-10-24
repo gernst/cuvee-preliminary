@@ -28,6 +28,8 @@ package object tacas2020 {
   val True = Id("true")
   val False = Id("false")
   val Skip = Block()
+  
+  implicit def toNum(value: Int) = Num(value)
 
   implicit class StringOps(self: String) {
     def __(index: Option[Int]): String = index match {
