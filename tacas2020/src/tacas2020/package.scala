@@ -18,7 +18,7 @@ package object tacas2020 {
 
   val True = Id("true")
   val False = Id("false")
-  val Skip = Block()
+  val Skip = Block(Nil)
 
   implicit def toNum(value: Int) = Num(value)
 

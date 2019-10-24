@@ -100,8 +100,9 @@ object Eval {
       val _psi = eval(post, env0, old, st)
       _psi
 
-    case Block(progs) :: rest =>
-      wp(progs ++ rest, post, env0, old, st)
+    case Block(progs, withOld) :: rest =>
+      val old_ = if (withOld) env0 :: old else old
+      wp(progs ++ rest, post, env0, old_, st)
 
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old, st))
@@ -121,7 +122,7 @@ object Eval {
       val _right = !_test ==> wp(right :: rest, post, env0, old, st)
       _left && _right
 
-    case While(test, body, term, phi, psi) :: rest =>
+    case While(test, body, after, term, phi, psi) :: rest =>
       val mod = body.mod
       val mod_ = mod.toList
 
@@ -133,11 +134,13 @@ object Eval {
       val hyp = Spec(mod_, decrease && phi, !test && psi)
 
       val _phi0 = eval(phi, env0, old, st)
+      val _psi0 = eval(psi, env1, old, st)
+
       val _phi1 = eval(phi, env1, old, st)
       val _psi1 = eval(psi, env1, env1 :: old, st)
 
-      val use = _phi0 && Forall(formals, _psi1 ==> wp(rest, post, env1, old, st))
-      val base = Forall(formals, (!_test && _phi1) ==> _psi1)
+      val use = _phi0 && Forall(formals, _psi0 ==> wp(rest, post, env1, old, st))
+      val base = Forall(formals, (!_test && _phi1) ==> wp(List(after), psi, env1, env1 :: old, st))
       val step = Forall(formals, (_test && _phi1) ==> wp(List(body, hyp), psi, env1, env1 :: old, st))
 
       use && base && step
@@ -148,8 +151,9 @@ object Eval {
       val _psi = eval(post, env0, old, st)
       _psi
 
-    case Block(progs) :: rest =>
-      box(progs ++ rest, post, env0, old, st)
+    case Block(progs, withOld) :: rest =>
+      val old_ = if (withOld) env0 :: old else old
+      box(progs ++ rest, post, env0, old_, st)
 
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old, st))
@@ -169,7 +173,7 @@ object Eval {
       val _right = !_test ==> box(right :: rest, post, env0, old, st)
       _left && _right
 
-    case While(test, body, term, phi, psi) :: rest =>
+    case While(test, body, after, term, phi, psi) :: rest =>
       val mod = body.mod
       val mod_ = mod.toList
 
@@ -179,11 +183,14 @@ object Eval {
 
       val hyp = Spec(mod_, phi, !test && psi)
 
+      val _phi0 = eval(phi, env0, old, st)
+      val _psi0 = eval(psi, env1, old, st)
+
       val _phi1 = eval(phi, env1, old, st)
       val _psi1 = eval(psi, env1, env1 :: old, st)
 
-      val use = Forall(formals, _psi1 ==> box(rest, post, env1, old, st))
-      val base = Forall(formals, (!_test && _phi1) ==> _psi1)
+      val use = _phi0 ==> Forall(formals, _psi0 ==> box(rest, post, env1, old, st))
+      val base = Forall(formals, (!_test && _phi1) ==> box(List(after), psi, env1, env1 :: old, st))
       val step = Forall(formals, (_test && _phi1) ==> box(List(body, hyp), psi, env1, env1 :: old, st))
 
       use && base && step
@@ -194,8 +201,9 @@ object Eval {
       val _psi = eval(post, env0, old, st)
       _psi
 
-    case Block(progs) :: rest =>
-      dia(progs ++ rest, post, env0, old, st)
+    case Block(progs, withOld) :: rest =>
+      val old_ = if (withOld) env0 :: old else old
+      dia(progs ++ rest, post, env0, old_, st)
 
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old, st))
@@ -215,7 +223,7 @@ object Eval {
       val _right = !_test && dia(right :: rest, post, env0, old, st)
       _left || _right
 
-    case While(test, body, term, phi, psi) :: rest =>
+    case While(test, body, after, term, phi, psi) :: rest =>
       val mod = body.mod
       val mod_ = mod.toList
 
@@ -227,12 +235,14 @@ object Eval {
       val hyp = Spec(mod_, decrease && phi, !test && psi)
 
       val _phi0 = eval(phi, env0, old, st)
+      val _psi0 = eval(psi, env1, old, st)
+
       val _phi1 = eval(phi, env1, old, st)
       val _psi1 = eval(psi, env1, env1 :: old, st)
 
-      val use = _phi0 && Exists(formals, _psi1 && dia(rest, post, env1, old, st))
-      val base = Forall(formals, (!_test && _phi1) ==> _psi1)
-      val step = Forall(formals, (_test && _phi1) ==> wp(List(body, hyp), psi, env1, env1 :: old, st))
+      val use = _phi0 && Exists(formals, _psi0 && dia(rest, post, env1, old, st))
+      val base = Forall(formals, (!_test && _phi1) ==> dia(List(after), psi, env1, env1 :: old, st))
+      val step = Forall(formals, (_test && _phi1) ==> dia(List(body, hyp), psi, env1, env1 :: old, st))
 
       use && base && step
   }

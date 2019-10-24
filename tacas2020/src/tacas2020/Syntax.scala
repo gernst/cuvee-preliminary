@@ -233,7 +233,7 @@ sealed trait Prog {
   def rename(re: Map[Id, Id]): Prog
 }
 
-case class Block(progs: List[Prog]) extends Prog {
+case class Block(progs: List[Prog], withOld: Boolean) extends Prog {
   def mod = Set(progs flatMap (_.mod): _*)
   def read = Set(progs flatMap (_.read): _*)
   def rename(re: Map[Id, Id]) = Block(progs map (_ rename re))
@@ -242,8 +242,8 @@ case class Block(progs: List[Prog]) extends Prog {
 }
 
 object Block extends (List[Prog] => Block) {
-  def apply(progs: Prog*): Block = {
-    Block(progs.toList)
+  def apply(progs: List[Prog]): Block = {
+    Block(progs, false)
   }
 }
 
@@ -276,11 +276,21 @@ case class If(test: Expr, left: Prog, right: Prog) extends Prog {
   override def toString = "(if " + test + " " + left + " " + right + ")"
 }
 
-case class While(test: Expr, body: Prog, term: Expr, pre: Expr, post: Expr) extends Prog {
+case class While(test: Expr, body: Prog, after: Prog, term: Expr, pre: Expr, post: Expr) extends Prog {
   def mod = body.mod
   def read = test.free ++ body.read
-  def rename(re: Map[Id, Id]) = While(test rename re, body rename re, term rename re, pre rename re, post rename re)
-  override def toString = "(while " + test + " " + body + " :termination " + term + " :precondition " + pre + " :post " + post + ")"
+  def rename(re: Map[Id, Id]) = While(test rename re, body rename re, after rename re, term rename re, pre rename re, post rename re)
+  override def toString = "(while " + test + " " + body + " " + after + " :termination " + term + " :precondition " + pre + " :post " + post + ")"
+}
+
+object While extends ((Expr, Prog, Option[Prog], Option[Expr], Option[Expr], Option[Expr]) => While) {
+  def apply(test: Expr, body: Prog, after: Option[Prog], term: Option[Expr], pre: Option[Expr], post: Option[Expr]): While = {
+    val _after = after getOrElse Skip
+    val _term = term getOrElse Num(0)
+    val _pre = pre getOrElse True
+    val _post = post getOrElse True
+    While(test, body, _after, _term, _pre, _post)
+  }
 }
 
 sealed trait Cmd {
@@ -316,8 +326,20 @@ case class Assert(expr: Expr) extends Cmd {
 }
 
 object CounterExample extends ((Expr, Prog, Expr) => Cmd) {
-  def apply(pre: Expr, prog: Prog, post: Expr): Cmd = {
-    Assert(!(pre ==> WP(prog, post)))
+  def apply(pre: Expr, prog: Prog, post: Expr): Cmd = prog match {
+    case While(test, body, after, term, phi, psi) =>
+      val _pre = if (phi == True) pre else phi
+      val _post = if (psi == True) post else psi
+      val _loop = While(test, body, after, term, _pre, _post)
+      val _prog = Block(List(_loop), withOld = true)
+
+      if (term == Num(0))
+        Assert(!(pre ==> Box(_prog, post)))
+      else
+        Assert(!(pre ==> WP(_prog, post)))
+
+    case _ =>
+      Assert(!(pre ==> WP(prog, post)))
   }
 }
 
