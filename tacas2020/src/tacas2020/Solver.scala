@@ -1,47 +1,61 @@
 package tacas2020
 
-case class ProofUnknown(info: Any*) extends Error
-case class ProofFailure(info: Any*) extends Error
-case class ProofError(info: Any*) extends Error
+class Solver {
+  var states: List[State] = _
+  reset()
 
-object Solver {
-  var timeout = 5000
-  var uninterpreted: Set[Fun] = Set()
-  def default = SMT2.z3(timeout)
-}
+  val top = states.head
 
-trait Solver {
-  def assume(phi: Pure)
-  def assumeDistinct(exprs: Iterable[Pure])
-  def push()
-  def pop()
-
-  def isConsistent: Boolean
-
-  def isSatisfiable(phi: Pure): Boolean = {
-    assuming(phi) { isConsistent }
+  def reset() {
+    states = List(State.default)
   }
 
-  def assume(phis: Iterable[Pure]) {
-    for (phi <- phis)
-      assume(phi)
+  def pop() = {
+    ensure(!states.isEmpty, "empty stack")
+    val st :: rest = states
+    states = rest
+    st
   }
 
-  def scoped[A](f: => A): A = {
-    push()
-    try {
-      f
-    } finally {
-      pop()
-    }
+  def push(st: State) {
+    states = st :: states
   }
 
-  def assuming[A](phis: Pure*)(f: => A): A = scoped {
-    assume(phis)
-    f
-  }
+  def exec(cmd: Cmd) = cmd match {
+    case Exit =>
+      System.exit(0)
 
-  def isValid(phi: Pure): Boolean = {
-    !isSatisfiable(!phi)
+    case Reset =>
+      reset()
+
+    case Push =>
+      push(top)
+
+    case Pop =>
+      pop
+
+    case Assert(expr) =>
+      val state = pop()
+      push(state assert expr)
+
+    case DeclareSort(sort, arity) =>
+      val state = pop()
+      push(state declare (sort, arity))
+
+    case DefineSort(sort, args, body) =>
+      val state = pop()
+      push(state define (sort, args, body))
+
+    case DeclareFun(id, Nil, res) =>
+      val state = pop()
+      push(state declare (id, res))
+
+    case DeclareFun(id, args, res) =>
+      val state = pop()
+      push(state declare (id, args, res))
+
+    case DefineFun(id, args, res, body) =>
+      val state = pop()
+      push(state define (id, args, res, body))
   }
 }

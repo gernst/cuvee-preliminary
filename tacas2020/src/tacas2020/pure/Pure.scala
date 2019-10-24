@@ -1,4 +1,7 @@
-package tacas2020
+package tacas2020.pure
+
+import tacas2020.StringOps
+import tacas2020.Alpha
 
 sealed trait Pure extends Pure.term with Sugar.expr {
   def typ: Sort
@@ -51,7 +54,6 @@ object Pure extends Alpha[Pure, Var] {
   object and extends binary(Fun.and)
   object or extends binary(Fun.or)
   object imp extends binary(Fun.imp)
-  object eqv extends binary(Fun.eqv)
 
   object cons extends binary(Fun.cons)
   object in extends binary(Fun.in)
@@ -70,7 +72,7 @@ object Const {
   }
 
   def unapply(expr: Pure) = expr match {
-    case App(Fun(name, Nil, typ, _), Nil) =>
+    case App(Fun(name, Nil, typ), Nil) =>
       Some((name, typ))
     case _ =>
       None
@@ -78,15 +80,9 @@ object Const {
 
   def int(n: Int) = Const(n.toString, Sort.int)
   def bool(b: Boolean) = Const(b.toString, Sort.bool)
-
-  def nil(inst: Sort.list) = new App(Fun.nil, Nil) {
-    assert(fun.args.isEmpty)
-    override val env = Sort.unify(fun.ret, inst, Set.empty[Param], Typing.empty)
-  }
 }
 
 case class Var(name: String, typ: Sort, index: Option[Int] = None) extends Pure with Pure.x {
-  def prime = Var(name + "'", typ, index)
   def fresh(index: Int) = Var(name, typ, Some(index))
   override def toString = name __ index
 }
@@ -112,7 +108,7 @@ case class App(fun: Fun, args: List[Pure]) extends Pure {
   def rename(re: Ren) = App(fun, args map (_ rename re))
   def subst(su: Subst) = App(fun, args map (_ subst su))
 
-  override def toString = fun.format(args, 0, Non)
+  override def toString = (fun :: args).mkString("(", " ", ")")
 }
 
 sealed trait Quant {
@@ -144,12 +140,14 @@ sealed trait Quant {
   }
 }
 
-case object All extends Quant {
-  override def toString = "forall"
-}
+object Bind {
+  case object all extends Quant {
+    override def toString = "forall"
+  }
 
-case object Ex extends Quant {
-  override def toString = "exists"
+  case object ex extends Quant {
+    override def toString = "exists"
+  }
 }
 
 case class Bind(quant: Quant, bound: Set[Var], body: Pure) extends Pure with Pure.bind {

@@ -1,6 +1,6 @@
-package tacas2020
+package tacas2020.pure
 
-case class SimplificationFailure(info: Any*) extends Error
+import tacas2020.Error
 
 sealed trait Rule
 
@@ -24,7 +24,7 @@ case class Case(pre: Pure, concl: App) {
   def bound = pre.free -- concl.free
 
   def apply(su: Subst) = {
-    val _pre = Ex(bound, pre)
+    val _pre = Bind.ex(bound, pre)
     _pre subst su
   }
 }
@@ -97,7 +97,7 @@ case class Simplify(rw: List[Rule]) extends (Pure => Pure) {
       simplify(phi, ctx)
     } catch {
       case _: StackOverflowError =>
-        throw SimplificationFailure("nonterminating simplifcation", phi)
+        throw Error("nonterminating simplifcation", phi)
     }
 
   }
@@ -293,7 +293,7 @@ case class Simplify(rw: List[Rule]) extends (Pure => Pure) {
 
   def prune(phi: Pure, q: Quant, bound: Set[Var], pos: Boolean): Pure = phi match {
     case Pure._eq(x: Var, e) if !(e.free contains x) && (bound contains x) =>
-      if (pos && q == Ex || !pos && q == All) {
+      if (pos && q == Bind.ex || !pos && q == Bind.all) {
         True
       } else {
         phi

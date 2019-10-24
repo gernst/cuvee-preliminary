@@ -1,5 +1,7 @@
-package tacas2020
+package tacas2020.pure
 
+import tacas2020.Error
+import tacas2020.sexpr
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileWriter
@@ -18,6 +20,8 @@ object SMT2 {
     def cmds = rcmds.reverse
   }
 
+  val empty = SMT2.state(Set(), Set(), Set(), List())
+
   def z3(timeout: Int) = new SMT2("z3", "-t:" + timeout, "-in") {
     override def declare_list() {} // Z3 has builtin lists
   }
@@ -25,8 +29,6 @@ object SMT2 {
   def cvc4(timeout: Int) = new SMT2("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--increment-triggers") {
     command("set-logic", "ALL")
   }
-
-  val pointer = Sort.int // Sort.base("Pointer")
 }
 
 trait Backend {
@@ -71,7 +73,7 @@ object Backend {
 
     def ok() {
       if (!pr.isAlive)
-        throw ProofError("backend died", pr.exitValue)
+        throw Error("backend died", pr.exitValue)
     }
   }
 
@@ -108,11 +110,7 @@ object Backend {
 class SMT2(args: String*) extends Solver {
   val backend: Backend = new Backend.incremental(args: _*)
 
-  object State {
-    val empty = SMT2.state(Set(), Set(), Set(), List())
-  }
-
-  var stack = List(State.empty)
+  var stack = List(SMT2.empty)
   def state = stack.head
   state.rcmds = Nil // don't track this command commands
 
@@ -159,16 +157,8 @@ class SMT2(args: String*) extends Solver {
         out.flush()
         out.close()
 
-        throw ProofUnknown("timeout", result, "re-run this query with", args.mkString("", " ", " < ") + path)
+        throw Error("timeout", result, "re-run this query with", args.mkString("", " ", " < ") + path)
     }
-  }
-
-  def sexpr(arg0: String, args: String*) = {
-    "(" + arg0 + " " + args.mkString(" ") + ")"
-  }
-
-  def sexpr(args: Iterable[String]) = {
-    args mkString ("(", " ", ")")
   }
 
   def command(name: String, args: String*) = {
@@ -196,7 +186,7 @@ class SMT2(args: String*) extends Solver {
     val out = backend.read()
     if (out != "success") {
       println(this)
-      throw ProofError(cmd, out)
+      throw Error(cmd, out)
     }
   }
 
@@ -206,10 +196,6 @@ class SMT2(args: String*) extends Solver {
       state.sorts += name
       command("declare-sort", name, "0")
     }
-  }
-
-  def declare_pointer() {
-    declare_typ(SMT2.pointer)
   }
 
   def declare_list() {
@@ -241,9 +227,6 @@ class SMT2(args: String*) extends Solver {
   def declare_typ(typ: Sort): Unit = typ match {
     case Sort.bool =>
     case Sort.int =>
-    case Sort.pointer(elem) =>
-      declare_pointer()
-      declare_typ(elem)
     case sort: Sort.base =>
       declare_sort(sort)
     case Sort.list(elem) =>
@@ -268,14 +251,10 @@ class SMT2(args: String*) extends Solver {
   }
 
   def smt(typ: Sort): String = typ match {
-    case _: Param =>
-      ???
     case Sort.bool =>
       "Bool"
     case Sort.int =>
       "Int"
-    case ptr: Sort.pointer =>
-      smt(SMT2.pointer)
     case sort @ Sort.base(name) =>
       declare_typ(typ)
       name
@@ -292,6 +271,7 @@ class SMT2(args: String*) extends Solver {
     if (name forall (_.isLetterOrDigit)) name
     else "|" + name + "|"
   }
+
   def mangle(name: String, index: Option[Int]): String = index match {
     case None => mangle(name)
     case Some(index) => mangle(name + index)
@@ -377,8 +357,6 @@ class SMT2(args: String*) extends Solver {
       sexpr("or", smt(scope, arg1), smt(scope, arg2))
     case Pure.imp(arg1, arg2) =>
       sexpr("=>", smt(scope, arg1), smt(scope, arg2))
-    case Pure.eqv(arg1, arg2) =>
-      sexpr("=", smt(scope, arg1), smt(scope, arg2))
 
     case App(Fun.nil, List()) =>
       "nil"

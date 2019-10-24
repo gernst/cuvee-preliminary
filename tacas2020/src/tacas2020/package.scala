@@ -1,51 +1,24 @@
 package object tacas2020 {
-  trait Exception {
-    def info: Seq[Any]
-    override def toString = info.mkString("Error(", ",", ")")
+  case class Error(info: Any*) extends Exception
+
+  def ensure(test: Boolean, info: Any*) = {
+    if (!test) throw Error(info)
   }
 
-  type TRen = Map[Param, Param]
+  type TRen = Map[Sort, Sort]
+  type Typing = Map[Sort, Type]
 
-  type Typing = Map[Param, Sort]
-  object Typing { val empty: Typing = Map() }
+  type Ren = Map[Id, Id]
+  type Subst = Map[Id, Expr]
 
-  type Ren = Map[Var, Var]
-  object Ren { val empty: Ren = Map() }
+  val True = Id("true")
+  val False = Id("false")
+  val Skip = Block()
 
-  type Subst = Map[Var, Pure]
-  object Subst { val empty: Subst = Map() }
-
-  val True = Fun._true()
-  val False = Fun._false()
-
-  implicit def toConst(n: Int) = Const.int(n)
-
-  val sub = "₀₁₂₃₄₅₆₇₈₉"
   implicit class StringOps(self: String) {
-    def prime = self + "'"
-
-    def __(index: Int): String = {
-      self + (index.toString map (n => sub(n - '0')))
-    }
-
     def __(index: Option[Int]): String = index match {
       case None => self
-      case Some(index) => this __ index
-    }
-
-    def form(args: List[_]): String = {
-      var as = args
-      val res = new StringBuilder
-      for (c <- self) {
-        if (c == '_') {
-          res append as.head
-          as = as.tail
-        } else {
-          res append c
-        }
-      }
-      assert(as.isEmpty)
-      res.toString
+      case Some(index) => this.toString + index
     }
   }
 
@@ -55,4 +28,11 @@ package object tacas2020 {
     }
   }
 
+  def sexpr(arg0: String, args: String*) = {
+    "(" + arg0 + " " + args.mkString(" ") + ")"
+  }
+
+  def sexpr(args: Iterable[String]) = {
+    args mkString ("(", " ", ")")
+  }
 }

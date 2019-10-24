@@ -1,4 +1,4 @@
-package tacas2020
+package tacas2020.pure
 
 object Sugar {
   class nullary(val fun: Fun) {
@@ -71,8 +71,6 @@ object Sugar {
 
     def ===(that: Pure) = if (this == that) {
       True
-    } else if (this.typ == Sort.bool && that.typ == Sort.bool) {
-      this <=> that
     } else {
       Pure._eq(this, that)
     }
@@ -115,17 +113,7 @@ object Sugar {
       case _ => Pure.imp(this, that)
     }
 
-    def <=>(that: Pure) = (this, that) match {
-      case (True, _) => that
-      case (False, _) => !that
-      case (_, True) => this
-      case (_, False) => !this
-      case _ => Pure.eqv(this, that)
-    }
-
-    def isNil = typ match {
-      case typ: Sort.list => this === Const.nil(typ)
-    }
+    def isNil = this === Fun.nil()
 
     def in(that: Pure) = Pure.in(this, that)
     def head = Pure.head(this)

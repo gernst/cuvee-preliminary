@@ -84,7 +84,7 @@ trait Alpha[E <: Alpha.term[E, V], V <: E with Alpha.x[E, V]] {
     zs.toMap
   }
 
-  def compose(inner: Subst, outer: Subst) = {
+  def compose(inner: Map[V, E], outer: Map[V, E]) = {
     val updated = inner map {
       case (x, e) => (x, e subst outer)
     }
