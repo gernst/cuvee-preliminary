@@ -86,6 +86,12 @@ object Main {
       for (file <- files.reverse)
         read(file)
 
+    case "-z3" :: Nil =>
+      run("--" :: "z3" :: "-in" :: Nil, files)
+
+    case "-cvc4" :: Nil =>
+      run("--" :: "cvc4" :: "--lang" :: "smt2" :: Nil, files)
+
     case "--" :: args =>
       ensure(args.length >= 1, "-- needs an SMT solver as argument")
 

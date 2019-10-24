@@ -62,8 +62,9 @@ object Parser {
   val post = P(":postcondition" ~ expr)
   val while_ = P(While("while" ~ expr ~ prog ~ prog.? ~ term.? ~ pre.? ~ post.?))
 
-  val cmd: Parser[Cmd] = P(parens(exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_assertions_ | declare_const_ | declare_fun_))
+  val cmd: Parser[Cmd] = P(parens(set_logic_ | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_assertions_ | declare_const_ | declare_fun_))
 
+  val set_logic_ = P(SetLogic("set-logic" ~ name))
   val exit_ = P(Exit("exit"))
   val reset_ = P(Reset("reset"))
   val push_ = P(Reset("push 1"))

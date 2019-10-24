@@ -72,6 +72,10 @@ class Solver {
       map(cmd, x => x)
       ack()
 
+    case SetLogic(logic) =>
+      map(cmd, x => x)
+      ack()
+
     case Assert(expr) =>
       import Eval.eval
       val _expr = eval(expr, top.env, List.empty, top)

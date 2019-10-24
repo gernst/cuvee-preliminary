@@ -297,6 +297,10 @@ sealed trait Cmd {
 
 }
 
+case class SetLogic(logic: String) extends Cmd {
+  override def toString = "(set-logic " + logic + ")"
+}
+
 case object Exit extends Cmd {
   override def toString = "(exit)"
 }
