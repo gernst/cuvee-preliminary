@@ -138,7 +138,6 @@ case class Eq(left: Expr, right: Expr) extends Expr {
   override def toString = "(= " + left + " " + right + ")"
 }
 
-
 object Imp extends ((Expr, Expr) => Expr) {
   def apply(left: Expr, right: Expr): App = {
     App(Id.imp, left, right)
@@ -207,21 +206,21 @@ case class Bind(quant: Quant, formals: List[Formal], body: Expr) extends Expr wi
   override def toString = "(" + quant + formals.mkString(" (", " ", ") ") + body + ")"
 }
 
-case class WP(prog: Block, post: Expr) extends Expr {
+case class WP(prog: Prog, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
   def rename(re: Map[Id, Id]) = WP(prog rename re, post rename re)
   def subst(su: Map[Id, Expr]) = ???
   override def toString = "(wp " + prog + " " + post + ")"
 }
 
-case class Box(prog: Block, post: Expr) extends Expr {
+case class Box(prog: Prog, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
   def rename(re: Map[Id, Id]) = Box(prog rename re, post rename re)
   def subst(su: Map[Id, Expr]) = ???
   override def toString = "(box " + prog + " " + post + ")"
 }
 
-case class Dia(prog: Block, post: Expr) extends Expr {
+case class Dia(prog: Prog, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
   def rename(re: Map[Id, Id]) = Dia(prog rename re, post rename re)
   def subst(su: Map[Id, Expr]) = ???
@@ -234,7 +233,7 @@ sealed trait Prog {
   def rename(re: Map[Id, Id]): Prog
 }
 
-case class Block(progs: List[Prog]) {
+case class Block(progs: List[Prog]) extends Prog {
   def mod = Set(progs flatMap (_.mod): _*)
   def read = Set(progs flatMap (_.read): _*)
   def rename(re: Map[Id, Id]) = Block(progs map (_ rename re))
@@ -270,14 +269,14 @@ case class Spec(xs: List[Id], pre: Expr, post: Expr) extends Prog {
   override def toString = "(spec " + xs.mkString(" (", " ", ") ") + pre + post + ")"
 }
 
-case class If(test: Expr, left: Block, right: Block) extends Prog {
+case class If(test: Expr, left: Prog, right: Prog) extends Prog {
   def mod = left.mod ++ right.mod
   def read = test.free ++ left.read ++ right.read
   def rename(re: Map[Id, Id]) = If(test rename re, left rename re, right rename re)
   override def toString = "(if " + test + " " + left + " " + right + ")"
 }
 
-case class While(test: Expr, body: Block, term: Expr, pre: Expr, post: Expr) extends Prog {
+case class While(test: Expr, body: Prog, term: Expr, pre: Expr, post: Expr) extends Prog {
   def mod = body.mod
   def read = test.free ++ body.read
   def rename(re: Map[Id, Id]) = While(test rename re, body rename re, term rename re, pre rename re, post rename re)
@@ -314,6 +313,12 @@ case object CheckSat extends Cmd {
 
 case class Assert(expr: Expr) extends Cmd {
   override def toString = "(assert " + expr + ")"
+}
+
+object CounterExample extends ((Expr, Prog, Expr) => Cmd) {
+  def apply(pre: Expr, prog: Prog, post: Expr): Cmd = {
+    Assert(!(pre ==> WP(prog, post)))
+  }
 }
 
 case class DeclareSort(sort: Sort, arity: Int) extends Cmd {
