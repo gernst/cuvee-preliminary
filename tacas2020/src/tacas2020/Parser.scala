@@ -62,12 +62,14 @@ object Parser {
   val post = P(":postcondition" ~ expr)
   val while_ = P(While("while" ~ expr ~ prog ~ term ~ pre ~ post))
 
-  val cmd: Parser[Cmd] = P(parens(exit_ | reset_ | push_ | pop_ | verify_ | assert_ | get_assertions_ | declare_const_ | declare_fun_))
+  val cmd: Parser[Cmd] = P(parens(exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_assertions_ | declare_const_ | declare_fun_))
 
   val exit_ = P(Exit("exit"))
   val reset_ = P(Reset("reset"))
   val push_ = P(Reset("push 1"))
   val pop_ = P(Reset("pop 1"))
+
+  val check_sat_ = P(CheckSat("check-sat"))
 
   val assert_ = P(Assert("assert" ~ expr))
   val verify_ = P(CounterExample("assert-counterexample" ~ expr ~ prog ~ expr))
