@@ -205,7 +205,7 @@ i.e., the program is correct with respect to the specified contract.
 \subsection{Proof Rules}
 \label{sec:semantics}
 
-\begin{figure}
+\begin{figure}[t]
     \begin{align*}
 \code{(wp (assign (($x_1$ $t_1$) $\cdots$ ($x_n$ $t_n$))) $Q$)}
     & \equiv Q[x_1,\ldots,x_n \gets t_1,\ldots,t_n]
@@ -225,24 +225,65 @@ i.e., the program is correct with respect to the specified contract.
                             \to Q[\xs \gets \ys]$)}
               }
     \\[1em]
-\infer{\code{(wp (while $b$ $p$) $Q$)}}
+\infer{\code{(box (while $b$ $p$) $Q$)}}
 {   
 \begin{array}{c}
-   \code{(wp (spec ($\xs$) $\phi$ $\psi$) $Q$)} \\
-   \code{(forall ($\xs$) (=> (and $\phi$ (not $b$)) (wp (block $p$ (spec ($\xs$) $\phi$ $\psi$)) $Q$)$[\underline{\code{(old $x$)}} \gets \xs]$))} \\
-   \code{(forall ($\xs$) (=> (and $\phi$ $b$) $Q[\underline{\code{(old $x$)}} \gets \xs]$))}
+   \code{(box (spec ($\xs$) $\phi$ $\psi$) $Q$)} \\
+   \code{(forall ($\xs$) (=> (and $\phi$ (not $b$)) $Q[\underline{\code{(old $x$)}} \gets \xs]$))} \\
+   \code{(forall ($\xs$) (=> (and $\phi$ $b$) (box (block $p$ (spec ($\xs$) $\phi$ $\psi$)) $\psi$)$[\underline{\code{(old $x$)}} \gets \xs]$))}
 \end{array}}
-    \end{gather*}
     \\
-        \qquad \text{where $\phi$ is the precondition of the loop and $\psi$ is the postcondition}
+        \qquad \text{where $\phi$ is the precondition of the loop and $\psi$ is the postcondition,} \\
+        \qquad \text{$\xs$ are the variables modified by the loop body~$p$ and $\ys$ are fresh.}
+    \end{gather*}
     \label{fig:semantics}
     \caption{Predicate transformer semantics for the programming language in \cref{fig:syntax}.
              The rules for the specification statement and loops are given as inference rules
              to improve readability (these could be equally formulated as equivalences).}
 \end{figure}
 
-The predicate transformer semantics of the input language is shown in \cref{fig:semantics} for the \code{wp} operator.
-The rules for \code{box} and \code{dia} are similar.
+The predicate transformer semantics of the input language is shown in \cref{fig:semantics} for the \code{wp} operator,
+with the exception of the loop rule, which is shortened to omit the termination conditions
+and therefore expressed using \code{box}. The rules for \code{box} and \code{dia} are similar.
+Note that~$Q$ is a term that may again contain weakest-precondition operators.
+
+The first three equivalences are standard~\cite{}.
+Assignments propagate as a simultaneous substitution into the postcondition~$Q$.
+Sequential execution simply nests the weakest precondition operator.
+Conditionals produce two branches that evaluate the test positively resp.~negatively.
+
+The specification statement binds fresh copies~$\ys$ for the havoc'ed variables~$\xs$,
+and substitutes \code{old} expressions in the postcondition~$\psi$.
+The first premise simply asserts the precondition~$\phi$.
+
+\medskip
+
+The loop rule is more involved and proceeds by induction on the number of loop iterations.
+It has three premises:
+The first, abstracts the entire execution of the loop loop with a specification statement,
+after which the postcondition~$Q$ needs to hold.
+
+The second premise corresponds to the base case of the induction
+and establishes $Q$ upon termination (when $b$ is false).
+Old values in~$Q$ refer to the current state.
+
+The third premise corresponds to the inductive case, where~$b$ holds.
+Then, the condition to show is that after executing the loop body~$p$ once,
+the inductive hypothesis about the remaining iterations is sufficient to establish~$\psi$ after the entire loop.
+This hypothesis is encoded as a specification statement
+\code{(spec ($\xs$) $\phi$ $\psi$)}
+that abstracts the remaining iterations, similarly as in the first premise.
+
+The interaction between the different occurrences of \code{old} is somewhat intricate:
+Within the specification statement, \code{old} refers to the state \emph{after} the first iteration,
+according to the corresponding proof rule.
+Hence, the it encodes that it is possible at that point to turn the precondition~$\phi$
+into an arbitrary state after the remaining iterations that satisfies~$\psi$ for fresh copies of the modified variables~$\xs$
+introduced by the specification statement.
+Ultimately, this knowledge needs to suffice to establish~$\psi$ after the loop with \emph{all} iterations,
+where \code{old} refers to the state \emph{before} executing the first iteration~$p$.
+
+A good explanation of this loop rule can be found e.g. in~\cite{}.
 
 \section{Tool Description}
 \label{sec:tool}
