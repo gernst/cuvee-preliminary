@@ -1,0 +1,73 @@
+\documentclass[fleqn]{llncs}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+% nice code font
+\usepackage[scaled=0.8]{beramono}
+
+% math stuff
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+
+\usepackage{xspace}
+
+% nice citations
+\usepackage[numbers]{natbib}
+
+% clickable links and cross-references
+\usepackage{hyperref}
+\hypersetup{hidelinks,
+    colorlinks=true,
+    allcolors=blue,
+    pdfstartview=Fit,
+    breaklinks=true}
+
+% easy cross-references with \cref
+\usepackage[capitalise,nameinlink]{cleveref}
+
+\pagestyle{plain}
+
+\newcommand{\Cuvee}{\textsc{Cuvée}\xspace}
+
+\title{\Cuvee: Blending SMT-LIB with \\ Programs and Weakest Preconditions}
+\author{Gidon Ernst}
+\institute{LMU Munich, Germany, \email{gidon.ernst@lmu.de}}
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\Cuvee is a program verification tool that reads SMT-LIB-like input files where expressions may additionally contain weakest precondition operators over abstract programs.
+\Cuvee translates such inputs into first-order SMT-LIB by symbolically executing these programs.
+The input format used by \Cuvee is intended to bring different verification communities closer together and achieve a similar unification of tools for that for example synthesize loop summaries.
+A notable technical aspect of \Cuvee itself is the consequent use of loop pre-/postconditions instead of invariants, and we demonstrate how this lowers the annotation burden on some simple while programs.
+\end{abstract}
+
+\begin{keywords}
+Program Verification, SMT-LIB, Weakest Precondition
+\end{keywords}
+
+\section{Introduction}
+
+Intermediate verification languages and tools such as Boogie, Why3, and Viper
+have had a significant impact on the state-of-the-art of (deductive) program verification.
+At the annual competition on interactive program verification VerifyThis~\cite{},
+tools like these are put to practice on small but intricate verification problems.
+
+SMT-LIB~\cite{} is a standardized interchange format for verification tasks in first-order logic
+that is widely used in many different application domains such as constraint-solving, program verification, and model-checking.
+Many mature tools are available \cite{}, and the annual SMT-COMP evaluates and compares their performance on benchmark problems.
+Part of the success of the SMT-LIB format is its regular syntax and its precise standardization.
+
+SV-COMP~\cite{} is 
+
+
+In comparison to existing intermediate verification languages such as Boogie, Why3, and Viper,
+it is more light-weight and aims to be easier to implement and process automatically.
+The input format used by \Cuvee is intended to bridge the gap between automated theorem proving,
+and between the goals of SV-COMP (fully automatic verification of C programs)
+and the VerifyThis competition (
+
+\end{document}
