@@ -12,6 +12,10 @@
 
 \usepackage{xspace}
 
+% grammars
+\usepackage{syntax}
+\setlength{\grammarindent}{8em}
+
 % nice citations
 \usepackage[numbers]{natbib}
 
@@ -29,6 +33,11 @@
 \pagestyle{plain}
 
 \newcommand{\Cuvee}{\textsc{Cuvée}\xspace}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\hoare}[3]{\{ #1 \}~#2~\{ #3 \}}
+\newcommand{\hoaretotal}[3]{[ #1 ]~#2~[ #3 ]}
+
+\newcommand{\nonterminal}[1]{\ensuremath{\langle \mathit{#1} \rangle}}
 
 \title{\Cuvee: Blending SMT-LIB with \\ Programs and Weakest Preconditions}
 \author{Gidon Ernst}
@@ -39,10 +48,11 @@
 \maketitle
 
 \begin{abstract}
-\Cuvee is a program verification tool that reads SMT-LIB-like input files where expressions may additionally contain weakest precondition operators over abstract programs.
+\Cuvee is a program verification tool that reads SMT-LIB-like input files where terms may additionally contain weakest precondition operators over abstract programs.
 \Cuvee translates such inputs into first-order SMT-LIB by symbolically executing these programs.
 The input format used by \Cuvee is intended to bring different verification communities closer together and achieve a similar unification of tools for that for example synthesize loop summaries.
 A notable technical aspect of \Cuvee itself is the consequent use of loop pre-/postconditions instead of invariants, and we demonstrate how this lowers the annotation burden on some simple while programs.
+Moreover, \Cuvee can express refinement conditions between multiple programs.
 \end{abstract}
 
 \begin{keywords}
@@ -69,5 +79,61 @@ it is more light-weight and aims to be easier to implement and process automatic
 The input format used by \Cuvee is intended to bridge the gap between automated theorem proving,
 and between the goals of SV-COMP (fully automatic verification of C programs)
 and the VerifyThis competition (
+
+\section{Input Format}
+
+\begin{figure}
+    \begin{grammar}
+    <var_binding>
+        ::= "(" <symbol> <term> ")"
+
+    <term>
+        ::=  "(wp" <program> <term>")"
+        \alt "(box" <program> <term>")"
+        \alt "(dia" <program> <term>")"
+        \alt ...
+
+    <program>
+        ::=  "(assign" "("<var_binding>")"$^+$ ")"
+        \alt "(spec"   "(" <symbol>$^+$ ")" <term> <term> ")"
+        \alt "(if"     <term> <term> <term> ")"
+        \alt "(while"  <term> <term> <term> ")"
+
+    <command>
+        ::=  "(assert-counterexample" <term> <program> <term> ")"
+        \alt ...
+    \end{grammar}
+    \caption{Extension of the SMT-LIB supported by \Cuvee:
+             Weakest-precondition operators,
+             simple nondeterministic \textsc{While} programs,
+             and a top-level command to specify Hoare triples
+             (\nonterminal{var\_binding} is from the SMT-LIB grammar).}
+    \label{fig:syntax}
+\end{figure}
+
+The additional constructs accepted by \Cuvee are shown in \cref{fig:syntax}.
+
+\Cuvee extends the \nonterminal{term} language of SMT-LIB by three weakest-precondition operators,
+\code{(wp  $p$ $t$)}, \code{(box $p$ $t$)}, \code{(dia $p$ $t$)}
+for programs~$p$ (see below)
+and postconditions~$t$ (terms of sort \code{Bool},
+which state slightly different correctness criteria with respect to termination and nondeterministic choices.
+
+The first one, \code{wp} is Dijkstra's standard weakest precondition that expresses that all executions of~$p$,
+when started in the current state, terminate and lead to a state that satisfies~$t$.
+For instance, a Hoare triple total correctness $\hoaretotal{\phi}{p}{\psi}$ can be written as the implication \code{(=> $\phi$ (wp $p$ $\psi$))}
+
+Similarly, \code{box} does not require termination (i.e., it expresses the weakest liberal precondition),
+i.e., $\hoare{\phi}{p}{\psi}$ can be written as \code{(=> $\phi$ (box $p$ $\psi$))}
+The operator \code{dia} reflects angelic execution instead of demonic execution:
+For \code{(dia $p$ $t$)} it is required that there is at least one execution of~$p$
+that terminates and leads to a state that satisfies~$t$.
+The names of the latter two operators is taken from Dynamic Logic~\cite{}.
+
+Moveover, the expression \code{(old $t$)} may be used to refer to initial states of loop executions.
+
+\section{Tool Description}
+
+\section{Examples}
 
 \end{document}
