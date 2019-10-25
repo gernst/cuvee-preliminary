@@ -52,9 +52,10 @@
 \maketitle
 
 \begin{abstract}
+\url{https://github.com/gernst/cuvee/blob/master/ae.zip}\\
 \Cuvee is a program verification tool that reads SMT-LIB-like input files where terms may additionally contain weakest precondition operators over abstract programs.
 \Cuvee translates such inputs into first-order SMT-LIB by symbolically executing these programs.
-The input format used by \Cuvee is intended to bring different verification communities closer together and achieve a similar unification of tools for that for example synthesize loop summaries.
+The input format used by \Cuvee is intended to achieve a similar unification of tools for that for example synthesize loop summaries.
 A notable technical aspect of \Cuvee itself is the consequent use of loop pre-/postconditions instead of invariants, and we demonstrate how this lowers the annotation burden on some simple while programs.
 % Moreover, \Cuvee can express refinement conditions between multiple programs.
 \end{abstract}
@@ -65,29 +66,27 @@ Program Verification, SMT-LIB, Weakest Precondition
 
 \section{Introduction}
 
-Intermediate verification languages and tools such as Boogie~\cite{}, Why3~\cite{}, and Viper~\cite{}
+Intermediate verification languages and tools such as Boogie~\cite{leino2008boogie}, Why3~\cite{bobot2011why3}, and Viper~\cite{muller2016viper}
 have had a significant impact on the state-of-the-art of (deductive) program verification.
-At the annual competition on interactive program verification VerifyThis~\cite{},
+At the annual competition on interactive program verification VerifyThis~\cite{ernst2019verifythis},
 tools like these are put to practice on small but intricate verification problems.
 Currently, VerifyThis lacks a common input format.
 This is fine for hard challenges where efficiency of the tool and seamless interaction are required.
-SMT-LIB~\cite{} is a standardized interchange format for verification tasks in first-order logic
+SMT-LIB~\cite{Barrett} is a standardized interchange format for verification tasks in first-order logic
 that is widely used in many different application domains such as constraint-solving, program verification, and model-checking.
-Many mature tools are available \cite{}, and the annual SMT-COMP evaluates and compares their performance on benchmark problems.
+Many mature tools are available, and the annual SMT-COMP evaluates and compares their performance on benchmark problems.
 Part of the success of the SMT-LIB format is its regular syntax and its precise standardization.
-SV-COMP~\cite{} is a competition where the participating tools analyze C code fully automatically.
+SV-COMP is a competition where the participating tools analyze C code fully automatically.
 It is therefore restricted to less complex properties that cannot be solved without the guidance of a proof engineer.
 
-The goal of this work is to occupy the spot between these three communities,
-as well as the different technologies involved.
+The goal of this work is to occupy the spot between these communities,
+as well as the different technologies involved~\cite{bartocci2019toolympics}.
 How to make use, e.g., of tools that can infer invariants?
 The input format that is described here and implemented in \Cuvee takes deliberate trade-offs
 to position itself between the highly expressive logic of e.g. Dafny,
 and stressing the interoperability that made SMT-LIB successful.
 As such one design goal, for example, is to re-use the existing logical data types of that format,
 even if it might be less convenient as a front-end for humans.
-
-
 
 \section{Syntax}
 \label{sec:syntax}
@@ -141,7 +140,7 @@ i.e., $\hoare{\phi}{p}{\psi}$ can be written as \code{(=> $\phi$ (box $p$ $\psi$
 The operator \code{dia} reflects angelic execution instead of demonic execution:
 For \code{(dia $p$ $t$)} it is required that there is at least one execution of~$p$
 that terminates and leads to a state that satisfies~$t$.
-The names of the latter two operators is taken from Dynamic Logic~\cite{}.
+The names of the latter two operators is taken from Dynamic Logic.
 
 The expression \code{(old $t$)} is intended for use in loop annotations.
 It refers to previous states of the execution at the beginning of loop iterations.
@@ -155,8 +154,8 @@ e.g. \code{(assign (x y)  (y x))} swaps the values stored in the variables \code
 Note that there is no syntactic difference between program variables and logical ones,
 and the former ones may range over arbitrary SMT-LIB data types.
 
-Specification statements \code{(spec ($x_1 \cdots x_n$) $\phi \psi$)}
-encode arbitrary, possibly nondeeterministic transitions~\cite{}.
+Specification statements \code{(spec ($x_1 \cdots x_n$) $\phi \psi$)} (see~\cite{morgan1988specification})
+encode arbitrary, possibly nondeeterministic transitions.
 The effect of executing such a statement is that the precondition~$\phi$ of the statement
 is asserted (i.e., needs to hold in the current state),
 then the variables \code{$x_1 \cdots x_n$} are given fresh arbitrary values,
@@ -164,7 +163,7 @@ and the postcondition $\psi$ is assumed for the remainder of the execution.
 
 Specification statements can encode assertions (\code{assert $\phi$} becomes \code{(spec () $\phi$ true)}),
 assumptions (\code{assume $\psi$} becomes \code{(spec () true $\psi$)}),
-and the statement \code{havoc $x_1 \cdots x_n$} from e.g. Boogie~\cite{}
+and the statement \code{havoc $x_1 \cdots x_n$} from e.g. Boogie
 (which becomes \code{(spec ($x_1 \cdots x_n$) true true)}).
 
 Within the postcondition of a specification statement, \code{old} refers to the pre-state of the statement itself.
@@ -241,12 +240,12 @@ i.e., the program is correct with respect to the specified contract.
     \label{fig:semantics}
 \end{figure}
 
-The predicate transformer semantics of the input language is shown in \cref{fig:semantics} for the \code{wp} operator,
+The predicate transformer semantics~\cite{manes2004predicate} of the input language is shown in \cref{fig:semantics} for the \code{wp} operator,
 with the exception of the loop rule, which is shortened to omit the termination conditions
 and therefore expressed using \code{box}. The rules for \code{box} and \code{dia} are similar.
 Note that~$Q$ is a term that may again contain weakest-precondition operators.
 
-The first three equivalences are standard~\cite{}.
+The first three equivalences are standard.
 Assignments propagate as a simultaneous substitution into the postcondition~$Q$.
 Sequential execution simply nests the weakest precondition operator.
 Conditionals produce two branches that evaluate the test positively resp.~negatively.
@@ -281,8 +280,6 @@ into an arbitrary state after the remaining iterations that satisfies~$\psi$ for
 introduced by the specification statement.
 Ultimately, this knowledge needs to suffice to establish~$\psi$ after the loop with \emph{all} iterations,
 where \code{old} refers to the state \emph{before} executing the first iteration~$p$.
-
-A good explanation of this loop rule can be found e.g.gin~\cite{}.
 
 \section{Tool Description}
 \label{sec:tool}
@@ -336,7 +333,7 @@ assuming those solvers are present in \verb|$PATH|.
 \end{figure}
 
 We demonstrate \Cuvee on a simple example, shown in \cref{fig:example},
-which is taken from the VerifyThis competition~2012~\cite{}.
+which is taken from the VerifyThis competition~2012.
 It is an algorithm that searches the maximum element in an array by elimination.
 It maintains two indices, $\code{x} \le \code{y}$
 and moves the one pointing to the smaller element in each iteration.
@@ -364,5 +361,8 @@ Extension to recursive procedures is planned as well.
 Ultimately, following this approach opens up the possibility to evaluate and compare
 verification tools that can handle complex functional correctness conditions
 involving quantifiers, arrays, and other data types.
+
+\bibliographystyle{splncsnat}
+\bibliography{references}
 
 \end{document}
