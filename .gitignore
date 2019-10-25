@@ -1,0 +1,14 @@
+.cache-main
+.classpath
+.project
+.worksheet/
+ae/
+bin/
+out/
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.pdf
+
