@@ -1,4 +1,4 @@
-package tacas2020
+package cuvee
 
 object Alpha {
   trait term[E, V <: E] {

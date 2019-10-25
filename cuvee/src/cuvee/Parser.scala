@@ -1,4 +1,4 @@
-package tacas2020
+package cuvee
 
 import arse._
 import arse.implicits._

@@ -1,4 +1,4 @@
-package tacas2020
+package cuvee
 
 case class State(
   sorts: Map[Sort, Int],

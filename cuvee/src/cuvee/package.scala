@@ -1,6 +1,6 @@
 import scala.io.StdIn
 
-package object tacas2020 {
+package object cuvee {
   case class Error(info: Seq[Any]) extends Exception {
     override def toString = {
       info.mkString("(error \"", ", ", "\")")

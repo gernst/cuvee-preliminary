@@ -1,4 +1,4 @@
-package tacas2020
+package cuvee
 
 case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
   def contains(id: Id) = su contains id

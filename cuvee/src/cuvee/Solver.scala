@@ -1,4 +1,4 @@
-package tacas2020
+package cuvee
 
 class Solver {
   var rlog: List[Cmd] = Nil

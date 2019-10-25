@@ -1,6 +1,6 @@
-package tacas2020.test
+package cuvee.test
 
-import tacas2020._
+import cuvee._
 
 import minitest.SimpleTestSuite
 import java.io.OutputStream

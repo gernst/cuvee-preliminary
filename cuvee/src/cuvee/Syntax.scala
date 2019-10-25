@@ -1,4 +1,4 @@
-package tacas2020
+package cuvee
 
 sealed trait Type extends Type.term {
 
