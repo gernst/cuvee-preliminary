@@ -80,9 +80,17 @@ The input format used by \Cuvee is intended to bridge the gap between automated 
 and between the goals of SV-COMP (fully automatic verification of C programs)
 and the VerifyThis competition (
 
-\section{Input Format}
+\section{Input Language}
+\label{sec:language}
 
-\begin{figure}
+This section highlights the syntactic additions to SMT-LIB and includes a brief description of the intended meaning,
+given via predicate transformer semantics.
+The new constructs accepted by \Cuvee are shown in \cref{fig:syntax}.
+
+\subsection{Syntax}
+\label{sec:syntax}
+
+\begin{figure}[t]
     \begin{grammar}
     <var_binding>
         ::= "(" <symbol> <term> ")"
@@ -91,13 +99,15 @@ and the VerifyThis competition (
         ::=  "(wp" <program> <term>")"
         \alt "(box" <program> <term>")"
         \alt "(dia" <program> <term>")"
+        \alt "(old" <term> ")"
         \alt ...
 
     <program>
         ::=  "(assign" "("<var_binding>")"$^+$ ")"
         \alt "(spec"   "(" <symbol>$^+$ ")" <term> <term> ")"
+        \alt "(block"  <program>$^+$ ")"
         \alt "(if"     <term> <term> <term> ")"
-        \alt "(while"  <term> <term> <term> ")"
+        \alt "(while"  <term> <term> <attribute>$^+$ ")"
 
     <command>
         ::=  "(assert-counterexample" <term> <program> <term> ")"
@@ -111,28 +121,83 @@ and the VerifyThis competition (
     \label{fig:syntax}
 \end{figure}
 
-The additional constructs accepted by \Cuvee are shown in \cref{fig:syntax}.
-
-\Cuvee extends the \nonterminal{term} language of SMT-LIB by three weakest-precondition operators,
+Terms \nonterminal{term} of SMT-LIB are extended by three weakest-precondition operators,
 \code{(wp  $p$ $t$)}, \code{(box $p$ $t$)}, \code{(dia $p$ $t$)}
 for programs~$p$ (see below)
 and postconditions~$t$ (terms of sort \code{Bool},
 which state slightly different correctness criteria with respect to termination and nondeterministic choices.
 
-The first one, \code{wp} is Dijkstra's standard weakest precondition that expresses that all executions of~$p$,
-when started in the current state, terminate and lead to a state that satisfies~$t$.
-For instance, a Hoare triple total correctness $\hoaretotal{\phi}{p}{\psi}$ can be written as the implication \code{(=> $\phi$ (wp $p$ $\psi$))}
+The first one, \code{wp} denotes Dijkstra's well-known weakest precondition:
+All executions of~$p$, when started in the current state, terminate and lead to a state that satisfies~$t$.
+For instance, a Hoare triple for total correctness $\hoaretotal{\phi}{p}{\psi}$ can be written as the implication \code{(=> $\phi$ (wp $p$ $\psi$))}
 
 Similarly, \code{box} does not require termination (i.e., it expresses the weakest liberal precondition),
-i.e., $\hoare{\phi}{p}{\psi}$ can be written as \code{(=> $\phi$ (box $p$ $\psi$))}
+i.e., $\hoare{\phi}{p}{\psi}$ can be written as \code{(=> $\phi$ (box $p$ $\psi$))}.
+
 The operator \code{dia} reflects angelic execution instead of demonic execution:
 For \code{(dia $p$ $t$)} it is required that there is at least one execution of~$p$
 that terminates and leads to a state that satisfies~$t$.
 The names of the latter two operators is taken from Dynamic Logic~\cite{}.
 
-Moveover, the expression \code{(old $t$)} may be used to refer to initial states of loop executions.
+The expression \code{(old $t$)} is intended for use in loop annotations.
+It refers to previous states of the execution at the beginning of loop iterations.
+
+\medskip
+
+Programs \nonterminal{program} provide familiar constructs from a simple sequential \textsc{While} language.
+
+Parallel assignments evaluate all right-hand-sides simultaneously,
+e.g. \code{(assign (x y)  (y x))} swaps the values stored in the variables \code{x} and \code{y}.
+Note that there is no syntactic difference between program variables and logical ones,
+and the former ones may range over arbitrary SMT-LIB data types.
+
+Specification statements \code{(spec ($x_1 \cdots x_n$) $\phi \psi$)}
+encode arbitrary, possibly nondeeterministic transitions~\cite{}.
+The effect of executing such a statement is that the precondition~$\phi$ of the statement
+is asserted (i.e., needs to hold in the current state),
+then the variables \code{$x_1 \cdots x_n$} are given fresh arbitrary values,
+and the postcondition $\psi$ is assumed for the remainder of the execution.
+
+Specification statements can encode assertions (\code{assert $\phi$} becomes \code{(spec () $\phi$ true)}),
+assumptions (\code{assume $\psi$} becomes \code{(spec () true $\psi$)}),
+and the statement \code{havoc $x_1 \cdots x_n$} from e.g. Boogie~\cite{}
+(which becomes \code{(spec $x_1 \cdots x_n$ true true)}).
+
+Within the postcondition of a specification statement, \code{old} refers to the pre-state of the statement itself.
+This admits elegant encoding of transition relations,
+i.e., \code{(spec (x) true (> x (old x)))} specifies that the new value of \code{x} is strictly larger than the previous one.
+
+Specification statements are useful internally, too, to encode the inductive hypothesis of the loop rule implemented in \Cuvee (see \cref{sec:syntax}).
+
+Sequential composition is written as \code{(block $p_1 \cdots p_n$)}, where \code{(block)} denotes the empty statement.
+Conditional statements \code{(if $b$ $p_1$ $p_2$)} execute either~$p_1$ or~$p_2$ depending of the evaluation of the test~$b$ (a boolean term) in the current state.
+
+\medskip
+\noindent
+While loops
+\[ \code{(while $b$ $p$ :termination $t$ :precondition $\phi$ :postcondition $\psi$)} \]
+execute $p$ as long as the test~$b$ holds true.
+\Cuvee supports some attributes that can be used to specify loop annotations,
+namely, a termination measure~$t$, a loop precondition~$\phi$, and a loop postcondition~$\psi$.
+All three annotations are optional.
+
+\medskip
+
+A new top-level command \code{(assert-counterexample $\phi$ $p$ $\psi$)}
+asserts that the Hoare triple $\hoaretotal{\phi}{p}{\psi}$ is not valid.
+This command can be understood as an abbreviation of \code{(assert (not (=> $\phi$ (wp $p$ $\psi$))))}.
+Hoverer, \Cuvee implements special cases when $p$ is a while loop without annotations
+to derive the loop specification from such a contract.
+
+Consistent with the standard pattern in SMT-LIB, where formulas are proved by searching for satisfying assignments of the negation,
+an \code{unsat} from the underlying SMT solver on the problem translated by \Cuvee indicates that there is no counterexample
+i.e., the program is correct with respect to the specified contract.
+
+\subsection{Proof Rules}
+\label{sec:semantics}
 
 \section{Tool Description}
+\label{sec:tool}
 
 \section{Examples}
 
