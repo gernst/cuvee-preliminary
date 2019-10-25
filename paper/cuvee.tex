@@ -38,6 +38,9 @@
 \newcommand{\hoare}[3]{\{ #1 \}~#2~\{ #3 \}}
 \newcommand{\hoaretotal}[3]{[ #1 ]~#2~[ #3 ]}
 
+\newcommand{\xs}{\underline x}
+\newcommand{\ys}{\underline y}
+
 \newcommand{\nonterminal}[1]{\ensuremath{\langle \mathit{#1} \rangle}}
 
 \title{\Cuvee: Blending SMT-LIB with \\ Programs and Weakest Preconditions}
@@ -207,21 +210,35 @@ i.e., the program is correct with respect to the specified contract.
 \code{(wp (assign (($x_1$ $t_1$) $\cdots$ ($x_n$ $t_n$))) $Q$)}
     & \equiv Q[x_1,\ldots,x_n \gets t_1,\ldots,t_n]
     \\
-\code{(wp (spec ($x_1 \cdots x_n$) $\phi$ $\psi$) $Q$)}
-    & \equiv 
-    \\
 \code{(wp (block $p_1 \cdots p_n$ $Q$)}
     & \equiv \code{(wp $p_1$ $\cdots$ (wp $p_n$ $Q$))}
     \\
 \code{(wp (if $b$ $p_1$ $p_2$) $Q$)}
-    & \equiv 
-    \\
-\code{(wp (while $b$ $p$) $Q$)}
-    & \equiv 
-    \\
+    & \equiv        \code{(and (=> $b$ (wp $p_1$ $Q$))} \\
+    & \hspace{30pt} \code{     (=> (not $b$) (wp $p_2$ $Q$)))}
     \end{align*}
+
+    \begin{gather*}
+\infer{\code{(wp (spec ($\xs$) $\phi$ $\psi$) $Q$)}}
+{   \phi
+ && \code{(forall ($\ys$) $\psi[\underline{\code{(old $x$)}} \gets \xs, \xs \gets \ys]
+                            \to Q[\xs \gets \ys]$)}
+              }
+    \\[1em]
+\infer{\code{(wp (while $b$ $p$) $Q$)}}
+{   
+\begin{array}{c}
+   \code{(wp (spec ($\xs$) $\phi$ $\psi$) $Q$)} \\
+   \code{(forall ($\xs$) (=> (and $\phi$ (not $b$)) (wp (block $p$ (spec ($\xs$) $\phi$ $\psi$)) $Q$)$[\underline{\code{(old $x$)}} \gets \xs]$))} \\
+   \code{(forall ($\xs$) (=> (and $\phi$ $b$) $Q[\underline{\code{(old $x$)}} \gets \xs]$))}
+\end{array}}
+    \end{gather*}
+    \\
+        \qquad \text{where $\phi$ is the precondition of the loop and $\psi$ is the postcondition}
     \label{fig:semantics}
-    \caption{Predicate transformer semantics for the programming language in \cref{fig:syntax}.}
+    \caption{Predicate transformer semantics for the programming language in \cref{fig:syntax}.
+             The rules for the specification statement and loops are given as inference rules
+             to improve readability (these could be equally formulated as equivalences).}
 \end{figure}
 
 The predicate transformer semantics of the input language is shown in \cref{fig:semantics} for the \code{wp} operator.
