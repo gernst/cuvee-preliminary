@@ -56,7 +56,7 @@
 \Cuvee translates such inputs into first-order SMT-LIB by symbolically executing these programs.
 The input format used by \Cuvee is intended to bring different verification communities closer together and achieve a similar unification of tools for that for example synthesize loop summaries.
 A notable technical aspect of \Cuvee itself is the consequent use of loop pre-/postconditions instead of invariants, and we demonstrate how this lowers the annotation burden on some simple while programs.
-Moreover, \Cuvee can express refinement conditions between multiple programs.
+% Moreover, \Cuvee can express refinement conditions between multiple programs.
 \end{abstract}
 
 \begin{keywords}
@@ -65,32 +65,31 @@ Program Verification, SMT-LIB, Weakest Precondition
 
 \section{Introduction}
 
-Intermediate verification languages and tools such as Boogie, Why3, and Viper
+Intermediate verification languages and tools such as Boogie~\cite{}, Why3~\cite{}, and Viper~\cite{}
 have had a significant impact on the state-of-the-art of (deductive) program verification.
 At the annual competition on interactive program verification VerifyThis~\cite{},
 tools like these are put to practice on small but intricate verification problems.
-
+Currently, VerifyThis lacks a common input format.
+This is fine for hard challenges where efficiency of the tool and seamless interaction are required.
 SMT-LIB~\cite{} is a standardized interchange format for verification tasks in first-order logic
 that is widely used in many different application domains such as constraint-solving, program verification, and model-checking.
 Many mature tools are available \cite{}, and the annual SMT-COMP evaluates and compares their performance on benchmark problems.
 Part of the success of the SMT-LIB format is its regular syntax and its precise standardization.
+SV-COMP~\cite{} is a competition where the participating tools analyze C code fully automatically.
+It is therefore restricted to less complex properties that cannot be solved without the guidance of a proof engineer.
 
-SV-COMP~\cite{} is 
+The goal of this work is to occupy the spot between these three communities,
+as well as the different technologies involved.
+How to make use, e.g., of tools that can infer invariants?
+The input format that is described here and implemented in \Cuvee takes deliberate trade-offs
+to position itself between the highly expressive logic of e.g. Dafny,
+and stressing the interoperability that made SMT-LIB successful.
+As such one design goal, for example, is to re-use the existing logical data types of that format,
+even if it might be less convenient as a front-end for humans.
 
 
-In comparison to existing intermediate verification languages such as Boogie, Why3, and Viper,
-it is more light-weight and aims to be easier to implement and process automatically.
-The input format used by \Cuvee is intended to bridge the gap between automated theorem proving,
-and between the goals of SV-COMP (fully automatic verification of C programs)
-and the VerifyThis competition (
 
-\section{Input Language}
-\label{sec:language}
-
-This section highlights the syntactic additions to SMT-LIB and includes a brief description of the intended meaning,
-given via predicate transformer semantics.
-
-\subsection{Syntax}
+\section{Syntax}
 \label{sec:syntax}
 
 The new constructs accepted by \Cuvee are shown in \cref{fig:syntax}.
@@ -202,7 +201,7 @@ Consistent with the standard pattern in SMT-LIB, where formulas are proved by se
 an \code{unsat} from the underlying SMT solver on the problem translated by \Cuvee indicates that there is no counterexample
 i.e., the program is correct with respect to the specified contract.
 
-\subsection{Proof Rules}
+\section{Proof Rules}
 \label{sec:semantics}
 
 \begin{figure}[t]
@@ -236,10 +235,10 @@ i.e., the program is correct with respect to the specified contract.
         \qquad \text{where $\phi$ is the precondition of the loop and $\psi$ is the postcondition,} \\
         \qquad \text{$\xs$ are the variables modified by the loop body~$p$ and $\ys$ are fresh.}
     \end{gather*}
-    \label{fig:semantics}
     \caption{Predicate transformer semantics for the programming language in \cref{fig:syntax}.
              The rules for the specification statement and loops are given as inference rules
              to improve readability (these could be equally formulated as equivalences).}
+    \label{fig:semantics}
 \end{figure}
 
 The predicate transformer semantics of the input language is shown in \cref{fig:semantics} for the \code{wp} operator,
@@ -283,11 +282,87 @@ introduced by the specification statement.
 Ultimately, this knowledge needs to suffice to establish~$\psi$ after the loop with \emph{all} iterations,
 where \code{old} refers to the state \emph{before} executing the first iteration~$p$.
 
-A good explanation of this loop rule can be found e.g. in~\cite{}.
+A good explanation of this loop rule can be found e.g.gin~\cite{}.
 
 \section{Tool Description}
 \label{sec:tool}
 
-\section{Examples}
+\Cuvee is implemented in the Scala programming language%
+    \footnote{\url{https://scala-lang.org}}
+and relies on SMT solvers as back-ends to solve the first-order verification conditions.
+
+\Cuvee is open source under the MIT License at \code{https://github.com/gernst/cuvee}.
+
+It reads one or more input files, reduces the weakest-precondition operators according to the rules in~\cref{fig:semantics}
+using symbolic execution (i.e., the substitutions are delayed and propagated down the term structure).
+
+The tool can be invoked from the command line in different ways
+as exemplified below:
+\begin{verbatim}
+./cuvee                                 # read from stdin, write to stdin
+./cuvee <file> -o <out>                 # read from file,  write to out
+./cuvee <file1> ... <filen> -- ./z3 -in # invoke SMT solver directly
+\end{verbatim}
+It can either save the generated SMT-LIB script to a file,
+or invoke an SMT solver, whose command line is appended after \verb|--|, Z3 in this case.
+In this mode of operation, it pipes the generated verification task directly to the solver.
+There are builtin abbreviations \verb|-z3| and \verb|-cvc4| that pass the necessary arguments,
+assuming those solvers are present in \verb|$PATH|.
+
+\section{Example}
+
+\begin{figure}[t]
+\begin{verbatim}
+(declare-const x Int)
+(declare-const y Int)
+(declare-const a (Array Int Int))
+
+(assert-counterexample
+  (<= x y)
+  (while (not (= x y))
+         (if (<= (select a x) (select a y))
+             (assign (x (+ x 1)))
+             (assign (y (- y 1))))
+         :termination (- y x))
+  (forall ((z Int))
+    (=> (and (<= (old x) z)
+             (<= z (old y)))
+        (<= (select a z) (select a x)))))
+
+(check-sat)
+\end{verbatim}
+\caption{Finding the maximum in an array by elimination.}
+\label{fig:example}
+\end{figure}
+
+We demonstrate \Cuvee on a simple example, shown in \cref{fig:example},
+which is taken from the VerifyThis competition~2012~\cite{}.
+It is an algorithm that searches the maximum element in an array by elimination.
+It maintains two indices, $\code{x} \le \code{y}$
+and moves the one pointing to the smaller element in each iteration.
+The postcondition asserts that for any valid index \code{z},
+the returned index \code{x} contains an element that is in fact at least as large.
+
+\Cuvee infers the precondition and postcondition of the loop from the
+specified contract, such that the example is solved without further interaction.
+
+A few more examples are contained in the \code{examples} subfolder on github,
+including GCD, and mapping an array range by an unspecified function.
+
+\section{Conclusion and Outlook}
+
+\Cuvee is a tool that aims to bridge the gap between fully automated program verification
+and approaches that have the human in the loop.
+It does so by extending SMT-LIB to cover weakest precondition statements about abstract programs,
+which tightly integrate into the existing standard.
+
+There are plenty of opportunities for future development.
+For one, it is hoped that the format will be taken up by others,
+supported by standardization efforts.
+Extension to recursive procedures is planned as well.
+
+Ultimately, following this approach opens up the possibility to evaluate and compare
+verification tools that can handle complex functional correctness conditions
+involving quantifiers, arrays, and other data types.
 
 \end{document}
