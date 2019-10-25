@@ -9,6 +9,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{mathtools}
+\usepackage{proof}
 
 \usepackage{xspace}
 
@@ -85,10 +86,11 @@ and the VerifyThis competition (
 
 This section highlights the syntactic additions to SMT-LIB and includes a brief description of the intended meaning,
 given via predicate transformer semantics.
-The new constructs accepted by \Cuvee are shown in \cref{fig:syntax}.
 
 \subsection{Syntax}
 \label{sec:syntax}
+
+The new constructs accepted by \Cuvee are shown in \cref{fig:syntax}.
 
 \begin{figure}[t]
     \begin{grammar}
@@ -161,7 +163,7 @@ and the postcondition $\psi$ is assumed for the remainder of the execution.
 Specification statements can encode assertions (\code{assert $\phi$} becomes \code{(spec () $\phi$ true)}),
 assumptions (\code{assume $\psi$} becomes \code{(spec () true $\psi$)}),
 and the statement \code{havoc $x_1 \cdots x_n$} from e.g. Boogie~\cite{}
-(which becomes \code{(spec $x_1 \cdots x_n$ true true)}).
+(which becomes \code{(spec ($x_1 \cdots x_n$) true true)}).
 
 Within the postcondition of a specification statement, \code{old} refers to the pre-state of the statement itself.
 This admits elegant encoding of transition relations,
@@ -185,9 +187,13 @@ All three annotations are optional.
 
 A new top-level command \code{(assert-counterexample $\phi$ $p$ $\psi$)}
 asserts that the Hoare triple $\hoaretotal{\phi}{p}{\psi}$ is not valid.
-This command can be understood as an abbreviation of \code{(assert (not (=> $\phi$ (wp $p$ $\psi$))))}.
-Hoverer, \Cuvee implements special cases when $p$ is a while loop without annotations
+This command roughly translates to \code{(assert (not (=> $\phi$ (wp $p$ $\psi$))))},
+however, \Cuvee implements special cases when $p$ is a while loop without a pre-/postcondition annotation
 to derive the loop specification from such a contract.
+Moreover, within a \code{assert-counterexample} command,
+\code{old} in the postcondition $\psi$ refers to the pre-state.
+Note that this feature is currently not expressible in the expression/program language alone,
+but can be emulated if needed by introducing additional logical variables capturing this pre-state explicitly.
 
 Consistent with the standard pattern in SMT-LIB, where formulas are proved by searching for satisfying assignments of the negation,
 an \code{unsat} from the underlying SMT solver on the problem translated by \Cuvee indicates that there is no counterexample
@@ -195,6 +201,31 @@ i.e., the program is correct with respect to the specified contract.
 
 \subsection{Proof Rules}
 \label{sec:semantics}
+
+\begin{figure}
+    \begin{align*}
+\code{(wp (assign (($x_1$ $t_1$) $\cdots$ ($x_n$ $t_n$))) $Q$)}
+    & \equiv Q[x_1,\ldots,x_n \gets t_1,\ldots,t_n]
+    \\
+\code{(wp (spec ($x_1 \cdots x_n$) $\phi$ $\psi$) $Q$)}
+    & \equiv 
+    \\
+\code{(wp (block $p_1 \cdots p_n$ $Q$)}
+    & \equiv \code{(wp $p_1$ $\cdots$ (wp $p_n$ $Q$))}
+    \\
+\code{(wp (if $b$ $p_1$ $p_2$) $Q$)}
+    & \equiv 
+    \\
+\code{(wp (while $b$ $p$) $Q$)}
+    & \equiv 
+    \\
+    \end{align*}
+    \label{fig:semantics}
+    \caption{Predicate transformer semantics for the programming language in \cref{fig:syntax}.}
+\end{figure}
+
+The predicate transformer semantics of the input language is shown in \cref{fig:semantics} for the \code{wp} operator.
+The rules for \code{box} and \code{dia} are similar.
 
 \section{Tool Description}
 \label{sec:tool}
