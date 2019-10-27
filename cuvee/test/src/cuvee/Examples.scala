@@ -9,8 +9,14 @@ import java.io.File
 
 object Examples extends SimpleTestSuite {
   val dir = "examples"
-  val tests = List("add.smt2", "gcd.smt2", "map.smt2", "max.smt2")
-  
+
+  val tests = List(
+    "add.smt2",
+    "gcd.smt2",
+    "map.smt2",
+    "max.smt2",
+    "compare.smt2")
+
   for (file <- tests if file.endsWith(".smt2")) {
     val path = dir + "/" + file
     test(path) {

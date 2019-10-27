@@ -137,6 +137,13 @@ case class Eq(left: Expr, right: Expr) extends Expr {
   override def toString = "(= " + left + " " + right + ")"
 }
 
+case class Distinct(exprs: List[Expr]) extends Expr {
+  def free = Set(exprs flatMap (_.free): _*)
+  def rename(re: Map[Id, Id]) = Distinct(exprs map (_ rename re))
+  def subst(su: Map[Id, Expr]) = Distinct(exprs map (_ subst su))
+  override def toString = "(distinct" + exprs.mkString(" ") + ")"
+}
+
 object Imp extends ((Expr, Expr) => Expr) {
   def apply(left: Expr, right: Expr): App = {
     App(Id.imp, left, right)
@@ -147,6 +154,13 @@ object And extends (List[Expr] => Expr) {
   def apply(exprs: List[Expr]): Expr = exprs match {
     case Nil => True
     case _ => exprs.reduceRight((App(Id.and, _, _)))
+  }
+}
+
+object Or extends (List[Expr] => Expr) {
+  def apply(exprs: List[Expr]): Expr = exprs match {
+    case Nil => False
+    case _ => exprs.reduceRight((App(Id.or, _, _)))
   }
 }
 
