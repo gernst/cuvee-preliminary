@@ -143,6 +143,13 @@ object Imp extends ((Expr, Expr) => Expr) {
   }
 }
 
+object And extends (List[Expr] => Expr) {
+  def apply(exprs: List[Expr]): Expr = exprs match {
+    case Nil => True
+    case _ => exprs.reduceRight((App(Id.and, _, _)))
+  }
+}
+
 case class Ite(test: Expr, left: Expr, right: Expr) extends Expr {
   def free = test.free ++ left.free ++ right.free
   def rename(re: Map[Id, Id]) = Ite(test rename re, left rename re, right rename re)
@@ -260,6 +267,13 @@ object Block extends (List[Prog] => Block) {
   }
 }
 
+case object Break extends Prog {
+  def mod = Set()
+  def read = Set()
+  def rename(re: Map[Id, Id]) = this
+  override def toString = "(break)"
+}
+
 case class Let(x: Id, e: Expr) {
   def mod = Set(x)
   def free = e.free
@@ -282,11 +296,23 @@ case class Spec(xs: List[Id], pre: Expr, post: Expr) extends Prog {
   override def toString = "(spec " + xs.mkString(" (", " ", ") ") + pre + post + ")"
 }
 
+object Spec extends ((List[Id], Expr, Expr) => Spec) {
+  def assert = (pre: Expr) => Spec(Nil, pre, True)
+  def assume = (post: Expr) => Spec(Nil, True, post)
+}
+
 case class If(test: Expr, left: Prog, right: Prog) extends Prog {
   def mod = left.mod ++ right.mod
   def read = test.free ++ left.read ++ right.read
   def rename(re: Map[Id, Id]) = If(test rename re, left rename re, right rename re)
   override def toString = "(if " + test + " " + left + " " + right + ")"
+}
+
+object If extends ((Expr, Prog, Option[Prog]) => If) {
+  def apply(test: Expr, left: Prog, right: Option[Prog]): If = right match {
+    case None => If(test, left, Skip)
+    case Some(right) => If(test, left, right)
+  }
 }
 
 case class While(test: Expr, body: Prog, after: Prog, term: Expr, pre: Expr, post: Expr) extends Prog {
@@ -313,7 +339,6 @@ sealed trait Cmd {
 case class SetLogic(logic: String) extends Cmd {
   override def toString = "(set-logic " + logic + ")"
 }
-
 
 object GetModel extends Cmd {
   override def toString = "(get-model)"

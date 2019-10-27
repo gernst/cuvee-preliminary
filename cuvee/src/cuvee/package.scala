@@ -1,6 +1,8 @@
 import scala.io.StdIn
 
 package object cuvee {
+  import scala.language.implicitConversions
+  
   case class Error(info: Seq[Any]) extends Exception {
     override def toString = {
       info.mkString("(error \"", ", ", "\")")

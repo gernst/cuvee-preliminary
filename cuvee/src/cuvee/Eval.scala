@@ -92,40 +92,47 @@ object Eval {
       Bind(quant, formals, eval(body, env bind formals, old, st))
 
     case WP(prog, post) =>
-      wp(List(prog), post, env, old, st)
+      wp(List(prog), None, post, env, old, st)
 
     case Box(prog, post) =>
-      box(List(prog), post, env, old, st)
+      box(List(prog), None, post, env, old, st)
 
     case Dia(prog, post) =>
-      dia(List(prog), post, env, old, st)
+      dia(List(prog), None, post, env, old, st)
   }
 
-  def wp(progs: List[Prog], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
+  def wp(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
     case Nil =>
-      val _psi = eval(post, env0, old, st)
-      _psi
+      eval(post, env0, old, st)
+
+    case Break :: rest =>
+      break match {
+        case Some(post) =>
+          eval(post, env0, old, st)
+        case None =>
+          error("break not within while", break, env0, st)
+      }
 
     case Block(progs, withOld) :: rest =>
       val old_ = if (withOld) env0 :: old else old
-      wp(progs ++ rest, post, env0, old_, st)
+      wp(progs ++ rest, break, post, env0, old_, st)
 
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old, st))
-      val (xs, _es) = pairs unzip
+      val (xs, _es) = pairs.unzip
       val env1 = env0 assign (xs, _es)
-      wp(rest, post, env1, old, st)
+      wp(rest, break, post, env1, old, st)
 
     case Spec(xs, phi, psi) :: rest =>
       val (formals, env1) = env0 havoc xs
       val _phi = eval(phi, env0, old, st)
       val _psi = eval(psi, env1, env0 :: old, st)
-      _phi && Forall(formals, _psi ==> wp(rest, post, env1, old, st))
+      _phi && Forall(formals, _psi ==> wp(rest, break, post, env1, old, st))
 
     case If(test, left, right) :: rest =>
       val _test = eval(test, env0, old, st)
-      val _left = _test ==> wp(left :: rest, post, env0, old, st)
-      val _right = !_test ==> wp(right :: rest, post, env0, old, st)
+      val _left = _test ==> wp(left :: rest, break, post, env0, old, st)
+      val _right = !_test ==> wp(right :: rest, break, post, env0, old, st)
       _left && _right
 
     case While(test, body, after, term, phi, psi) :: rest =>
@@ -145,38 +152,45 @@ object Eval {
       val _phi1 = eval(phi, env1, old, st)
       val _psi1 = eval(psi, env1, env1 :: old, st)
 
-      val use = _phi0 && Forall(formals, _psi0 ==> wp(rest, post, env1, old, st))
-      val base = Forall(formals, (!_test && _phi1) ==> wp(List(after), psi, env1, env1 :: old, st))
-      val step = Forall(formals, (_test && _phi1) ==> wp(List(body, hyp), psi, env1, env1 :: old, st))
+      val use = _phi0 && Forall(formals, _psi0 ==> wp(rest, break, post, env1, old, st))
+      val base = Forall(formals, (!_test && _phi1) ==> wp(List(after), break, psi, env1, env1 :: old, st))
+      val step = Forall(formals, (_test && _phi1) ==> wp(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
 
       use && base && step
   }
 
-  def box(progs: List[Prog], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
+  def box(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
     case Nil =>
-      val _psi = eval(post, env0, old, st)
-      _psi
+      eval(post, env0, old, st)
+
+    case Break :: rest =>
+      break match {
+        case Some(post) =>
+          eval(post, env0, old, st)
+        case None =>
+          error("break not within while", break, env0, st)
+      }
 
     case Block(progs, withOld) :: rest =>
       val old_ = if (withOld) env0 :: old else old
-      box(progs ++ rest, post, env0, old_, st)
+      box(progs ++ rest, break, post, env0, old_, st)
 
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old, st))
-      val (xs, _es) = pairs unzip
+      val (xs, _es) = pairs.unzip
       val env1 = env0 assign (xs, _es)
-      box(rest, post, env1, old, st)
+      box(rest, break, post, env1, old, st)
 
     case Spec(mod, phi, psi) :: rest =>
       val (formals, env1) = env0 havoc mod
       val _phi = eval(phi, env0, old, st)
       val _psi = eval(psi, env1, env0 :: old, st)
-      _phi ==> Forall(formals, _psi ==> box(rest, post, env0, old, st))
+      _phi ==> Forall(formals, _psi ==> box(rest, break, post, env0, old, st))
 
     case If(test, left, right) :: rest =>
       val _test = eval(test, env0, old, st)
-      val _left = _test ==> box(left :: rest, post, env0, old, st)
-      val _right = !_test ==> box(right :: rest, post, env0, old, st)
+      val _left = _test ==> box(left :: rest, break, post, env0, old, st)
+      val _right = !_test ==> box(right :: rest, break, post, env0, old, st)
       _left && _right
 
     case While(test, body, after, term, phi, psi) :: rest =>
@@ -195,38 +209,45 @@ object Eval {
       val _phi1 = eval(phi, env1, old, st)
       val _psi1 = eval(psi, env1, env1 :: old, st)
 
-      val use = _phi0 ==> Forall(formals, _psi0 ==> box(rest, post, env1, old, st))
-      val base = Forall(formals, (!_test && _phi1) ==> box(List(after), psi, env1, env1 :: old, st))
-      val step = Forall(formals, (_test && _phi1) ==> box(List(body, hyp), psi, env1, env1 :: old, st))
+      val use = _phi0 ==> Forall(formals, _psi0 ==> box(rest, break, post, env1, old, st))
+      val base = Forall(formals, (!_test && _phi1) ==> box(List(after), break, psi, env1, env1 :: old, st))
+      val step = Forall(formals, (_test && _phi1) ==> box(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
 
       use && base && step
   }
 
-  def dia(progs: List[Prog], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
+  def dia(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
     case Nil =>
-      val _psi = eval(post, env0, old, st)
-      _psi
+      eval(post, env0, old, st)
+
+    case Break :: rest =>
+      break match {
+        case Some(post) =>
+          eval(post, env0, old, st)
+        case None =>
+          error("break not within while", break, env0, st)
+      }
 
     case Block(progs, withOld) :: rest =>
       val old_ = if (withOld) env0 :: old else old
-      dia(progs ++ rest, post, env0, old_, st)
+      dia(progs ++ rest, break, post, env0, old_, st)
 
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old, st))
-      val (xs, _es) = pairs unzip
+      val (xs, _es) = pairs.unzip
       val env1 = env0 assign (xs, _es)
-      dia(rest, post, env1, old, st)
+      dia(rest, break, post, env1, old, st)
 
     case Spec(mod, phi, psi) :: rest =>
       val (formals, env1) = env0 havoc mod
       val _phi = eval(phi, env0, old, st)
       val _psi = eval(psi, env1, env0 :: old, st)
-      _phi && Exists(formals, _psi && dia(rest, post, env0, old, st))
+      _phi && Exists(formals, _psi && dia(rest, break, post, env0, old, st))
 
     case If(test, left, right) :: rest =>
       val _test = eval(test, env0, old, st)
-      val _left = _test && dia(left :: rest, post, env0, old, st)
-      val _right = !_test && dia(right :: rest, post, env0, old, st)
+      val _left = _test && dia(left :: rest, break, post, env0, old, st)
+      val _right = !_test && dia(right :: rest, break, post, env0, old, st)
       _left || _right
 
     case While(test, body, after, term, phi, psi) :: rest =>
@@ -246,9 +267,9 @@ object Eval {
       val _phi1 = eval(phi, env1, old, st)
       val _psi1 = eval(psi, env1, env1 :: old, st)
 
-      val use = _phi0 && Exists(formals, _psi0 && dia(rest, post, env1, old, st))
-      val base = Forall(formals, (!_test && _phi1) ==> dia(List(after), psi, env1, env1 :: old, st))
-      val step = Forall(formals, (_test && _phi1) ==> dia(List(body, hyp), psi, env1, env1 :: old, st))
+      val use = _phi0 && Exists(formals, _psi0 && dia(rest, break, post, env1, old, st))
+      val base = Forall(formals, (!_test && _phi1) ==> dia(List(after), break, psi, env1, env1 :: old, st))
+      val step = Forall(formals, (_test && _phi1) ==> dia(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
 
       use && base && step
   }

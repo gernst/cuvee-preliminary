@@ -21,7 +21,7 @@ object Parser {
   val array_ = P(Type.array("Array" ~ typ ~ typ))
   val list_ = P(Type.list("List" ~ typ))
 
-  val expr: Parser[Expr] = P(id | num | parens(bind_ | imp_ | eq_ | ite_ | select_ | store_ | old_ | wp_ | box_ | dia_ | app_))
+  val expr: Parser[Expr] = P(id | num | parens(bind_ | imp_ | and_ | eq_ | ite_ | select_ | store_ | old_ | wp_ | box_ | dia_ | app_))
   val exprs = P(expr +)
 
   val id = P(Id(name | op))
@@ -30,7 +30,8 @@ object Parser {
   val num = P(Num(bigint))
 
   val old_ = P(Old("old" ~ expr))
-  val imp_ = P(Imp("=>" ~ expr ~ expr))
+  val imp_ = P(Imp("=>" ~ expr ~ expr)) // singled out to avoid clash with "="
+  val and_ = P(And("and" ~ expr.*))
   val eq_ = P(Eq("=" ~ expr ~ expr))
   val ite_ = P(Ite("ite" ~ expr ~ expr ~ expr))
 
@@ -47,20 +48,23 @@ object Parser {
   val formals = P(formal *)
   val bind_ = P(Bind(quant ~ parens(formals) ~ expr))
 
-  val prog: Parser[Prog] = P(parens(assign_ | spec_ | if_ | while_ | block_))
+  val prog: Parser[Prog] = P(parens(break_ | assign_ | asm_ | asrt_ | spec_ | if_ | while_ | block_))
   val progs = P(prog *)
   val block_ = P(Block("block" ~ progs))
 
   val wp_ = P(WP("wp" ~ prog ~ expr))
   val box_ = P(Box("box" ~ prog ~ expr))
   val dia_ = P(Dia("dia" ~ prog ~ expr))
-
+  
   val let = P(Let(parens(id ~ expr)))
   val lets = P(let *)
   val assign_ = P(Assign("assign" ~ lets))
 
+  val break_ = P(Break("break"))
+  val asm_ = P(Spec.assume("assume" ~ expr))
+  val asrt_ = P(Spec.assert("assert" ~ expr))
   val spec_ = P(Spec("spec" ~ parens(ids) ~ expr ~ expr))
-  val if_ = P(If("if" ~ expr ~ prog ~ prog))
+  val if_ = P(If("if" ~ expr ~ prog ~ prog.?))
 
   val term = P(":termination" ~ expr)
   val pre = P(":precondition" ~ expr)
