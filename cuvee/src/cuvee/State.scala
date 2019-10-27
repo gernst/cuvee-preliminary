@@ -7,7 +7,9 @@ case class State(
   funs: Map[Id, (List[Type], Type)],
   fundefs: Map[Id, (List[Id], Expr)],
 
-  asserts: List[Expr]) {
+  rasserts: List[Expr]) {
+  
+  def asserts = rasserts.reverse
   
   def env = {
     val su = funs collect {
@@ -51,7 +53,7 @@ case class State(
   
   def assert(expr: Expr) = {
     copy(
-      asserts = expr :: asserts)
+      rasserts = expr :: rasserts)
   }
 }
 
@@ -97,5 +99,5 @@ object State {
       Id.store -> Fun.store */),
     fundefs = Map(),
 
-    asserts = Nil)
+    rasserts = Nil)
 }

@@ -71,7 +71,7 @@ class Solver {
       ack(cmd)
 
     case GetAssertions =>
-      val asserts = top.asserts.reverse
+      val asserts = top.asserts
       for (assert <- asserts)
         yield "(assert " + assert + ")"
 
