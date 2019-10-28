@@ -24,14 +24,14 @@ object Type extends Alpha[Type, Sort] {
     def free = elem.free
     def rename(re: Map[Sort, Sort]) = list(elem rename re)
     def subst(ty: Map[Sort, Type]) = list(elem subst ty)
-    override def toString = "(List " + elem + ")"
+    override def toString = sexpr("List", elem)
   }
 
   case class array(dom: Type, ran: Type) extends Type {
     def free = ran.free ++ dom.free
     def rename(re: Map[Sort, Sort]) = array(dom rename re, ran rename re)
     def subst(ty: Map[Sort, Type]) = array(dom subst ty, ran subst ty)
-    override def toString = "(Array " + dom + " " + ran + ")"
+    override def toString = sexpr("Array", dom, ran)
   }
 }
 
@@ -120,7 +120,7 @@ object Id extends (String => Id) {
 
 case class Formal(id: Id, typ: Type) {
   def rename(re: Map[Id, Id]) = Formal(id rename re, typ)
-  override def toString = "(" + id + " " + typ + ")"
+  override def toString = sexpr(id, typ)
 }
 
 case class Num(value: BigInt) extends Expr {
@@ -134,14 +134,14 @@ case class Eq(left: Expr, right: Expr) extends Expr {
   def free = left.free ++ right.free
   def rename(re: Map[Id, Id]) = Eq(left rename re, right rename re)
   def subst(su: Map[Id, Expr]) = Eq(left subst su, right subst su)
-  override def toString = "(= " + left + " " + right + ")"
+  override def toString = sexpr("=", left, right)
 }
 
 case class Distinct(exprs: List[Expr]) extends Expr {
   def free = Set(exprs flatMap (_.free): _*)
   def rename(re: Map[Id, Id]) = Distinct(exprs map (_ rename re))
   def subst(su: Map[Id, Expr]) = Distinct(exprs map (_ subst su))
-  override def toString = "(distinct" + exprs.mkString(" ") + ")"
+  override def toString = sexpr("distinct", exprs: _*)
 }
 
 object Imp extends ((Expr, Expr) => Expr) {
@@ -168,21 +168,21 @@ case class Ite(test: Expr, left: Expr, right: Expr) extends Expr {
   def free = test.free ++ left.free ++ right.free
   def rename(re: Map[Id, Id]) = Ite(test rename re, left rename re, right rename re)
   def subst(su: Map[Id, Expr]) = Ite(test subst su, left subst su, right subst su)
-  override def toString = "(ite " + test + " " + left + " " + right + ")"
+  override def toString = sexpr("ite", test, left, right)
 }
 
 case class Select(array: Expr, index: Expr) extends Expr {
   def free = array.free ++ index.free
   def rename(re: Map[Id, Id]) = Select(array rename re, index rename re)
   def subst(su: Map[Id, Expr]) = Select(array subst su, index subst su)
-  override def toString = "(select " + array + " " + index + ")"
+  override def toString = sexpr("select", array, index)
 }
 
 case class Store(array: Expr, index: Expr, value: Expr) extends Expr {
   def free = array.free ++ index.free ++ value.free
   def rename(re: Map[Id, Id]) = Store(array rename re, index rename re, value rename re)
   def subst(su: Map[Id, Expr]) = Store(array subst su, index subst su, value subst su)
-  override def toString = "(store " + array + " " + index + " " + value + ")"
+  override def toString = sexpr("store ", array, index, value)
 }
 
 case class App(fun: Id, args: List[Expr]) extends Expr {
@@ -190,7 +190,7 @@ case class App(fun: Id, args: List[Expr]) extends Expr {
   def free = Set(args flatMap (_.free): _*)
   def rename(re: Map[Id, Id]) = App(fun, args map (_ rename re))
   def subst(su: Map[Id, Expr]) = App(fun, args map (_ subst su))
-  override def toString = "(" + fun + " " + args.mkString(" ") + ")"
+  override def toString = sexpr(fun, args: _*)
 }
 
 object App {
@@ -212,7 +212,7 @@ case class Old(expr: Expr) extends Expr {
   def free = expr.free
   def rename(re: Map[Id, Id]) = Old(expr rename re)
   def subst(su: Map[Id, Expr]) = Old(expr subst su)
-  override def toString = "(old " + expr + ")"
+  override def toString = sexpr("old", expr)
 }
 
 sealed trait Quant {
@@ -221,7 +221,7 @@ sealed trait Quant {
     else if (body == True) body
     else Bind(this, formals, body)
   }
-  
+
   def unapply(bind: Bind) = bind match {
     case Bind(quant, formals, body) if quant == this =>
       Some((formals, body))
@@ -244,28 +244,28 @@ case class Bind(quant: Quant, formals: List[Formal], body: Expr) extends Expr wi
   def free = body.free -- bound
   def rename(a: Map[Id, Id], re: Map[Id, Id]): Bind = Bind(quant, formals map (_ rename a), body rename re)
   def subst(a: Map[Id, Id], su: Map[Id, Expr]): Bind = Bind(quant, formals map (_ rename a), body subst su)
-  override def toString = "(" + quant + formals.mkString(" (", " ", ") ") + body + ")"
+  override def toString = sexpr(quant, sexpr(formals), body)
 }
 
 case class WP(prog: Prog, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
   def rename(re: Map[Id, Id]) = WP(prog rename re, post rename re)
   def subst(su: Map[Id, Expr]) = ???
-  override def toString = "(wp " + prog + " " + post + ")"
+  override def toString = sexpr("wp", prog, post)
 }
 
 case class Box(prog: Prog, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
   def rename(re: Map[Id, Id]) = Box(prog rename re, post rename re)
   def subst(su: Map[Id, Expr]) = ???
-  override def toString = "(box " + prog + " " + post + ")"
+  override def toString = sexpr("box", prog, post)
 }
 
 case class Dia(prog: Prog, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
   def rename(re: Map[Id, Id]) = Dia(prog rename re, post rename re)
   def subst(su: Map[Id, Expr]) = ???
-  override def toString = "(dia " + prog + " " + post + ")"
+  override def toString = sexpr("dia", prog, post)
 }
 
 sealed trait Prog {
@@ -279,7 +279,7 @@ case class Block(progs: List[Prog], withOld: Boolean) extends Prog {
   def read = Set(progs flatMap (_.read): _*)
   def rename(re: Map[Id, Id]) = Block(progs map (_ rename re))
   def ++(that: Block) = Block(this.progs ++ that.progs)
-  override def toString = "(block " + progs.mkString(" ") + ")"
+  override def toString = sexpr("block", progs.mkString: _*)
 }
 
 object Block extends (List[Prog] => Block) {
@@ -292,14 +292,14 @@ case object Break extends Prog {
   def mod = Set()
   def read = Set()
   def rename(re: Map[Id, Id]) = this
-  override def toString = "(break)"
+  override def toString = sexpr("break")
 }
 
 case class Let(x: Id, e: Expr) {
   def mod = Set(x)
   def free = e.free
   def rename(re: Map[Id, Id]) = Let(x rename re, e rename re)
-  override def toString = "(" + x + " " + e + ")"
+  override def toString = sexpr(x, e)
 }
 
 case class Assign(lets: List[Let]) extends Prog {
@@ -307,14 +307,14 @@ case class Assign(lets: List[Let]) extends Prog {
   def mod = Set(lets flatMap (_.mod): _*)
   def read = Set(lets flatMap (_.free): _*)
   def rename(re: Map[Id, Id]) = Assign(lets map (_ rename re))
-  override def toString = "(assign " + lets.mkString(" ") + ")"
+  override def toString = sexpr("assign", sexpr(lets))
 }
 
 case class Spec(xs: List[Id], pre: Expr, post: Expr) extends Prog {
   def mod = xs.toSet
   def read = pre.free ++ (post.free -- mod)
   def rename(re: Map[Id, Id]) = Spec(xs map (_ rename re), pre rename re, post rename re)
-  override def toString = "(spec " + xs.mkString(" (", " ", ") ") + pre + post + ")"
+  override def toString = sexpr("spec", sexpr(xs), pre, post)
 }
 
 object Spec extends ((List[Id], Expr, Expr) => Spec) {
@@ -326,7 +326,7 @@ case class If(test: Expr, left: Prog, right: Prog) extends Prog {
   def mod = left.mod ++ right.mod
   def read = test.free ++ left.read ++ right.read
   def rename(re: Map[Id, Id]) = If(test rename re, left rename re, right rename re)
-  override def toString = "(if " + test + " " + left + " " + right + ")"
+  override def toString = sexpr("if", test, left, right)
 }
 
 object If extends ((Expr, Prog, Option[Prog]) => If) {
@@ -340,7 +340,7 @@ case class While(test: Expr, body: Prog, after: Prog, term: Expr, pre: Expr, pos
   def mod = body.mod
   def read = test.free ++ body.read
   def rename(re: Map[Id, Id]) = While(test rename re, body rename re, after rename re, term rename re, pre rename re, post rename re)
-  override def toString = "(while " + test + " " + body + " " + after + " :termination " + term + " :precondition " + pre + " :post " + post + ")"
+  override def toString = sexpr("while", test, body, after, ":termination", term, ":precondition", pre, ":postcondition", post)
 }
 
 object While extends ((Expr, Prog, Option[Prog], Option[Expr], Option[Expr], Option[Expr]) => While) {
@@ -358,39 +358,39 @@ sealed trait Cmd {
 }
 
 case class SetLogic(logic: String) extends Cmd {
-  override def toString = "(set-logic " + logic + ")"
+  override def toString = sexpr("set-logic", logic)
 }
 
 object GetModel extends Cmd {
-  override def toString = "(get-model)"
+  override def toString = sexpr("get-model")
 }
 
 case object Exit extends Cmd {
-  override def toString = "(exit)"
+  override def toString = sexpr("exit")
 }
 
 case object Reset extends Cmd {
-  override def toString = "(reset)"
+  override def toString = sexpr("reset")
 }
 
 case object Push extends Cmd {
-  override def toString = "(push)"
+  override def toString = sexpr("push")
 }
 
 case object Pop extends Cmd {
-  override def toString = "(pop)"
+  override def toString = sexpr("pop")
 }
 
 case object GetAssertions extends Cmd {
-  override def toString = "(get-assertions)"
+  override def toString = sexpr("get-assertions")
 }
 
 case object CheckSat extends Cmd {
-  override def toString = "(check-sat)"
+  override def toString = sexpr("check-sat")
 }
 
 case class Assert(expr: Expr) extends Cmd {
-  override def toString = "(assert " + expr + ")"
+  override def toString = sexpr("assert", expr)
 }
 
 object CounterExample extends ((Expr, Prog, Expr) => Cmd) {
@@ -412,33 +412,33 @@ object CounterExample extends ((Expr, Prog, Expr) => Cmd) {
 }
 
 case class DeclareSort(sort: Sort, arity: Int) extends Cmd {
-  override def toString = "(declare-sort " + sort + " " + arity + ")"
+  override def toString = sexpr("declare-sort", sort, arity)
 }
 
 case class DefineSort(sort: Sort, args: List[Sort], body: Type) extends Cmd {
-  override def toString = "(declare-fun " + sort + args.mkString(" (", " ", ") ") + body + ")"
+  override def toString = sexpr("declare-fun", sort, sexpr(args), body)
 }
 
 case class DeclareFun(id: Id, args: List[Type], res: Type) extends Cmd {
-  override def toString = "(declare-fun " + id + args.mkString(" (", " ", ") ") + res + ")"
+  override def toString = sexpr("declare-fun", id, sexpr(args), res)
 }
 
 case class DefineFun(id: Id, args: List[Formal], res: Type, body: Expr) extends Cmd {
-  override def toString = "(define-fun " + id + args.mkString(" (", " ", ") ") + res + " " + body + ")"
+  override def toString = sexpr("define-fun", id, sexpr(args), res, body)
 }
 
 case class DefineFunRec(id: Id, args: List[Formal], res: Type, body: Expr) extends Cmd {
-  override def toString = "(define-fun-rec " + id + args.mkString(" (", " ", ") ") + res + " " + body + ")"
+  override def toString = sexpr("define-fun-rec", id, sexpr(args), res, body)
 }
 
 case class DeclareProc(id: Id, in: List[Type], ref: List[Type], out: List[Type]) extends Cmd {
-  override def toString = "(declare-proc " + id + in.mkString(" (", " ", ") ") + ref.mkString(" (", " ", ") ") + ")"
+  override def toString = sexpr("declare-proc", id, sexpr(in), ref)
 }
 
 case class DefineProc(id: Id, in: List[Type], ref: List[Formal], body: Expr) extends Cmd {
-  override def toString = "(define-proc " + id + in.mkString(" (", " ", ") ") + ref.mkString(" (", " ", ") ") + " " + body + ")"
+  override def toString = sexpr("define-proc", id, sexpr(in), ref, body)
 }
 
 case class DefineProcRec(id: Id, in: List[Type], ref: List[Formal], body: Expr) extends Cmd {
-  override def toString = "(define-proc-rec " + id + in.mkString(" (", " ", ") ") + ref.mkString(" (", " ", ") ") + " " + body + ")"
+  override def toString = sexpr("define-proc-rec", id, sexpr(in), ref, body)
 }

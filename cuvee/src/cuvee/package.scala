@@ -2,7 +2,7 @@ import scala.io.StdIn
 
 package object cuvee {
   import scala.language.implicitConversions
-  
+
   case class Error(info: Seq[Any]) extends Exception {
     override def toString = {
       info.mkString("(error \"", ", ", "\")")
@@ -37,11 +37,12 @@ package object cuvee {
     }
   }
 
-  def sexpr(arg0: String, args: String*) = {
-    "(" + arg0 + " " + args.mkString(" ") + ")"
+  def sexpr(arg0: Any, args: Any*): String = {
+    if (args.isEmpty) "(" + arg0 + ")"
+    else "(" + arg0 + " " + args.mkString(" ") + ")"
   }
 
-  def sexpr(args: Iterable[String]) = {
-    args mkString ("(", " ", ")")
+  def sexpr(args: Iterable[Any]): String = {
+    args.mkString("(", " ", ")")
   }
 }
