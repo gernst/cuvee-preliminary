@@ -221,6 +221,13 @@ sealed trait Quant {
     else if (body == True) body
     else Bind(this, formals, body)
   }
+  
+  def unapply(bind: Bind) = bind match {
+    case Bind(quant, formals, body) if quant == this =>
+      Some((formals, body))
+    case _ =>
+      None
+  }
 }
 
 case object Forall extends Quant {
@@ -424,4 +431,14 @@ case class DefineFunRec(id: Id, args: List[Formal], res: Type, body: Expr) exten
   override def toString = "(define-fun-rec " + id + args.mkString(" (", " ", ") ") + res + " " + body + ")"
 }
 
+case class DeclareProc(id: Id, in: List[Type], ref: List[Type], out: List[Type]) extends Cmd {
+  override def toString = "(declare-proc " + id + in.mkString(" (", " ", ") ") + ref.mkString(" (", " ", ") ") + ")"
+}
 
+case class DefineProc(id: Id, in: List[Type], ref: List[Formal], body: Expr) extends Cmd {
+  override def toString = "(define-proc " + id + in.mkString(" (", " ", ") ") + ref.mkString(" (", " ", ") ") + " " + body + ")"
+}
+
+case class DefineProcRec(id: Id, in: List[Type], ref: List[Formal], body: Expr) extends Cmd {
+  override def toString = "(define-proc-rec " + id + in.mkString(" (", " ", ") ") + ref.mkString(" (", " ", ") ") + " " + body + ")"
+}

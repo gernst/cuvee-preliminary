@@ -46,6 +46,12 @@ trait Alpha[E <: Alpha.term[E, V], V <: E with Alpha.x[E, V]] {
       val alpha = avoid(xs)
       subst(alpha, su -- bound ++ alpha)
     }
+
+    def refresh = {
+      val xs = bound
+      val alpha = avoid(xs)
+      rename(alpha, alpha)
+    }
   }
 
   var _index = 0
