@@ -8,6 +8,34 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.io.File
 import java.io.FileInputStream
 
+object Transform {
+  case class eval(state: () => State, to: Sink) extends Sink {
+    def eval(expr: Expr): Expr = {
+      eval(Nil, expr)
+    }
+
+    def eval(formals: List[Formal], expr: Expr): Expr = {
+      val st = state()
+      Eval.eval(expr, st.env bind formals, List.empty, st)
+    }
+
+    def send(cmd: Cmd) = cmd match {
+      case Assert(expr) =>
+        to.send(Assert(eval(expr)))
+      case DefineFun(id, formals, res, body) =>
+        to.send(DefineFun(id, formals, res, eval(formals, body)))
+      case DefineFunRec(id, formals, res, body) =>
+        to.send(DefineFunRec(id, formals, res, eval(formals, body)))
+      case _ =>
+        to.send(cmd)
+    }
+
+    def res(): Res = {
+      to.res()
+    }
+  }
+}
+
 trait Inbox {
   val _in: BlockingQueue[Cmd] = new LinkedBlockingQueue[Cmd]
   def recv(): Cmd = _in.take()
