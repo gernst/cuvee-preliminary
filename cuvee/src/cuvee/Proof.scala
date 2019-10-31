@@ -10,7 +10,7 @@ object Goal {
   def assume(expr: Expr): Goal = {
     Goal.empty assume expr
   }
-  
+
   def assert(expr: Expr): Goal = {
     Goal.empty assert expr
   }

@@ -357,6 +357,14 @@ sealed trait Cmd {
 
 }
 
+object Cmd {
+  def from(text: String) = {
+    import Parser.whitespace
+    import Parser.cmd
+    cmd.parseAll(text)
+  }
+}
+
 case class SetLogic(logic: String) extends Cmd {
   override def toString = sexpr("set-logic", logic)
 }
@@ -431,6 +439,7 @@ case class DefineFunRec(id: Id, args: List[Formal], res: Type, body: Expr) exten
   override def toString = sexpr("define-fun-rec", id, sexpr(args), res, body)
 }
 
+/*
 case class DeclareProc(id: Id, in: List[Type], ref: List[Type], out: List[Type]) extends Cmd {
   override def toString = sexpr("declare-proc", id, sexpr(in), ref)
 }
@@ -441,4 +450,51 @@ case class DefineProc(id: Id, in: List[Type], ref: List[Formal], body: Expr) ext
 
 case class DefineProcRec(id: Id, in: List[Type], ref: List[Formal], body: Expr) extends Cmd {
   override def toString = sexpr("define-proc-rec", id, sexpr(in), ref, body)
+}
+*/
+
+sealed trait Res
+
+object Res {
+  def from(text: String) = {
+    import Parser.whitespace
+    import Parser.res
+    res.parseAll(text)
+  }
+
+  case object empty extends Res {
+    override def toString = "()"
+  }
+}
+
+case object Success extends Res {
+  override def toString = "success"
+}
+
+case object Unsupported extends Res {
+  override def toString = "unsupported"
+}
+
+case class Error(info: Seq[Any]) extends Exception with Res {
+  override def toString = {
+    info.mkString("(error \"", ", ", "\")")
+  }
+}
+
+object Error extends (String => Error) {
+  def apply(msg: String): Error = {
+    Error(Seq(msg))
+  }
+}
+
+case object Sat extends Res {
+  override def toString = "sat"
+}
+
+case object Unknown extends Res {
+  override def toString = "unknown"
+}
+
+case object Unsat extends Res {
+  override def toString = "unsat"
 }

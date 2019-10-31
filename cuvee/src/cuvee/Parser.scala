@@ -94,6 +94,15 @@ object Parser {
   val define_fun_ = P(DefineFun("define-fun" ~ id ~ parens(formals) ~ typ ~ expr))
   val define_fun_rec_ = P(DefineFunRec("define-fun-rec" ~ id ~ parens(formals) ~ typ ~ expr))
 
+  val res: Parser[Res] = P(success | unsupported | sat | unsat | unknown | parens(error_))
+
+  val success = P(Success("success"))
+  val unsupported = P(Unsupported("unsupported"))
+  val sat = P(Sat("sat"))
+  val unsat = P(Unsat("unsat"))
+  val unknown = P(Unknown("unknown"))
+  val error_ = P(Error("error" ~ string))
+
   val cmds = P(cmd.*)
   val script = P(cmds.$)
 }
