@@ -8,6 +8,127 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.io.File
 import java.io.FileInputStream
 
+import scala.annotation.tailrec
+
+case class Pipe(source: Source, sink: Sink) extends Runnable {
+  def run() {
+    while (true) {
+      val cmd = source.recv()
+      if (cmd == null) return
+      sink.send(cmd)
+    }
+  }
+}
+
+object Pipe {
+  case class log(to: Sink) extends Sink {
+    var rcmds: List[Cmd] = Nil
+    var rress: List[Res] = Nil
+
+    def cmds = rcmds.reverse
+    def ress = rress.reverse
+
+    def send(cmd: Cmd) = {
+      rcmds = cmd :: rcmds
+      to.send(cmd)
+    }
+
+    def res(): Res = {
+      val res = to.res()
+      rress = res :: rress
+      res
+    }
+  }
+
+  def state(to: (() => State) => Sink): Sink = {
+    object scope {
+      def top(): State = st.top
+      val st = state(to(top))
+    }
+    scope.st
+  }
+
+  case class state(to: Sink) extends Sink {
+    var states: List[State] = _
+    reset()
+
+    def top = states.head
+
+    def reset() {
+      states = List(State.default)
+    }
+
+    def pop() = {
+      ensure(!states.isEmpty, "empty stack")
+      val st :: rest = states
+      states = rest
+      st
+    }
+
+    def push(st: State) {
+      states = st :: states
+    }
+
+    def map(action: State => State) {
+      val st0 = pop()
+      try {
+        push(action(st0))
+      } catch {
+        case e: Throwable =>
+          push(st0)
+          throw e
+      }
+    }
+
+    def send(cmd: Cmd) = cmd match {
+      case Reset =>
+        reset()
+        to.send(cmd)
+
+      case Push =>
+        push(top)
+        to.send(cmd)
+
+      case Pop =>
+        pop()
+        to.send(cmd)
+
+      /*  case GetAssertions =>
+        val asserts = top.asserts
+        for (assert <- asserts)
+          yield "(assert " + assert + ")" */
+
+      case DeclareSort(sort, arity) =>
+        map(_ declare (sort, arity))
+        to.send(cmd)
+
+      case DefineSort(sort, args, body) =>
+        map(_ define (sort, args, body))
+        to.send(cmd)
+        to.send(cmd)
+
+      case DeclareFun(id, args, res) =>
+        map(_ declare (id, args, res))
+        to.send(cmd)
+
+      case DefineFun(id, args, res, body) =>
+        map(_ define (id, args, res, body))
+        to.send(cmd)
+
+      case DefineFunRec(id, args, res, body) =>
+        map(_ define (id, args, res, body))
+        to.send(cmd)
+
+      case _ =>
+        to.send(cmd)
+    }
+
+    def res(): Res = {
+      to.res()
+    }
+  }
+}
+
 object Transform {
   case class eval(state: () => State, to: Sink) extends Sink {
     def eval(expr: Expr): Expr = {
@@ -34,6 +155,7 @@ object Transform {
       to.res()
     }
   }
+
 }
 
 trait Inbox {
@@ -51,9 +173,12 @@ trait Outbox {
 trait Source {
   def recv(): Cmd
   def ack(res: Res)
+  def |(that: Sink) = Pipe(this, that)
 }
 
 object Source {
+  def file(in: File): file = file(in, println)
+
   case class file(in: File, out: Res => Unit) extends Source {
     val reader = new BufferedReader(new InputStreamReader(new FileInputStream(in)))
 
@@ -101,8 +226,8 @@ object Sink {
 
   def dummy(in: Cmd): Option[Res] = in match {
     case Push | Pop | Exit => None
-    case GetAssertions => Some(Res.empty)
-    case GetModel => Some(Res.empty)
+    case GetAssertions => Some(Assertions(Nil))
+    case GetModel => Some(Model(Nil))
     case CheckSat => Some(Unknown)
     case Reset => Some(Success)
     case _: SetLogic => Some(Success)

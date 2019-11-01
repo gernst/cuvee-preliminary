@@ -1,130 +1,68 @@
 package cuvee
 
-class Solver {
-  var rlog: List[Cmd] = Nil
-  var states: List[State] = _
-  reset()
+trait Solver {
+  def exec(cmd: Cmd): Option[Res]
+}
 
-  override def toString = {
-    rlog.reverse.mkString("\n")
-  }
+trait Dispatch {
+  this: Solver =>
 
-  def top = states.head
+  def setLogic(logic: String): Ack
+  def setOption(args: List[String]): Ack
 
-  def reset() {
-    states = List(State.default)
-  }
+  def reset(): Unit
+  def push(): Unit
+  def pop(): Unit
+  def exit(): Nothing
 
-  def exit(): Nothing = {
-    System.exit(0)
-    ??? // unreachable
-  }
+  def check(): IsSat
+  def assertions(): Assertions
+  def model(): Model
 
-  def pop() = {
-    ensure(!states.isEmpty, "empty stack")
-    val st :: rest = states
-    states = rest
-    st
-  }
+  def declare(sort: Sort, arity: Int): Ack
+  def define(sort: Sort, args: List[Sort], body: Type): Ack
 
-  def push(st: State) {
-    states = st :: states
-  }
+  def declare(id: Id, args: List[Type], res: Type): Ack
+  def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean): Ack
 
-  def ack(cmd: Cmd) = {
-    rlog = cmd :: rlog
-    List()
-  }
+  def assert(expr: Expr): Ack
 
-  def ack(cmds: List[Cmd]) = {
-    rlog = cmds.reverse ++ rlog
-    List()
-  }
+  def exec(cmd: Cmd): Option[Res] = cmd match {
+    case SetLogic(logic) =>
+      Some(setLogic(logic))
+    case SetOption(args) =>
+      Some(setOption(args))
 
-  def map(action: State => State) {
-    val st0 = pop()
-    try {
-      push(action(st0))
-    } catch {
-      case e: Throwable =>
-        push(st0)
-        throw e
-    }
-  }
-
-  def exec(cmds: List[Cmd]): List[String] = {
-    cmds flatMap exec
-  }
-
-  def exec(cmd: Cmd): List[String] = cmd match {
+    case Reset =>
+      reset(); None
+    case Push =>
+      push(); None
+    case Pop =>
+      pop(); None
     case Exit =>
       exit()
 
-    case Reset =>
-      reset()
-      ack(cmd)
-
-    case Push =>
-      push(top)
-      ack(cmd)
-
-    case Pop =>
-      pop()
-      ack(cmd)
-
-    case GetModel =>
-      ack(cmd)
-
-    case GetAssertions =>
-      val asserts = top.asserts
-      for (assert <- asserts)
-        yield "(assert " + assert + ")"
-
     case CheckSat =>
-      map(x => x)
-      ack(cmd)
-
-    case SetLogic(logic) =>
-      map(x => x)
-      ack(cmd)
-
-    case Assert(expr) =>
-      import Eval.eval
-      val _expr = eval(expr, top.env, List.empty, top)
-      val _cmd = Assert(_expr)
-      // val _goal = Goal.assume(_expr)
-      // println((_goal.scope ++ _goal.ant ++ _goal.suc).mkString("\n"))
-      map(_ assert _expr)
-      ack(_cmd)
-
-    /*
-      val cmds = Simplify.flatten(_expr, pos = true)
-      cmds match {
-        case List(cmd @ Assert(expr)) =>
-          map(_ assert expr)
-          ack(cmd)
-        case _ =>
-          exec(cmds)
-      } */
+      Some(check())
+    case GetAssertions =>
+      Some(assertions())
+    case GetModel =>
+      Some(model())
 
     case DeclareSort(sort, arity) =>
-      map(_ declare (sort, arity))
-      ack(cmd)
-
+      Some(declare(sort, arity))
     case DefineSort(sort, args, body) =>
-      map(_ define (sort, args, body))
-      ack(cmd)
+      Some(define(sort, args, body))
 
     case DeclareFun(id, args, res) =>
-      map(_ declare (id, args, res))
-      ack(cmd)
+      Some(declare(id, args, res))
+    case DefineFun(id, formals, res, body) =>
+      Some(define(id, formals, res, body, false))
+    case DefineFunRec(id, formals, res, body) =>
+      Some(define(id, formals, res, body, true))
 
-    case DefineFun(id, args, res, body) =>
-      map(_ define (id, args, res, body))
-      ack(cmd)
-
-    case DefineFunRec(id, args, res, body) =>
-      map(_ define (id, args, res, body))
-      ack(cmd)
+    case Assert(expr) =>
+      Some(assert(expr))
   }
 }
+

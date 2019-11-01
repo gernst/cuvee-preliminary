@@ -13,7 +13,7 @@ object Main {
   import Parser.script
   import Parser.whitespace
 
-  var solver: Solver = null
+  var solver: DIspatch = null
 
   def in() = {
     var line = StdIn.readLine()
@@ -44,7 +44,7 @@ object Main {
   }
 
   def repl() {
-    solver = new Solver
+    solver = new DIspatch
     while (true) {
       val line = in()
       line match {
@@ -55,7 +55,7 @@ object Main {
   }
 
   def read(path: String) {
-    solver = new Solver
+    solver = new DIspatch
     val file = new File(path)
     val length = file.length
     val buf = new Array[Byte](length.toInt)
