@@ -38,6 +38,7 @@ object Main {
       case e: Error =>
         out(e)
       case t: Throwable =>
+        t.printStackTrace
         out("(error \"" + t + "\")")
     }
   }

@@ -36,6 +36,11 @@ class Solver {
     List()
   }
 
+  def ack(cmds: List[Cmd]) = {
+    rlog = cmds.reverse ++ rlog
+    List()
+  }
+
   def map(action: State => State) {
     val st0 = pop()
     try {
@@ -87,8 +92,20 @@ class Solver {
       import Eval.eval
       val _expr = eval(expr, top.env, List.empty, top)
       val _cmd = Assert(_expr)
+      // val _goal = Goal.assume(_expr)
+      // println((_goal.scope ++ _goal.ant ++ _goal.suc).mkString("\n"))
       map(_ assert _expr)
       ack(_cmd)
+
+    /*
+      val cmds = Simplify.flatten(_expr, pos = true)
+      cmds match {
+        case List(cmd @ Assert(expr)) =>
+          map(_ assert expr)
+          ack(cmd)
+        case _ =>
+          exec(cmds)
+      } */
 
     case DeclareSort(sort, arity) =>
       map(_ declare (sort, arity))
