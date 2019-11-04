@@ -1,7 +1,48 @@
 package cuvee
 
+import java.io.PrintStream
+import java.io.BufferedReader
+import java.io.InputStreamReader
+
 trait Solver {
   def exec(cmd: Cmd): Option[Res]
+}
+
+object Solver {
+  def z3(timeout: Int = 1000) = process("z3", "-t:" + timeout, "-in")
+  def cvc4(timeout: Int = 1000) = process("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--increment-triggers")
+
+  case class process(args: String*) extends Solver {
+    val pb = new ProcessBuilder(args: _*)
+    val pr = pb.start()
+    val stdout = new BufferedReader(new InputStreamReader(pr.getInputStream))
+    val stdin = new PrintStream(pr.getOutputStream)
+
+    val init = List(
+      SetOption(List(":print-success", "true")))
+
+    for (cmd <- init)
+      exec(cmd)
+
+    def exec(cmd: Cmd) = cmd match {
+      case Push | Pop | Reset | Exit =>
+        write(cmd)
+        None
+      case _ =>
+        write(cmd)
+        Some(read())
+    }
+
+    def write(cmd: Cmd) = {
+      stdin.println(cmd)
+      stdin.flush()
+    }
+
+    def read(): Res = {
+      val line = stdout.readLine()
+      Res.from(line)
+    }
+  }
 }
 
 trait Dispatch {
