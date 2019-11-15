@@ -3,6 +3,7 @@ package cuvee
 import java.io.PrintStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.io.File
 
 trait Solver {
   def setLogic(logic: String): Ack
@@ -24,11 +25,11 @@ trait Solver {
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean): Ack
 
   def assert(expr: Expr): Ack
-  
+
   def setOption(args: String*): Ack = {
     setOption(args.toList)
   }
-  
+
   def exec(cmd: Cmd): Option[Res] = cmd match {
     case SetLogic(logic) =>
       Some(setLogic(logic))
@@ -71,7 +72,7 @@ trait Solver {
 object Solver {
   def z3(timeout: Int = 1000) = process("z3", "-t:" + timeout, "-in")
   def cvc4(timeout: Int = 1000) = process("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--increment-triggers")
-
+  
   case class process(args: String*) extends Solver {
     val pb = new ProcessBuilder(args: _*)
     val pr = pb.start()
@@ -153,6 +154,81 @@ object Solver {
 
     def read() = {
       stdout.readLine()
+    }
+  }
+
+  case class file(out: File) extends Solver {
+    val stream = new PrintStream(out)
+
+    def setLogic(logic: String) = {
+      write(Printer.setLogic(logic))
+      Success
+    }
+
+    def setOption(args: List[String]) = {
+      write(Printer.setOption(args))
+      Success
+    }
+
+    def reset() {
+      write(Printer.reset())
+    }
+
+    def push() {
+      write(Printer.push())
+    }
+
+    def pop() {
+      write(Printer.pop())
+    }
+
+    def exit() {
+      write(Printer.exit())
+    }
+
+    def check() = {
+      write(Printer.check())
+      Unknown
+    }
+
+    def assert(expr: Expr) = {
+      write(Printer.assert(expr))
+      Success
+    }
+
+    def assertions() = {
+      write(Printer.assertions)
+      Assertions(Nil)
+    }
+
+    def model() = {
+      write(Printer.model())
+      Model(Nil)
+    }
+
+    def declare(sort: Sort, arity: Int) = {
+      write(Printer.declare(sort, arity))
+      Success
+    }
+
+    def define(sort: Sort, args: List[Sort], body: Type) = {
+      write(Printer.define(sort, args, body))
+      Success
+    }
+
+    def declare(id: Id, args: List[Type], res: Type) = {
+      write(Printer.declare(id, args, res))
+      Success
+    }
+
+    def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
+      write(Printer.define(id, formals, res, body, rec))
+      Success
+    }
+
+    def write(line: String) {
+      stream.println(line)
+      stream.flush()
     }
   }
 }

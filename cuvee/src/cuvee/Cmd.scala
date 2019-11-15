@@ -4,13 +4,8 @@ sealed trait Cmd
 sealed trait Decl extends Cmd
 sealed trait Def extends Cmd
 
-object Cmd {
-  def from(text: String) = {
-    import Parser.whitespace
-    import Parser.cmd
-    cmd.parseAll(text)
-  }
-}
+object Cmd extends Parseable(Parser.cmd)
+object Script extends Parseable(Parser.script)
 
 case class SetLogic(logic: String) extends Cmd {
   override def toString = Printer.setLogic(logic)
