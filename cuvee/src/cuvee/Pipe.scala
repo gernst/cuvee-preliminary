@@ -6,50 +6,52 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintStream
 
-trait Source extends Runnable {
+trait Source {
+  def run(solver: Solver, report: Report)
 }
 
 trait Report extends (Res => Unit) {
+  def apply(res: Res)
 }
 
 object Source {
-  def safe(cmd: Cmd, solver: Solver, out: Report) {
+  def safe(cmd: Cmd, solver: Solver, report: Report) {
     try {
       solver.exec(cmd) match {
         case None =>
         case Some(res) =>
-          out(res)
+          report(res)
       }
     } catch {
       case e: Error =>
-        out(e)
+        report(e)
       case t: Throwable =>
         t.printStackTrace
         val e = Error(t.toString)
-        out(e)
+        report(e)
     }
   }
 
-  case class stdin(out: Report, solver: Solver) extends Source {
+  case object stdin extends Source {
     val reader = new BufferedReader(new InputStreamReader(System.in))
 
     def readLine() = {
       reader.readLine()
     }
 
-    def run() {
+    def run(solver: Solver, report: Report) {
       var line: String = null
       do {
         line = readLine()
         if (line != null) {
           val cmd = Cmd.from(line)
-          safe(cmd, solver, out)
+          safe(cmd, solver, report)
         }
       } while (line != null)
     }
   }
 
-  case class file(in: File, out: Report, solver: Solver) extends Source {
+  case class file(in: File) extends Source {
     def read() = {
       val length = in.length
       val buf = new Array[Byte](length.toInt)
@@ -60,19 +62,19 @@ object Source {
       new String(buf, "UTF-8")
     }
 
-    def run() {
+    def run(solver: Solver, report: Report) {
       val input = read()
       val cmds = Script.from(input)
 
       for (cmd <- cmds) {
-        safe(cmd, solver, out)
+        safe(cmd, solver, report)
       }
     }
   }
 }
 
 object Report {
-  object stdout extends Report {
+  case object stdout extends Report {
     def apply(res: Res) {
       System.out.println(res)
       System.out.flush()

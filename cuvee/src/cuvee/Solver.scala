@@ -72,7 +72,7 @@ trait Solver {
 object Solver {
   def z3(timeout: Int = 1000) = process("z3", "-t:" + timeout, "-in")
   def cvc4(timeout: Int = 1000) = process("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--increment-triggers")
-  
+
   case class process(args: String*) extends Solver {
     val pb = new ProcessBuilder(args: _*)
     val pr = pb.start()
@@ -157,9 +157,14 @@ object Solver {
     }
   }
 
-  case class file(out: File) extends Solver {
+  def file(out: File) = {
     val stream = new PrintStream(out)
+    print(stream)
+  }
+  
+  val stdout = print(System.out)
 
+  case class print(stream: PrintStream) extends Solver {
     def setLogic(logic: String) = {
       write(Printer.setLogic(logic))
       Success

@@ -10,119 +10,41 @@ import java.io.InputStreamReader
 import java.io.InputStream
 
 object Main {
-  import Parser.script
-  import Parser.whitespace
+  val solver: Solver = ???
 
-  var solver: DIspatch = null
+  def run(source: Source, backend: Solver, report: Report) {
 
-  def in() = {
-    var line = StdIn.readLine()
-    if (line != null) line = line.trim
-    line
   }
 
-  var _out = System.out
-
-  def out(any: Any) {
-    _out.println(any)
-    _out.flush()
-  }
-
-  def cmd(input: String) {
-    try {
-      val cmds = script parse input
-      val msgs = solver.exec(cmds)
-      for (msg <- msgs)
-        out(msg)
-    } catch {
-      case e: Error =>
-        out(e)
-      case t: Throwable =>
-        t.printStackTrace
-        out("(error \"" + t + "\")")
-    }
-  }
-
-  def repl() {
-    solver = new DIspatch
-    while (true) {
-      val line = in()
-      line match {
-        case null | "" => solver.exit()
-        case _ => cmd(line)
-      }
-    }
-  }
-
-  def read(path: String) {
-    solver = new DIspatch
-    val file = new File(path)
-    val length = file.length
-    val buf = new Array[Byte](length.toInt)
-    val stream = new FileInputStream(file)
-    val read = stream.read(buf)
-    ensure(read == length, "short read", path)
-    stream.close()
-    val content = new String(buf, "UTF-8")
-    cmd(content)
-    out(solver)
-    solver = null
-  }
-
-  def drain(in: InputStream) {
-    val reader = new BufferedReader(new InputStreamReader(in))
-    var line: String = null
-    do {
-      line = reader.readLine()
-      if (line != null)
-        out(line)
-    } while (line != null)
-  }
-
-  def run(args: List[String], files: List[String] = Nil): Unit = args match {
-    case Nil if files.isEmpty =>
-      repl()
-
+  def run(args: List[String], source: Source, solver: Solver, report: Report): Unit = args match {
     case Nil =>
-      for (file <- files.reverse)
-        read(file)
+      run(source, solver, report)
 
-    case "-z3" :: Nil =>
-      run("--" :: "z3" :: "-in" :: Nil, files)
+    case "-z3" :: rest =>
+      run("--" :: "z3" :: "-in" :: rest, source, solver, report)
 
-    case "-cvc4" :: Nil =>
-      run("--" :: "cvc4" :: "--lang" :: "smt2" :: Nil, files)
+    case "-cvc4" :: rest =>
+      run("--" :: "cvc4" :: "--lang" :: "smt2" :: rest, source, solver, report)
 
     case "--" :: args =>
       ensure(args.length >= 1, "-- needs an SMT solver as argument")
+      val _solver = Solver.process(args: _*)
+      run(source, _solver, report)
 
-      for (file <- files.reverse) {
-        val pb = new ProcessBuilder(args: _*)
-        val pr = pb.start()
-        val stdout = pr.getInputStream
-        val stderr = pr.getErrorStream
-        val stdin = new PrintStream(pr.getOutputStream)
+    case "-o" :: path :: rest =>
+      val out = new File(path)
+      val _report = Report.file(out)
+      run(rest, source, solver, _report)
 
-        val old = _out
-        _out = stdin
-        read(file)
-        out("(exit)")
-        _out = old
+    case path :: rest =>
+      ensure(source == Source.stdin, "only a single input file is supported")
+      val in = new File(path)
+      val _source = Source.file(in)
+      run(rest, _source, solver, report)
+  }
 
-        drain(stdout)
-        drain(stderr)
-        stdin.close()
-      }
-
-    case "-o" :: dest :: Nil =>
-      ensure(files.length == 1, "-o can only be used with a single input file", files)
-      _out = new PrintStream(new File(dest))
-
-      for (file <- files.reverse)
-        read(file)
-
-    case file :: rest =>
-      run(rest, file :: files)
+  def run(args: List[String]) {
+    run(args.toList, Source.stdin, Solver.stdout, Report.stdout)
   }
 
   def main(args: Array[String]) {
