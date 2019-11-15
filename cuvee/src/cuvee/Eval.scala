@@ -147,7 +147,7 @@ object Eval {
       val hyp = Spec(mod_, decrease && phi, !test && psi)
 
       val _phi0 = eval(phi, env0, old, st)
-      val _psi0 = eval(psi, env1, old, st)
+      val _psi0 = eval(psi, env1, env0 :: old, st)
 
       val _phi1 = eval(phi, env1, old, st)
       val _psi1 = eval(psi, env1, env1 :: old, st)

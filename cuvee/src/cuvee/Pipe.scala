@@ -105,7 +105,6 @@ object Pipe {
       case DefineSort(sort, args, body) =>
         map(_ define (sort, args, body))
         to.send(cmd)
-        to.send(cmd)
 
       case DeclareFun(id, args, res) =>
         map(_ declare (id, args, res))
@@ -231,6 +230,7 @@ object Sink {
     case CheckSat => Some(Unknown)
     case Reset => Some(Success)
     case _: SetLogic => Some(Success)
+    case _: SetOption => Some(Success)
     case _: DeclareSort => Some(Success)
     case _: DeclareFun => Some(Success)
     case _: DefineSort => Some(Success)

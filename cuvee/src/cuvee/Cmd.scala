@@ -13,43 +13,43 @@ object Cmd {
 }
 
 case class SetLogic(logic: String) extends Cmd {
-  override def toString = sexpr("set-logic", logic)
+  override def toString = Printer.setLogic(logic)
 }
 
 case class SetOption(args: List[String]) extends Cmd {
-  override def toString = sexpr("set-option", args: _*)
+  override def toString = Printer.setOption(args)
 }
 
 object GetModel extends Cmd {
-  override def toString = sexpr("get-model")
+  override def toString = Printer.model()
 }
 
 case object Exit extends Cmd {
-  override def toString = sexpr("exit")
+  override def toString = Printer.exit()
 }
 
 case object Reset extends Cmd {
-  override def toString = sexpr("reset")
+  override def toString = Printer.reset()
 }
 
 case object Push extends Cmd {
-  override def toString = sexpr("push")
+  override def toString = Printer.push()
 }
 
 case object Pop extends Cmd {
-  override def toString = sexpr("pop")
+  override def toString = Printer.pop()
 }
 
 case object GetAssertions extends Cmd {
-  override def toString = sexpr("get-assertions")
+  override def toString = Printer.assertions()
 }
 
 case object CheckSat extends Cmd {
-  override def toString = sexpr("check-sat")
+  override def toString = Printer.check()
 }
 
 case class Assert(expr: Expr) extends Cmd {
-  override def toString = sexpr("assert", expr)
+  override def toString = Printer.assert(expr)
 }
 
 object CounterExample extends ((Expr, Prog, Expr) => Cmd) {
@@ -71,23 +71,23 @@ object CounterExample extends ((Expr, Prog, Expr) => Cmd) {
 }
 
 case class DeclareSort(sort: Sort, arity: Int) extends Decl {
-  override def toString = sexpr("declare-sort", sort, arity)
+  override def toString = Printer.declare(sort, arity)
 }
 
 case class DefineSort(sort: Sort, args: List[Sort], body: Type) extends Def {
-  override def toString = sexpr("declare-fun", sort, sexpr(args), body)
+  override def toString = Printer.define(sort, args, body)
 }
 
 case class DeclareFun(id: Id, args: List[Type], res: Type) extends Decl {
-  override def toString = sexpr("declare-fun", id, sexpr(args), res)
+  override def toString = Printer.declare(id, args, res)
 }
 
-case class DefineFun(id: Id, args: List[Formal], res: Type, body: Expr) extends Def {
-  override def toString = sexpr("define-fun", id, sexpr(args), res, body)
+case class DefineFun(id: Id, formals: List[Formal], res: Type, body: Expr) extends Def {
+  override def toString = Printer.define(id, formals, res, body, false)
 }
 
-case class DefineFunRec(id: Id, args: List[Formal], res: Type, body: Expr) extends Def {
-  override def toString = sexpr("define-fun-rec", id, sexpr(args), res, body)
+case class DefineFunRec(id: Id, formals: List[Formal], res: Type, body: Expr) extends Def {
+  override def toString = Printer.define(id, formals, res, body, true)
 }
 
 /*
@@ -109,13 +109,12 @@ sealed trait Res
 sealed trait IsSat extends Res
 sealed trait Ack extends Res
 
-object Res {
-  def from(text: String) = {
-    import Parser.whitespace
-    import Parser.res
-    res.parseAll(text)
-  }
-}
+object Res extends Parseable(Parser.res)
+object IsSat extends Parseable(Parser.is_sat)
+object Ack extends Parseable(Parser.ack)
+
+object Assertions extends Parseable(Parser.assertions) with (List[Expr] => Assertions)
+object Model extends Parseable(Parser.model) with (List[Def] => Model)
 
 case object Success extends Ack {
   override def toString = "success"
@@ -126,9 +125,7 @@ case object Unsupported extends Ack {
 }
 
 case class Error(info: Seq[Any]) extends Exception with Ack {
-  override def toString = {
-    info.mkString("(error \"", ", ", "\")")
-  }
+  override def toString = Printer.error(info)
 }
 
 object Error extends (String => Error) {
@@ -138,21 +135,21 @@ object Error extends (String => Error) {
 }
 
 case object Sat extends IsSat {
-  override def toString = "sat"
+  override def toString = Printer.sat()
 }
 
 case object Unknown extends IsSat {
-  override def toString = "unknown"
+  override def toString = Printer.unknown()
 }
 
 case object Unsat extends IsSat {
-  override def toString = "unsat"
+  override def toString = Printer.unsat()
 }
 
 case class Assertions(exprs: List[Expr]) extends Res {
-  override def toString = sexpr(exprs)
+  override def toString = Printer.assertions(exprs)
 }
 
 case class Model(defs: List[Def]) extends Res {
-  override def toString = sexpr(defs)
+  override def toString = Printer.model()
 }

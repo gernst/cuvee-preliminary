@@ -3,8 +3,15 @@ package cuvee
 import arse._
 import arse.implicits._
 
+class Parseable[A](p: Parser[A]) {
+  def from(text: String): A = {
+    import Parser.whitespace
+    p.parseAll(text)
+  }
+}
+
 object Parser {
-  implicit val whitespace = Whitespace.default
+  implicit val whitespace: Whitespace = Whitespace.default
 
   def parens[A](p: Parser[A]) = {
     "(" ~ p ~ ")"
@@ -94,7 +101,10 @@ object Parser {
   val define_fun_ = P(DefineFun("define-fun" ~ id ~ parens(formals) ~ typ ~ expr))
   val define_fun_rec_ = P(DefineFunRec("define-fun-rec" ~ id ~ parens(formals) ~ typ ~ expr))
 
-  val res: Parser[Res] = P(success | unsupported | sat | unsat | unknown | parens(error_))
+  val res: Parser[Res] = P(ack | is_sat)
+
+  val dfn_ = P(define_fun_ | define_fun_rec_)
+  val dfn = parens(dfn_)
 
   val success = P(Success("success"))
   val unsupported = P(Unsupported("unsupported"))
@@ -102,6 +112,15 @@ object Parser {
   val unsat = P(Unsat("unsat"))
   val unknown = P(Unknown("unknown"))
   val error_ = P(Error("error" ~ string))
+
+  val ack: Parser[Ack] = P(success | unsupported | parens(error_))
+  val is_sat: Parser[IsSat] = P(sat | unsat | unknown)
+
+  val assertions_ = P(Assertions(expr.*))
+  val assertions: Parser[Assertions] = parens(assertions_)
+
+  val model_ = P(Model("model" ~ dfn.*))
+  val model: Parser[Model] = parens(model_)
 
   val cmds = P(cmd.*)
   val script = P(cmds.$)
