@@ -161,7 +161,7 @@ object Solver {
     val stream = new PrintStream(out)
     print(stream)
   }
-  
+
   val stdout = print(System.out)
 
   case class print(stream: PrintStream) extends Solver {

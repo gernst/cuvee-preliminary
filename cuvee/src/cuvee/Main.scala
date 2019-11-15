@@ -10,10 +10,31 @@ import java.io.InputStreamReader
 import java.io.InputStream
 
 object Main {
-  val solver: Solver = ???
+  case class eval(backend: Solver) extends Solver {
+    def setLogic(logic: String) = backend.setLogic(logic)
+    def setOption(args: List[String]) = backend.setOption(args)
+
+    def reset() = backend.reset()
+    def push() = backend.push()
+    def pop() = backend.pop()
+    def exit() = backend.exit()
+
+    def check() = backend.check()
+    def assertions() = backend.assertions()
+    def model() = backend.model()
+
+    def declare(sort: Sort, arity: Int) = backend.declare(sort, arity)
+    def define(sort: Sort, args: List[Sort], body: Type) = backend.define(sort, args, body)
+
+    def declare(id: Id, args: List[Type], res: Type) = backend.declare(id, args, res)
+    def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = backend.define(id, formals, res, body, rec)
+
+    def assert(expr: Expr) = backend.assert(expr)
+  }
 
   def run(source: Source, backend: Solver, report: Report) {
-
+    val solver = eval(backend)
+    source.run(solver, report)
   }
 
   def run(args: List[String], source: Source, solver: Solver, report: Report): Unit = args match {
