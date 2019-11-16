@@ -9,10 +9,10 @@ trait Solver {
   def setLogic(logic: String): Ack
   def setOption(args: List[String]): Ack
 
-  def reset(): Unit
-  def push(): Unit
-  def pop(): Unit
-  def exit(): Unit
+  def reset(): Ack
+  def push(): Ack
+  def pop(): Ack
+  def exit(): Ack
 
   def check(): IsSat
   def assertions(): Assertions
@@ -91,20 +91,24 @@ object Solver {
       Ack.from(read())
     }
 
-    def reset() {
+    def reset() = {
       write(Printer.reset())
+      Ack.from(read())
     }
 
-    def push() {
+    def push() = {
       write(Printer.push())
+      Ack.from(read())
     }
 
-    def pop() {
+    def pop() = {
       write(Printer.pop())
+      Ack.from(read())
     }
 
-    def exit() {
+    def exit() = {
       write(Printer.exit())
+      Ack.from(read())
     }
 
     def check() = {
@@ -153,7 +157,8 @@ object Solver {
     }
 
     def read() = {
-      stdout.readLine()
+      val line = stdout.readLine()
+      line
     }
   }
 
@@ -175,20 +180,24 @@ object Solver {
       Success
     }
 
-    def reset() {
+    def reset() = {
       write(Printer.reset())
+      Success
     }
 
-    def push() {
+    def push() = {
       write(Printer.push())
+      Success
     }
 
-    def pop() {
+    def pop() = {
       write(Printer.pop())
+      Success
     }
 
-    def exit() {
+    def exit() = {
       write(Printer.exit())
+      Success
     }
 
     def check() = {

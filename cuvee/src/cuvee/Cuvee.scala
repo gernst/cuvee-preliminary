@@ -11,7 +11,7 @@ import java.io.InputStream
 
 case class Simplify(backend: Solver) extends Solver {
   var rlog: List[Cmd] = Nil
-  var states: List[State] = _
+  var states: List[State] = List(State.default)
 
   override def toString = {
     log.mkString("\n")
@@ -23,7 +23,16 @@ case class Simplify(backend: Solver) extends Solver {
   def setLogic(logic: String) = backend.setLogic(logic)
   def setOption(args: List[String]) = backend.setOption(args)
 
-  def reset() {
+  override def exec(cmd: Cmd): Option[Res] = {
+    val res = super.exec(cmd)
+    res match {
+      case None => None
+      case Some(_: Ack) => None
+      case _ => res
+    }
+  }
+
+  def reset() = {
     states = List(State.default)
     backend.reset()
   }
@@ -50,7 +59,7 @@ case class Simplify(backend: Solver) extends Solver {
     backend.pop()
   }
 
-  def push() {
+  def push() = {
     _push(top)
     backend.push()
   }
@@ -67,17 +76,20 @@ case class Simplify(backend: Solver) extends Solver {
   }
 
   def simplify(expr: Expr): Expr = {
-    simplify(Nil, expr)
-  }
-
-  def simplify(formals: List[Formal], expr: Expr): Expr = {
-    val env = top.env bind formals
+    val env = top.env
     val old = Nil
     Eval.eval(expr, env, old, top)
   }
 
   def check() = {
-    backend.check()
+    backend.push()
+    for (expr <- top.asserts) {
+      val _expr = simplify(expr)
+      backend.assert(_expr)
+    }
+    val res = backend.check()
+    backend.pop()
+    res
   }
 
   def assertions() = {
@@ -156,6 +168,7 @@ object Cuvee {
   }
 
   def main(args: Array[String]) {
-    run(args.toList)
+    // run(args.toList)
+    run(List("examples/gcd.smt2", "-z3"))
   }
 }
