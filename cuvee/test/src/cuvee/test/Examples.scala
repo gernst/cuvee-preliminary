@@ -23,7 +23,7 @@ object Examples extends TestSuite {
     val report = prove_!
 
     test(path) {
-      Main.run(source, solver, report)
+      Cuvee.run(source, solver, report)
     }
   }
 

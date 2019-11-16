@@ -6,11 +6,11 @@ trait Proof {
 object Proof {
   val empty = Goal(Nil, Nil)
 
-  def assume(expr: Expr): Proof = {
+  def assume(expr: Expr): Goal = {
     empty assume expr
   }
 
-  def assert(expr: Expr): Proof = {
+  def assert(expr: Expr): Goal = {
     empty assert expr
   }
 }
@@ -23,7 +23,7 @@ case class Neg(phi: Expr) extends Proof {
   override def toString = sexpr("not", phi)
 }
 
-case class Cases(cases: List[Proof]) extends Proof {
+case class Cases(cases: List[Goal]) extends Proof {
   override def toString = sexpr("or", cases)
 }
 
