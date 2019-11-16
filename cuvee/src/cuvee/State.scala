@@ -7,7 +7,8 @@ case class State(
   funs: Map[Id, (List[Type], Type)],
   fundefs: Map[Id, (List[Id], Expr)],
 
-  rasserts: List[Expr]) {
+  rasserts: List[Expr],
+  model: Option[Model]) {
   
   def asserts = rasserts.reverse
   
@@ -55,6 +56,16 @@ case class State(
     copy(
       rasserts = expr :: rasserts)
   }
+  
+  def withModel(model: Model) = {
+    copy(
+      model = Some(model))
+  }
+  
+  def clearModel = {
+    copy(
+      model = None)
+  }
 }
 
 object State {
@@ -99,5 +110,6 @@ object State {
       Id.store -> Fun.store */),
     fundefs = Map(),
 
-    rasserts = Nil)
+    rasserts = Nil,
+    model = None)
 }

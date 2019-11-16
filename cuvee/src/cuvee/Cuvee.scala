@@ -13,6 +13,9 @@ case class Simplify(backend: Solver) extends Solver {
   var rlog: List[Cmd] = Nil
   var states: List[State] = List(State.default)
 
+  var printSuccess = false
+  var produceModels = false
+
   override def toString = {
     log.mkString("\n")
   }
@@ -20,16 +23,31 @@ case class Simplify(backend: Solver) extends Solver {
   def log = rlog.reverse
   def top = states.head
 
-  def setLogic(logic: String) = backend.setLogic(logic)
-  def setOption(args: List[String]) = backend.setOption(args)
+  def setLogic(logic: String) = {
+    backend.setLogic(logic)
+  }
+
+  def setOption(args: List[String]) = args match {
+    case List(":produce-models", flag) =>
+      produceModels = flag.toBoolean
+      backend.setOption(args)
+
+    case List(":print-success", flag) =>
+      printSuccess = flag.toBoolean
+      Success
+
+    case _ =>
+      backend.setOption(args)
+  }
+
+  def report(res: Option[Res]): Option[Res] = res match {
+    case None => None
+    case Some(Success) if !printSuccess => None
+    case _ => res
+  }
 
   override def exec(cmd: Cmd): Option[Res] = {
-    val res = super.exec(cmd)
-    res match {
-      case None => None
-      case Some(_: Ack) => None
-      case _ => res
-    }
+    report(super.exec(cmd))
   }
 
   def reset() = {
@@ -67,7 +85,7 @@ case class Simplify(backend: Solver) extends Solver {
   def map(action: State => State) {
     val st = _pop()
     try {
-      _push(action(st))
+      _push(action(st.clearModel))
     } catch {
       case e: Throwable =>
         _push(st)
@@ -83,11 +101,19 @@ case class Simplify(backend: Solver) extends Solver {
 
   def check() = {
     backend.push()
+
     for (expr <- top.asserts) {
       val _expr = simplify(expr)
       backend.assert(_expr)
     }
+
     val res = backend.check()
+
+    if (produceModels) {
+      val model = backend.model()
+      map(_ withModel model)
+    }
+
     backend.pop()
     res
   }
@@ -97,7 +123,12 @@ case class Simplify(backend: Solver) extends Solver {
   }
 
   def model() = {
-    backend.model()
+    top.model match {
+      case None =>
+        throw Error("no model available")
+      case Some(model) =>
+        model
+    }
   }
 
   def assert(expr: Expr) = {
