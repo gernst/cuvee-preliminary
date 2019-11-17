@@ -8,6 +8,11 @@ object Simplify {
   def simplify(exprs: List[Expr]): List[Expr] = exprs match {
     case Nil =>
       Nil
+      
+    case (bind: Bind) ::rest =>
+      val _phi = bind // don't simplify axioms
+      val _rest = assuming(_phi, simplify(rest))
+      _phi :: _rest
 
     case phi :: rest =>
       val _phi = simplify(phi)
@@ -26,10 +31,10 @@ object Simplify {
   }
 
   def _simplify(phi: Expr): Expr = phi match {
-    case _ if isTrue(phi) =>
-      True
     case _ if isFalse(phi) =>
       False
+    case _ if isTrue(phi) =>
+      True
     case App(Id.not, List(phi)) =>
       val _phi = simplify(phi)
       not(_phi)
