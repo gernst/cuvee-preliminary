@@ -31,6 +31,19 @@ package object cuvee {
     }
   }
 
+  def needsEscape(c: Char) = {
+    if ('0' <= c && c <= '9') false
+    else if ('a' <= c && c <= 'z') false
+    else if ('A' <= c && c <= 'Z') false
+    else true
+  }
+
+  def mangle(id: Id) = {
+    val Id(name, index) = id
+    if (name exists needsEscape) Id("|" + name + "|", index)
+    else id
+  }
+
   def sexpr(arg0: Any, args: Any*): String = {
     if (args.isEmpty) "(" + arg0 + ")"
     else "(" + arg0 + " " + args.mkString(" ") + ")"

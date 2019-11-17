@@ -78,6 +78,7 @@ object Expr extends Alpha[Expr, Id] {
 
 case class Id(name: String, index: Option[Int]) extends Expr with Expr.x {
   def this(name: String) = this(name, None)
+  def prime = Id(name + "'", index)
   def fresh(index: Int) = Id(name, Some(index))
   override def toString = name __ index
 }
@@ -119,6 +120,7 @@ object Id extends (String => Id) {
 }
 
 case class Formal(id: Id, typ: Type) {
+  def prime = Formal(id.prime, typ)
   def rename(re: Map[Id, Id]) = Formal(id rename re, typ)
   override def toString = sexpr(id, typ)
 }
@@ -135,6 +137,14 @@ case class Eq(left: Expr, right: Expr) extends Expr {
   def rename(re: Map[Id, Id]) = Eq(left rename re, right rename re)
   def subst(su: Map[Id, Expr]) = Eq(left subst su, right subst su)
   override def toString = sexpr("=", left, right)
+}
+
+object Eq extends ((Expr, Expr) => Expr) {
+  def apply(lefts: List[Expr], rights: List[Expr]): Expr = {
+    ensure(lefts.size == rights.size,"")
+    val eqs = (lefts zip rights) map { case (left, right) => Eq(left, right) }
+    And(eqs)
+  }
 }
 
 case class Distinct(exprs: List[Expr]) extends Expr {
