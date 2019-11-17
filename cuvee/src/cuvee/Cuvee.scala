@@ -9,18 +9,14 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.InputStream
 
-case class Simplify(backend: Solver) extends Solver {
-  var rlog: List[Cmd] = Nil
+case class Cuvee(backend: Solver) extends Solver {
   var states: List[State] = List(State.default)
 
   var printSuccess = false
   var produceModels = false
 
-  override def toString = {
-    log.mkString("\n")
-  }
+  override def toString = Printer.solver(this)
 
-  def log = rlog.reverse
   def top = states.head
 
   def setLogic(logic: String) = {
@@ -93,7 +89,7 @@ case class Simplify(backend: Solver) extends Solver {
     }
   }
 
-  def simplify(expr: Expr): Expr = {
+  def eval(expr: Expr): Expr = {
     val env = top.env
     val old = Nil
     Eval.eval(expr, env, old, top)
@@ -101,10 +97,12 @@ case class Simplify(backend: Solver) extends Solver {
 
   def check() = {
     backend.push()
+    val _asserts = top.asserts map eval
+    val __asserts = Simplify.simplify(_asserts)
 
-    for (expr <- top.asserts) {
-      val _expr = simplify(expr)
-      backend.assert(_expr)
+    for (expr <- __asserts) {
+      // val _expr = eval(expr)
+      backend.assert(expr)
     }
 
     val res = backend.check()
@@ -139,6 +137,7 @@ case class Simplify(backend: Solver) extends Solver {
   def declare(sort: Sort, arity: Int) = {
     map(_ declare (sort, arity))
     backend.declare(sort, arity)
+    Simplify.backend.declare(sort, arity)
   }
 
   def define(sort: Sort, args: List[Sort], body: Type) = {
@@ -149,6 +148,7 @@ case class Simplify(backend: Solver) extends Solver {
   def declare(id: Id, args: List[Type], res: Type) = {
     map(_ declare (id, args, res))
     backend.declare(id, args, res)
+    Simplify.backend.declare(id, args, res)
   }
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
@@ -158,12 +158,13 @@ case class Simplify(backend: Solver) extends Solver {
     map(_ declare (id, args, res))
     map(_ assert axiom)
     backend.declare(id, args, res)
+    Simplify.backend.declare(id, args, res)
   }
 }
 
 object Cuvee {
   def run(source: Source, backend: Solver, report: Report) {
-    val solver = Simplify(backend)
+    val solver = Cuvee(backend)
     source.run(solver, report)
   }
 
@@ -200,6 +201,9 @@ object Cuvee {
 
   def main(args: Array[String]) {
     // run(args.toList)
-    run(List("examples/gcd.smt2", "-z3"))
+    val solver = Solver.stdout
+    val source = Source.file(new File("examples/gcd.smt2"))
+    val report = Report.stdout
+    run(source, solver, report)
   }
 }

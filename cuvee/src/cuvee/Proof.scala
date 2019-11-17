@@ -1,9 +1,10 @@
 package cuvee
 
 trait Proof {
+  def toExpr: Expr
 }
 
-object Proof {
+object Goal {
   val empty = Goal(Nil, Nil)
 
   def assume(expr: Expr): Goal = {
@@ -13,33 +14,41 @@ object Proof {
   def assert(expr: Expr): Goal = {
     empty assert expr
   }
+
+  def apply(exprs: List[Expr]): Goal = {
+    empty assume exprs
+  }
 }
 
 case class Pos(phi: Expr) extends Proof {
+  def toExpr = phi
   override def toString = phi.toString
 }
 
 case class Neg(phi: Expr) extends Proof {
+  def toExpr = !phi
   override def toString = sexpr("not", phi)
 }
 
-case class Cases(cases: List[Goal]) extends Proof {
-  override def toString = sexpr("or", cases)
+case class Cases(cases: List[Proof]) extends Proof {
+  def toExpr = Or(cases map (_.toExpr))
+  override def toString = sexpr("or", cases: _*)
 }
 
 object Cases {
   def assume(exprs: List[Expr]) = {
-    Cases(exprs map Proof.assume)
+    Cases(exprs map Goal.assume)
   }
 
   def assert(exprs: List[Expr]) = {
-    Cases(exprs map Proof.assert)
+    Cases(exprs map Goal.assert)
   }
 }
 
 case class Goal(scope: List[Formal], props: List[Proof]) extends Proof {
-  override def toString = sexpr("forall", scope, sexpr("and", props))
-    
+  override def toString = sexpr("forall", sexpr(scope), sexpr("and", props: _*))
+  def toExpr = Forall(scope, And(props map (_.toExpr)))
+
   def assume(phi: List[Expr]): Goal = {
     phi.foldLeft(this)(_ assume _)
   }

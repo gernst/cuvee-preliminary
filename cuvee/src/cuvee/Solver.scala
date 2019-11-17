@@ -6,6 +6,9 @@ import java.io.InputStreamReader
 import java.io.File
 
 trait Solver {
+  var rlog: List[Cmd] = Nil
+  def log = rlog.reverse
+
   def setLogic(logic: String): Ack
   def setOption(args: List[String]): Ack
 
@@ -13,6 +16,25 @@ trait Solver {
   def push(): Ack
   def pop(): Ack
   def exit(): Ack
+
+  def scoped[A](f: => A) = {
+    push()
+    try { f }
+    finally { pop() }
+  }
+
+  def check(phi: Expr): IsSat = scoped {
+    assert(phi)
+    check()
+  }
+
+  def isSat(phi: Expr) = {
+    check(phi) == Sat
+  }
+
+  def isUnsat(phi: Expr) = {
+    check(phi) == Unsat
+  }
 
   def check(): IsSat
   def assertions(): Assertions
@@ -30,42 +52,46 @@ trait Solver {
     setOption(args.toList)
   }
 
-  def exec(cmd: Cmd): Option[Res] = cmd match {
-    case SetLogic(logic) =>
-      Some(setLogic(logic))
-    case SetOption(args) =>
-      Some(setOption(args))
+  def exec(cmd: Cmd): Option[Res] = {
+    rlog = cmd :: rlog
 
-    case Reset =>
-      reset(); None
-    case Push =>
-      push(); None
-    case Pop =>
-      pop(); None
-    case Exit =>
-      exit(); None
+    cmd match {
+      case SetLogic(logic) =>
+        Some(setLogic(logic))
+      case SetOption(args) =>
+        Some(setOption(args))
 
-    case CheckSat =>
-      Some(check())
-    case GetAssertions =>
-      Some(assertions())
-    case GetModel =>
-      Some(model())
+      case Reset =>
+        reset(); None
+      case Push =>
+        push(); None
+      case Pop =>
+        pop(); None
+      case Exit =>
+        exit(); None
 
-    case DeclareSort(sort, arity) =>
-      Some(declare(sort, arity))
-    case DefineSort(sort, args, body) =>
-      Some(define(sort, args, body))
+      case CheckSat =>
+        Some(check())
+      case GetAssertions =>
+        Some(assertions())
+      case GetModel =>
+        Some(model())
 
-    case DeclareFun(id, args, res) =>
-      Some(declare(id, args, res))
-    case DefineFun(id, formals, res, body) =>
-      Some(define(id, formals, res, body, false))
-    case DefineFunRec(id, formals, res, body) =>
-      Some(define(id, formals, res, body, true))
+      case DeclareSort(sort, arity) =>
+        Some(declare(sort, arity))
+      case DefineSort(sort, args, body) =>
+        Some(define(sort, args, body))
 
-    case Assert(expr) =>
-      Some(assert(expr))
+      case DeclareFun(id, args, res) =>
+        Some(declare(id, args, res))
+      case DefineFun(id, formals, res, body) =>
+        Some(define(id, formals, res, body, false))
+      case DefineFunRec(id, formals, res, body) =>
+        Some(define(id, formals, res, body, true))
+
+      case Assert(expr) =>
+        Some(assert(expr))
+    }
   }
 }
 
@@ -152,12 +178,14 @@ object Solver {
     }
 
     def write(line: String) {
+      // println("> " + line)
       stdin.println(line)
       stdin.flush()
     }
 
     def read() = {
       val line = stdout.readLine()
+      // println("< " + line)
       line
     }
   }
@@ -170,6 +198,8 @@ object Solver {
   val stdout = print(System.out)
 
   case class print(stream: PrintStream) extends Solver {
+    var sat: IsSat = Unknown
+
     def setLogic(logic: String) = {
       write(Printer.setLogic(logic))
       Success
@@ -191,6 +221,7 @@ object Solver {
     }
 
     def pop() = {
+      sat = Unknown
       write(Printer.pop())
       Success
     }
@@ -202,10 +233,11 @@ object Solver {
 
     def check() = {
       write(Printer.check())
-      Unknown
+      sat
     }
 
     def assert(expr: Expr) = {
+      if(expr == False) sat = Unsat
       write(Printer.assert(expr))
       Success
     }

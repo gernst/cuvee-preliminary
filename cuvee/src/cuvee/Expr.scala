@@ -217,9 +217,14 @@ case class Old(expr: Expr) extends Expr {
 
 sealed trait Quant {
   def apply(formals: List[Formal], body: Expr) = {
-    if (formals.isEmpty) body
+    val free = body.free
+    val _formals = formals filter (free contains _.id)
+
+    if (_formals.isEmpty) body
     else if (body == True) body
-    else Bind(this, formals, body)
+    else {
+      Bind(this, _formals, body)
+    }
   }
 
   def unapply(bind: Bind) = bind match {
