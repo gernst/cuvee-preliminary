@@ -85,8 +85,8 @@ case class DefineFunRec(id: Id, formals: List[Formal], res: Type, body: Expr) ex
   override def toString = Printer.define(id, formals, res, body, true)
 }
 
-case class Sel(id: Id, args: List[Type]) {
-  override def toString = Printer.sel(id, args)
+case class Sel(id: Id, typ: Type) {
+  override def toString = Printer.sel(id, typ)
 }
 
 case class Constr(id: Id, sels: List[Sel]) {

@@ -3,7 +3,7 @@ package cuvee
 object Simplify {
   case object Unsat extends Exception
 
-  val backend = Solver.z3(100)
+  val backend = Solver.z3(1000)
 
   def simplify(exprs: List[Expr]): List[Expr] = exprs match {
     case Nil =>
@@ -22,11 +22,10 @@ object Simplify {
 
   def simplify(phi: Expr): Expr = {
     val _phi = _simplify(phi)
-    /* println("simplify: ")
-    println("  solver: " + Printer.solver(backend))
-    println("     " + phi)
-    println("  ~> " + _phi)
-    println() */
+//    println("simplify: ")
+//    println("     " + phi)
+//    println("  ~> " + _phi)
+//    println()
     _phi
   }
 
@@ -50,19 +49,21 @@ object Simplify {
       val _phi = simplify(phi)
       val _psi = assuming(_phi, simplify(psi))
       imp(_phi, _psi)
-    case Bind(quant, formals, body) =>
+    /* case Bind(quant, formals, body) =>
       val _body = binding(formals, simplify(body))
-      Bind(quant, formals, _body)
+      Bind(quant, formals, _body) */
     case _ =>
       phi
   }
 
   def isTrue(phi: Expr) = {
-    (phi == True) || (backend isUnsat !phi)
+    val res = (phi == True) || (backend isUnsat !phi)
+    res
   }
 
   def isFalse(phi: Expr) = {
-    (phi == False) || (backend isUnsat phi)
+    val res = (phi == False) || (backend isUnsat phi)
+    res
   }
 
   def binding[A](formals: List[Formal], a: => A): A = {

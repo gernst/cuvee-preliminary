@@ -18,6 +18,7 @@ package object cuvee {
 
   implicit def toNum(value: Int) = Num(value)
   implicit def toIds(formals: List[Formal]) = formals map (_.id)
+  implicit def toTypes(formals: List[Formal]) = formals map (_.typ)
 
   implicit class StringOps(self: String) {
     def __(index: Option[Int]): String = index match {

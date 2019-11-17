@@ -3,7 +3,6 @@ package cuvee
 case class State(
   sorts: Map[Sort, Int],
   sortdefs: Map[Sort, (List[Sort], Type)],
-  dts: Map[Sort, Datatype],
 
   funs: Map[Id, (List[Type], Type)],
   fundefs: Map[Id, (List[Id], Expr)],
@@ -54,11 +53,18 @@ case class State(
   }
   
   def declare(sort: Sort, arity: Int, decl: Datatype): State = {
-    ensure(!(dts contains sort), "datatype already defined", sort)
+    val st = declare(sort, arity)
     ensure(arity == decl.params.length, "arity mismatch", arity, decl.params)
-    copy(
-      sorts = sorts + (sort -> arity),
-      dts = dts + (sort -> decl))
+      
+    decl.constrs.foldLeft(st) {
+      case (st, Constr(id, sels)) =>
+        val args = sels map (_.typ)
+        val st_ = st declare (id, args, sort)
+        sels.foldLeft(st_) {
+          case (st, Sel(id, typ)) =>
+            st declare (id, List(sort), typ)
+        }
+    }
   }
   
   def declare(arities: List[Arity], decls: List[Datatype]): State = {
@@ -91,7 +97,6 @@ object State {
       Sort.bool -> 0,
       Sort.int -> 0),
     sortdefs = Map(),
-    dts = Map(),
     
     funs = Map(
       True -> (List(), Sort.bool),

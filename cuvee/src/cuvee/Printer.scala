@@ -34,8 +34,8 @@ object Printer {
     else sexpr("define-fun-rec", id, sexpr(formals), res, body)
   }
 
-  def sel(id: Id, args: List[Type]) = {
-    sexpr(id, args: _*)
+  def sel(id: Id, typ: Type) = {
+    sexpr(id, typ)
   }
 
   def constr(id: Id, sels: List[Sel]) = {

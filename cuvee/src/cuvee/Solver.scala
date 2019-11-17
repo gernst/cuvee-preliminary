@@ -29,11 +29,13 @@ trait Solver {
   }
 
   def isSat(phi: Expr) = {
-    check(phi) == Sat
+    val sat = check(phi)
+    sat == Sat
   }
 
   def isUnsat(phi: Expr) = {
-    check(phi) == Unsat
+    val sat = check(phi)
+    sat == Unsat
   }
 
   def check(): IsSat
@@ -52,6 +54,10 @@ trait Solver {
 
   def setOption(args: String*): Ack = {
     setOption(args.toList)
+  }
+
+  def exec(line: String): Option[Res] = {
+    exec(Cmd.from(line))
   }
 
   def exec(cmd: Cmd): Option[Res] = {

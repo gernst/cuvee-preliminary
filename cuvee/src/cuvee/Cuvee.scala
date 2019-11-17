@@ -95,8 +95,7 @@ case class Cuvee(backend: Solver) extends Solver {
     Eval.eval(expr, env, old, top)
   }
 
-  def check() = {
-    backend.push()
+  def check() = backend.scoped {
     val _asserts = top.asserts map eval
     val __asserts = Simplify.simplify(_asserts)
 
@@ -112,7 +111,6 @@ case class Cuvee(backend: Solver) extends Solver {
       map(_ withModel model)
     }
 
-    backend.pop()
     res
   }
 
@@ -163,6 +161,7 @@ case class Cuvee(backend: Solver) extends Solver {
   }
 
   def declare(arities: List[Arity], decls: List[Datatype]) = {
+    map(_ declare (arities, decls))
     backend.declare(arities, decls)
     Simplify.backend.declare(arities, decls)
   }

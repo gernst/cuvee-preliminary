@@ -9,7 +9,7 @@
 
 ; isempty
 
-(assert (= n 0))
+(assert (= n1 0))
 
 ; push
 

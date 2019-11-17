@@ -44,7 +44,7 @@ case class Trans(state: List[Formal], init: Step, ops: List[Step]) {
     val init = diagram(
       as, as1, this.init,
       cs, cs1, that.init,
-      True, Rxs)
+      True, Rxs1)
 
     val ops = for ((aproc, cproc) <- (this.ops zip that.ops)) yield {
       diagram(
@@ -53,7 +53,7 @@ case class Trans(state: List[Formal], init: Step, ops: List[Step]) {
         Rxs, Rxs1)
     }
 
-    (Rxs, as, cs, init, ops)
+    (R, as, cs, init, ops)
   }
 }
 
@@ -94,8 +94,10 @@ object Trans {
     val in = (ai & ci).toList
     val out = (ao & co).toList
 
-    (apre && ceq && R0) ==>
-      (cpre && Exists(as1, aeq && R1))
+    // (apre && ceq && R0) ==>
+    //   (cpre && Exists(as1, aeq && R1))
+    (apre && aeq && ceq && R0) ==>
+      (cpre && R1)
   }
 }
 
@@ -124,14 +126,22 @@ object Refine {
       val a = Trans(acmds, solver.top)
       val c = Trans(ccmds, solver.top)
 
-      val (rxs, as, cs, init, ops) = a refine c
+      val (_R, as, cs, init, ops) = a refine c
 
-      val _init = Simplify.simplify(init)
-      println(_init)
+      solver.declare(_R, as ++ cs, Sort.bool)
 
+      solver.exec(
+        "(assert (forall ((A (Array Int Elem))) (R nil 0 A)))")
+
+      solver.exec(
+        "(assert (forall ((x Elem) (xs Lst) (n Int) (A (Array Int Elem))) (= (R (cons x xs) n A) (and (> n 0) (= x (select A (- n 1))) (R xs (- n 1) A)))))")
+        
+      solver.exec(
+        "(assert (forall ((x Elem) (xs Lst) (n Int) (A (Array Int Elem))) (=> (R xs n A) (R xs n (store A n x)))))")
+
+      report(solver.check(!init))
       for (op <- ops) {
-        val _op = Simplify.simplify(op)
-        println(_op)
+        report(solver.check(!op))
       }
     }
   }

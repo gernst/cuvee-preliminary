@@ -11,7 +11,7 @@
 
 ; isempty
 
-(assert (= xs nil))
+(assert (= xs1 nil))
 
 ; push
 

@@ -104,7 +104,7 @@ object Parser {
   val define_fun_ = P(DefineFun("define-fun" ~ id ~ parens(formals) ~ typ ~ expr))
   val define_fun_rec_ = P(DefineFunRec("define-fun-rec" ~ id ~ parens(formals) ~ typ ~ expr))
 
-  val sel = P(Sel(parens(id ~ typ.*)))
+  val sel = P(Sel(parens(id ~ typ)))
   val constr = P(parens(Constr(id ~ sel.*)))
   val datatype_ = P(Datatype("par" ~ parens(sort.+) ~ constr.+))
   val param_datatype_ = P(Datatype(ret(Nil) ~ constr.+))
