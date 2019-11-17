@@ -2,7 +2,7 @@ package cuvee
 
 object Printer {
   def solver(solver: Solver) = solver.log.mkString("\n")
-  
+
   def setLogic(logic: String) = sexpr("set-logic", logic)
   def setOption(args: List[String]) = sexpr("set-option", args: _*)
 
@@ -32,6 +32,27 @@ object Printer {
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
     if (!rec) sexpr("define-fun", id, sexpr(formals), res, body)
     else sexpr("define-fun-rec", id, sexpr(formals), res, body)
+  }
+
+  def sel(id: Id, args: List[Type]) = {
+    sexpr(id, args: _*)
+  }
+
+  def constr(id: Id, sels: List[Sel]) = {
+    sexpr(id, sels: _*)
+  }
+
+  def arity(sort: Sort, arity: Int) = {
+    sexpr(sort, arity)
+  }
+
+  def datatype(params: List[Sort], constrs: List[Constr]) = {
+    if (params.isEmpty) sexpr(constrs)
+    else sexpr("par", sexpr(params), sexpr(constrs))
+  }
+
+  def declare(arities: List[Arity], decls: List[Datatype]) = {
+    sexpr("declare-datatypes", sexpr(arities), sexpr(decls))
   }
 
   def sat() = "sat"

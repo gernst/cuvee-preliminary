@@ -143,6 +143,7 @@ case class Cuvee(backend: Solver) extends Solver {
   def define(sort: Sort, args: List[Sort], body: Type) = {
     map(_ define (sort, args, body))
     backend.define(sort, args, body)
+    Simplify.backend.define(sort, args, body)
   }
 
   def declare(id: Id, args: List[Type], res: Type) = {
@@ -159,6 +160,11 @@ case class Cuvee(backend: Solver) extends Solver {
     map(_ assert axiom)
     backend.declare(id, args, res)
     Simplify.backend.declare(id, args, res)
+  }
+
+  def declare(arities: List[Arity], decls: List[Datatype]) = {
+    backend.declare(arities, decls)
+    Simplify.backend.declare(arities, decls)
   }
 }
 
@@ -206,11 +212,20 @@ object Cuvee {
     run(args.toList, Source.stdin, Solver.stdout, Report.stdout)
   }
 
-  def main(args: Array[String]) {
-    // run(args.toList)
+  def test2() {
+    val path = "examples/"
+    val a = path + "stack_list.smt2"
+    val c = path + "stack_arr.smt2"
+
     val solver = Solver.stdout
-    val source = Source.file(new File("examples/gcd.smt2"))
+    val source = Refine.file(new File(a), new File(c))
     val report = Report.stdout
     run(source, solver, report)
+  }
+
+  def main(args: Array[String]) {
+    // run(args.toList)
+    // run(List("examples/dt.smt2"))
+    test2()
   }
 }

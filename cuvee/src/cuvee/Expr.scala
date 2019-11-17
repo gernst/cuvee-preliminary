@@ -141,7 +141,7 @@ case class Eq(left: Expr, right: Expr) extends Expr {
 
 object Eq extends ((Expr, Expr) => Expr) {
   def apply(lefts: List[Expr], rights: List[Expr]): Expr = {
-    ensure(lefts.size == rights.size,"")
+    ensure(lefts.size == rights.size, "")
     val eqs = (lefts zip rights) map { case (left, right) => Eq(left, right) }
     And(eqs)
   }
@@ -164,6 +164,17 @@ object And extends (List[Expr] => Expr) {
   def apply(exprs: List[Expr]): Expr = exprs match {
     case Nil => True
     case _ => exprs.reduceRight((App(Id.and, _, _)))
+  }
+
+  def flatten(expr: Expr): List[Expr] = expr match {
+    case App(Id.and, args) =>
+      args flatMap flatten
+    case _ =>
+      List(expr)
+  }
+
+  def unapply(expr: Expr): Option[List[Expr]] = {
+    Some(flatten(expr))
   }
 }
 

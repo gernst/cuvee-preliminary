@@ -46,6 +46,8 @@ trait Solver {
   def declare(id: Id, args: List[Type], res: Type): Ack
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean): Ack
 
+  def declare(arities: List[Arity], decls: List[Datatype]): Ack
+
   def assert(expr: Expr): Ack
 
   def setOption(args: String*): Ack = {
@@ -88,6 +90,8 @@ trait Solver {
         Some(define(id, formals, res, body, false))
       case DefineFunRec(id, formals, res, body) =>
         Some(define(id, formals, res, body, true))
+      case DeclareDatatypes(arity, decls) =>
+        Some(declare(arity, decls))
 
       case Assert(expr) =>
         Some(assert(expr))
@@ -177,6 +181,11 @@ object Solver {
       Ack.from(read())
     }
 
+    def declare(arities: List[Arity], decls: List[Datatype]) = {
+      write(Printer.declare(arities, decls))
+      Ack.from(read())
+    }
+
     def write(line: String) {
       // println("> " + line)
       stdin.println(line)
@@ -237,7 +246,7 @@ object Solver {
     }
 
     def assert(expr: Expr) = {
-      if(expr == False) sat = Unsat
+      if (expr == False) sat = Unsat
       write(Printer.assert(expr))
       Success
     }
@@ -269,6 +278,11 @@ object Solver {
 
     def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
       write(Printer.define(id, formals, res, body, rec))
+      Success
+    }
+
+    def declare(arities: List[Arity], decls: List[Datatype]) = {
+      write(Printer.declare(arities, decls))
       Success
     }
 

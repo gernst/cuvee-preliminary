@@ -11,7 +11,9 @@ class Parseable[A](p: Parser[A]) {
 }
 
 object Parser {
-  implicit val whitespace: Whitespace = Whitespace.default
+  implicit val whitespace: Whitespace = {
+    new Whitespace("(\\s|(;.*\\n))*")
+  }
 
   def parens[A](p: Parser[A]) = {
     "(" ~ p ~ ")"
@@ -79,7 +81,7 @@ object Parser {
   val while_ = P(While("while" ~ expr ~ prog ~ prog.? ~ term.? ~ pre.? ~ post.?))
 
   val cmd: Parser[Cmd] = P(parens(set_logic_ | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
-    declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_))
+    declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_))
 
   val set_logic_ = P(SetLogic("set-logic" ~ name))
   val get_model_ = P(GetModel("get-model"))
@@ -95,11 +97,20 @@ object Parser {
 
   val get_assertions_ = P(GetAssertions("get-assertions"))
 
-  val declare_sort_ = P(DeclareSort("declare-sort" ~ sort ~ int))
+  val int_0 = int | ret(0)
+  val declare_sort_ = P(DeclareSort("declare-sort" ~ sort ~ int_0))
   val declare_const_ = P(DeclareFun("declare-const" ~ id ~ ret(Nil) ~ typ))
   val declare_fun_ = P(DeclareFun("declare-fun" ~ id ~ parens(types) ~ typ))
   val define_fun_ = P(DefineFun("define-fun" ~ id ~ parens(formals) ~ typ ~ expr))
   val define_fun_rec_ = P(DefineFunRec("define-fun-rec" ~ id ~ parens(formals) ~ typ ~ expr))
+
+  val sel = P(Sel(parens(id ~ typ.*)))
+  val constr = P(parens(Constr(id ~ sel.*)))
+  val datatype_ = P(Datatype("par" ~ parens(sort.+) ~ constr.+))
+  val param_datatype_ = P(Datatype(ret(Nil) ~ constr.+))
+  val datatype = parens(param_datatype_ | datatype_)
+  val arity = P(Arity(parens(sort ~ int)))
+  val declare_dts_ = P(DeclareDatatypes("declare-datatypes" ~ parens(arity.*) ~ parens(datatype.*)))
 
   val res: Parser[Res] = P(ack | is_sat)
 
