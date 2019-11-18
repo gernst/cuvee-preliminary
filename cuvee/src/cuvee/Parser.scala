@@ -20,7 +20,7 @@ object Parser {
   }
 
   val name = S("[A-Za-z_][A-Za-z0-9_]*")
-  val op = L("-") | L("+") | L("-") | L("<=") | L("<") | L(">=") | L(">")
+  val op = L("-") | L("+") | L("<=") | L("<") | L(">=") | L(">")
 
   val typ: Parser[Type] = P(sort | parens(array_ | list_))
   val types = typ.*

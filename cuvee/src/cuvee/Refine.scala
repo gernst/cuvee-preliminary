@@ -127,8 +127,17 @@ object Refine {
       val c = Trans(ccmds, solver.top)
 
       val (_R, as, cs, init, ops) = a refine c
-
       solver.declare(_R, as ++ cs, Sort.bool)
+
+      val (_EQ, _, _, observe) = Synthesize.observe(a, c, solver.top)
+      val xs = as ++ cs
+      solver.declare(_EQ, xs, Sort.bool)
+
+      val List(rhs) = Simplify.con(List(observe), Map(), false)
+      println(observe)
+      println(rhs)
+      val axiom = Forall(xs, App(_EQ, xs) === rhs)
+      println(axiom)
 
       solver.exec(
         "(assert (forall ((A (Array Int Elem))) (R nil 0 A)))")

@@ -16,6 +16,8 @@ object Printer {
   def model() = sexpr("get-model")
 
   def assert(expr: Expr) = sexpr("assert", expr)
+  
+  def id(id: Id) = mangle(id)
 
   def declare(sort: Sort, arity: Int) = {
     sexpr("declare-sort", sort, arity)

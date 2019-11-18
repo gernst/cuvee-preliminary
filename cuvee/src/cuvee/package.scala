@@ -32,18 +32,21 @@ package object cuvee {
       (self & that).isEmpty
     }
   }
+  
+  def ok = "=-+<>"
 
   def needsEscape(c: Char) = {
     if ('0' <= c && c <= '9') false
     else if ('a' <= c && c <= 'z') false
     else if ('A' <= c && c <= 'Z') false
+    else if(ok contains c) false
     else true
   }
 
   def mangle(id: Id) = {
     val Id(name, index) = id
-    if (name exists needsEscape) Id("|" + name + "|", index)
-    else id
+    if (name exists needsEscape) "|" + (name __ index) + "|"
+    else name __ index
   }
 
   def sexpr(arg0: Any, args: Any*): String = {

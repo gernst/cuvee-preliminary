@@ -80,7 +80,7 @@ case class Id(name: String, index: Option[Int]) extends Expr with Expr.x {
   def this(name: String) = this(name, None)
   def prime = Id(name + "'", index)
   def fresh(index: Int) = Id(name, Some(index))
-  override def toString = name __ index
+  override def toString = Printer.id(this)
 }
 
 object Id extends (String => Id) {
@@ -143,7 +143,7 @@ object Eq extends ((Expr, Expr) => Expr) {
   def apply(lefts: List[Expr], rights: List[Expr]): Expr = {
     ensure(lefts.size == rights.size, "equations length mismatch", lefts, rights)
     val eqs = (lefts zip rights) map { case (left, right) => Eq(left, right) }
-    And.nary(eqs)
+    And(eqs)
   }
 }
 

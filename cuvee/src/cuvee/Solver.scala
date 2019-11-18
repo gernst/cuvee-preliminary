@@ -109,6 +109,8 @@ object Solver {
   def z3(timeout: Int = 1000) = process("z3", "-t:" + timeout, "-in")
   def cvc4(timeout: Int = 1000) = process("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--increment-triggers")
 
+  var traffic = false
+  
   case class process(args: String*) extends Solver {
     val pb = new ProcessBuilder(args: _*)
     val pr = pb.start()
@@ -193,14 +195,14 @@ object Solver {
     }
 
     def write(line: String) {
-      // println("> " + line)
+      if(traffic) println("> " + line)
       stdin.println(line)
       stdin.flush()
     }
 
     def read() = {
       val line = stdout.readLine()
-      // println("< " + line)
+      if(traffic) println("< " + line)
       line
     }
   }

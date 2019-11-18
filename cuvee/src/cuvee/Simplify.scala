@@ -86,6 +86,16 @@ object Simplify {
   def rewrite(expr: Expr, eqs: Map[Id, Expr]): Expr = expr match {
     case id: Id if (eqs contains id) =>
       eqs(id)
+    case Eq(left, right) =>
+      Eq(rewrite(left, eqs), rewrite(right, eqs))
+    case Ite(test, left, right) =>
+      Ite(rewrite(test, eqs), rewrite(left, eqs), rewrite(right, eqs))
+    case Select(array, index) =>
+      Select(rewrite(array, eqs), rewrite(index, eqs))
+    case Store(array, index, value) =>
+      Store(rewrite(array, eqs), rewrite(index, eqs), rewrite(value, eqs))
+    case Distinct(args) =>
+      Distinct(args map (rewrite(_, eqs)))
     case App(fun, args) =>
       App(fun, args map (rewrite(_, eqs)))
     case _ =>
