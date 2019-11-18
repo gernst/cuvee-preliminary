@@ -46,7 +46,7 @@ sealed trait Expr extends Expr.term {
   def unary_- = App(Id.uminus, this)
   def +(that: Expr) = App(Id.plus, this, that)
   def -(that: Expr) = App(Id.minus, this, that)
-  def ===(that: Expr) = App(Id._eq, this, that)
+  def ===(that: Expr) = Eq(this, that)
   def !==(that: Expr) = !(this === that)
 
   def <=(that: Expr) = App(Id.le, this, that)
@@ -226,6 +226,8 @@ case class Old(expr: Expr) extends Expr {
 }
 
 sealed trait Quant {
+  def unary_!(): Quant
+
   def apply(formals: List[Formal], body: Expr) = {
     val free = body.free
     val _formals = formals filter (free contains _.id)
@@ -246,10 +248,12 @@ sealed trait Quant {
 }
 
 case object Forall extends Quant {
+  def unary_! = Exists
   override def toString = "forall"
 }
 
 case object Exists extends Quant {
+  def unary_! = Forall
   override def toString = "exists"
 }
 

@@ -24,6 +24,27 @@ object Synthesize {
     (EQ, as, cs, And(init :: ops))
   }
 
+  def locksteps(a: Trans, c: Trans, st: State) = {
+    val as = a.state
+    val as1 = a.state1
+    val cs = c.state
+    val cs1 = c.state1
+
+    val init = lockstep(
+      as, as1, a.init,
+      cs, cs1, c.init,
+      st)
+
+    val ops = for ((aproc, cproc) <- (a.ops zip c.ops)) yield {
+      lockstep(
+        as, as1, aproc,
+        cs, cs1, cproc,
+        st)
+    }
+
+    (as, as1, cs, cs1, init, Or(ops))
+  }
+
   def io(
     as: List[Formal], as1: List[Formal], astep: Step,
     cs: List[Formal], cs1: List[Formal], cstep: Step,
@@ -64,5 +85,32 @@ object Synthesize {
       xs,
       Exists(as1 ++ cs1, apre && cpre_ && aeq && ceq_)
         ==> post)
+  }
+
+  def lockstep(
+    as: List[Formal], as1: List[Formal], astep: Step,
+    cs: List[Formal], cs1: List[Formal], cstep: Step,
+    st: State) = {
+    val Step(apres, abody) = astep
+    val Step(cpres, cbody) = cstep
+
+    val apre = And(apres)
+    val cpre = And(cpres)
+    val aeq = And(abody)
+    val ceq = And(cbody)
+
+    val ai = astep.in
+    val ao = astep.out
+
+    val ci = cstep.in
+    val co = cstep.out
+
+    val in = (ai & ci).toList
+    val out = (ao & co).toList
+    val xs = (in ++ out) map st.const
+
+    Exists(
+      xs,
+      apre && cpre && aeq && ceq)
   }
 }

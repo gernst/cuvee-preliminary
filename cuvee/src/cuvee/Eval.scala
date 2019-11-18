@@ -95,7 +95,7 @@ object Eval {
       App(id, args map (eval(_, env, old, st)))
 
     case App(id, args) =>
-      error("unknown function", expr, env, st)
+      error("unknown function", id, expr, env, st)
 
     case expr @ Bind(quant, formals, body) =>
       Bind(quant, formals, eval(body, env bind formals, old, st))

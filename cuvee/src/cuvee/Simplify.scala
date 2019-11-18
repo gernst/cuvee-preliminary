@@ -5,8 +5,8 @@ object Simplify {
 
   val backend = Solver.z3(1000)
 
-  def simplify(exprs: List[Expr]): List[Expr] = {
-    simplify(exprs, eqs = Map(), pos = true)
+  def simplify(exprs: List[Expr], pos: Boolean = true): List[Expr] = {
+    simplify(exprs, eqs = Map(), pos)
   }
 
   def simplify(exprs: List[Expr], eqs: Map[Id, Expr], pos: Boolean): List[Expr] = exprs match {
@@ -71,16 +71,41 @@ object Simplify {
       val _phi = simplify(phi, eqs, !pos)
       val _psi = assuming(_phi, eqs, simplify(psi, _, pos))
       imp(_phi, _psi)
+    /* case Forall(formals, And.nary(args)) =>
+      val _args = args map (Forall(formals, _))
+      simplify(And(_args), eqs, pos)
+    case bind @ Forall(formals, Or.nary(args)) =>
+      val bound = bind.bound
+      val (move, keep) = args.partition(_.free disjoint bound)
+      val bind_ = Forall(formals, Or.nary(keep))
+      val bind__ = __simplify(bind_, eqs, pos)
+      val rest = assuming(!bind__, eqs, dis(move, _, pos))
+      Or(bind__ :: rest)
+    case Exists(formals, Or.nary(args)) =>
+      val _args = args map (Exists(formals, _))
+      simplify(Or(_args), eqs, pos)
+    case bind @ Exists(formals, And.nary(args)) =>
+      val bound = bind.bound
+      val (move, keep) = args.partition(_.free disjoint bound)
+      val bind_ = Exists(formals, And.nary(keep))
+      val bind__ = __simplify(bind_, eqs, pos)
+      val rest = assuming(bind__, eqs, con(move, _, pos))
+      And(bind__ :: rest) */
+    case bind: Bind =>
+      __simplify(bind, eqs, pos)
+    case _ =>
+      rewrite(phi, eqs)
+  }
+
+  def __simplify(bind: Expr, eqs: Map[Id, Expr], pos: Boolean): Expr = bind match {
     case bind: Bind =>
       val Bind(quant, formals, body) = bind.refresh
       val bound = Set(formals map (_.id): _*)
       val _body = binding(formals, simplify(body, eqs, pos))
       val __body = prune(_body, quant, bound, pos)
       quant(formals, __body)
-    case And(phi, psi) => ???
-    case Or(phi, psi) => ???
     case _ =>
-      rewrite(phi, eqs)
+      _simplify(bind, eqs, pos)
   }
 
   def rewrite(expr: Expr, eqs: Map[Id, Expr]): Expr = expr match {
@@ -155,11 +180,11 @@ object Simplify {
       prune(x === e, quant, bound, pos)
     case Not(psi) =>
       val _psi = prune(psi, quant, bound, !pos)
-      !_psi
+      not(_psi)
     case Imp(phi, psi) =>
       val _phi = prune(phi, quant, bound, !pos)
       val _psi = prune(psi, quant, bound, pos)
-      _phi ==> _psi
+      imp(_phi, _psi)
     case Or.nary(args) =>
       val _args = args map (prune(_, quant, bound, pos))
       or(_args)

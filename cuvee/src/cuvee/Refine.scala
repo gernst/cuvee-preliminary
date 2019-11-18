@@ -134,19 +134,28 @@ object Refine {
       solver.declare(_EQ, xs, Sort.bool)
 
       val List(rhs) = Simplify.con(List(observe), Map(), false)
-      println(observe)
-      println(rhs)
-      val axiom = Forall(xs, App(_EQ, xs) === rhs)
-      println(axiom)
+      solver.assert(Forall(xs, App(_EQ, xs) === rhs))
 
-      solver.exec(
-        "(assert (forall ((A (Array Int Elem))) (R nil 0 A)))")
+      val (_, as1, _, cs1, isinit, isop) = Synthesize.locksteps(a, c, solver.top)
+      val xs1 = as1 ++ cs1
 
-      solver.exec(
-        "(assert (forall ((x Elem) (xs Lst) (n Int) (A (Array Int Elem))) (= (R (cons x xs) n A) (and (> n 0) (= x (select A (- n 1))) (R xs (- n 1) A)))))")
+      val List(ax) = as map (_.id)
+      val List(n, ar) = cs map (_.id)
+      val List(ax1) = as1 map (_.id)
+      val List(n1, ar1) = cs1 map (_.id)
 
-      solver.exec(
-        "(assert (forall ((x Elem) (xs Lst) (n Int) (A (Array Int Elem))) (= (R xs n A) (R xs n (store A n x)))))")
+      val base = Forall(
+        xs1,
+        (ax1 === Id.nil) ==> (App(_R, List(ax1, n1, ar1)) === (isinit && App(_EQ, List(ax1, n1, ar1)))))
+
+      val x = Id("x")
+      val rec = Forall(
+        xs ++ xs1,
+        Exists(List(Formal(x, Sort("Elem"))), ax1 === App(Id.cons, List(x, ax)))
+          ==> (App(_R, List(ax1, n1, ar1)) === (isop && App(_EQ, List(ax1, n1, ar1)) && App(_R, List(ax, n, ar)))))
+
+      solver.assert(base)
+      solver.assert(rec)
 
       report(solver.check(!init))
       for (op <- ops) {
