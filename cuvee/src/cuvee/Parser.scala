@@ -38,8 +38,8 @@ object Parser {
 
   val old_ = P(Old("old" ~ expr))
   val imp_ = P(Imp("=>" ~ expr ~ expr)) // singled out to avoid clash with "="
-  val and_ = P(And("and" ~ expr.*))
-  val or_ = P(Or("or" ~ expr.*))
+  val and_ = P(And.nary("and" ~ expr.*))
+  val or_ = P(Or.nary("or" ~ expr.*))
   val distinct_ = P(Distinct("distinct" ~ expr.*))
   val eq_ = P(Eq("=" ~ expr ~ expr))
   val ite_ = P(Ite("ite" ~ expr ~ expr ~ expr))

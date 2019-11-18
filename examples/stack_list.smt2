@@ -19,4 +19,4 @@
 
 ; pop
 
-(assert (= xs (cons out xs1)))
+(assert (and (distinct xs nil) (= xs (cons out xs1))))

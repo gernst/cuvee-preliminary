@@ -141,9 +141,9 @@ case class Eq(left: Expr, right: Expr) extends Expr {
 
 object Eq extends ((Expr, Expr) => Expr) {
   def apply(lefts: List[Expr], rights: List[Expr]): Expr = {
-    ensure(lefts.size == rights.size, "")
+    ensure(lefts.size == rights.size, "equations length mismatch", lefts, rights)
     val eqs = (lefts zip rights) map { case (left, right) => Eq(left, right) }
-    And(eqs)
+    And.nary(eqs)
   }
 }
 
@@ -154,34 +154,23 @@ case class Distinct(exprs: List[Expr]) extends Expr {
   override def toString = sexpr("distinct", exprs: _*)
 }
 
-object Imp extends ((Expr, Expr) => Expr) {
-  def apply(left: Expr, right: Expr): App = {
-    App(Id.imp, left, right)
+object Not extends Sugar.unary(Id.not)
+
+object Imp extends Sugar.binary(Id.imp)
+
+object And extends Sugar.binary(Id.and) {
+  def apply(args: List[Expr]) = args match {
+    case List() => True
+    case List(arg) => arg
+    case _ => App(fun, args)
   }
 }
 
-object And extends (List[Expr] => Expr) {
-  def apply(exprs: List[Expr]): Expr = exprs match {
-    case Nil => True
-    case _ => exprs.reduceRight((App(Id.and, _, _)))
-  }
-
-  def flatten(expr: Expr): List[Expr] = expr match {
-    case App(Id.and, args) =>
-      args flatMap flatten
-    case _ =>
-      List(expr)
-  }
-
-  def unapply(expr: Expr): Option[List[Expr]] = {
-    Some(flatten(expr))
-  }
-}
-
-object Or extends (List[Expr] => Expr) {
-  def apply(exprs: List[Expr]): Expr = exprs match {
-    case Nil => False
-    case _ => exprs.reduceRight((App(Id.or, _, _)))
+object Or extends Sugar.binary(Id.or) {
+  def apply(args: List[Expr]) = args match {
+    case List() => False
+    case List(arg) => arg
+    case _ => App(fun, args)
   }
 }
 
@@ -203,7 +192,7 @@ case class Store(array: Expr, index: Expr, value: Expr) extends Expr {
   def free = array.free ++ index.free ++ value.free
   def rename(re: Map[Id, Id]) = Store(array rename re, index rename re, value rename re)
   def subst(su: Map[Id, Expr]) = Store(array subst su, index subst su, value subst su)
-  override def toString = sexpr("store ", array, index, value)
+  override def toString = sexpr("store", array, index, value)
 }
 
 case class App(fun: Id, args: List[Expr]) extends Expr {

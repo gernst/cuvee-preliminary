@@ -16,7 +16,7 @@ case class Step(pre: List[Expr], eqs: List[Eq]) {
 
 object Step {
   def apply(phi: Expr): Step = {
-    val And(args) = phi
+    val args = And.flatten(phi)
     val pre = args.filter { !_.isInstanceOf[Eq] }
     val eqs = args collect { case eq: Eq => eq }
     Step(pre, eqs)
@@ -94,10 +94,10 @@ object Trans {
     val in = (ai & ci).toList
     val out = (ao & co).toList
 
-    // (apre && ceq && R0) ==>
-    //   (cpre && Exists(as1, aeq && R1))
-    (apre && aeq && ceq && R0) ==>
-      (cpre && R1)
+    (apre && ceq && R0) ==>
+      (cpre && Exists(as1, aeq && R1))
+    //    (apre && aeq && ceq && R0) ==>
+    //      (cpre && R1)
   }
 }
 
@@ -135,9 +135,9 @@ object Refine {
 
       solver.exec(
         "(assert (forall ((x Elem) (xs Lst) (n Int) (A (Array Int Elem))) (= (R (cons x xs) n A) (and (> n 0) (= x (select A (- n 1))) (R xs (- n 1) A)))))")
-        
+
       solver.exec(
-        "(assert (forall ((x Elem) (xs Lst) (n Int) (A (Array Int Elem))) (=> (R xs n A) (R xs n (store A n x)))))")
+        "(assert (forall ((x Elem) (xs Lst) (n Int) (A (Array Int Elem))) (= (R xs n A) (R xs n (store A n x)))))")
 
       report(solver.check(!init))
       for (op <- ops) {

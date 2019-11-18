@@ -80,6 +80,15 @@ object Eval {
     case Store(array, index, value) =>
       Store(eval(array, env, old, st), eval(index, env, old, st), eval(value, env, old, st))
 
+    case Distinct(args) =>
+      Distinct(args map (eval(_, env, old, st)))
+
+    case And.nary(args) =>
+      And(args map (eval(_, env, old, st)))
+
+    case Or.nary(args) =>
+      Or(args map (eval(_, env, old, st)))
+
     case App(id, args) if (st.funs contains id) =>
       val (types, res) = st funs id
       ensure(args.length == types.length, "wrong number of arguments", expr, env, st)
