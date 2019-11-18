@@ -154,6 +154,8 @@ object Refine {
         Exists(List(Formal(x, Sort("Elem"))), ax1 === App(Id.cons, List(x, ax)))
           ==> (App(_R, List(ax1, n1, ar1)) === (isop && App(_EQ, List(ax1, n1, ar1)) && App(_R, List(ax, n, ar)))))
 
+      println(base)
+      println(rec)
       solver.assert(base)
       solver.assert(rec)
 

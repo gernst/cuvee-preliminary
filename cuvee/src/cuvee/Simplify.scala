@@ -71,6 +71,12 @@ object Simplify {
       val _phi = simplify(phi, eqs, !pos)
       val _psi = assuming(_phi, eqs, simplify(psi, _, pos))
       imp(_phi, _psi)
+    // HACK
+    case Distinct(List(xs, Id.nil)) =>
+      val x = Id("x")
+      val xs0 = Id("xs0")
+      val xs_ = Expr.fresh(xs0)
+      Exists(List(Formal(x,Sort("Elem")), Formal(xs_, Sort("Lst"))), xs === x :: xs_)
     /* case Forall(formals, And.nary(args)) =>
       val _args = args map (Forall(formals, _))
       simplify(And(_args), eqs, pos)

@@ -65,6 +65,10 @@ trait Alpha[E <: Alpha.term[E, V], V <: E with Alpha.x[E, V]] {
     val ys = xs map (x => (x, x))
     ys.toMap
   }
+  
+  def fresh(x: V) = {
+    x fresh nextIndex
+  }
 
   def fresh(xs: Iterable[V]): Map[V, V] = {
     val ys = xs map (x => (x, x fresh nextIndex))

@@ -12,6 +12,7 @@ import java.io.InputStream
 case class Cuvee(backend: Solver) extends Solver {
   var states: List[State] = List(State.default)
 
+  var simplify = false
   var printSuccess = false
   var produceModels = false
 
@@ -97,7 +98,7 @@ case class Cuvee(backend: Solver) extends Solver {
 
   def check() = backend.scoped {
     val _asserts = top.asserts map eval
-    val __asserts = Simplify.simplify(_asserts)
+    val __asserts = if(simplify) Simplify.simplify(_asserts) else _asserts
 
     for (expr <- __asserts) {
       // val _expr = eval(expr)
