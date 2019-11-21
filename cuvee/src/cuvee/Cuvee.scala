@@ -218,6 +218,7 @@ object Cuvee {
     val c = path + "stack_arr.smt2"
 
     val solver = Solver.stdout
+    // val solver = Solver.z3(1000)
     val source = Refine.file(new File(a), new File(c))
     val report = Report.stdout
     run(source, solver, report)

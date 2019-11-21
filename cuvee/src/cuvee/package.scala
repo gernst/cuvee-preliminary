@@ -32,14 +32,14 @@ package object cuvee {
       (self & that).isEmpty
     }
   }
-  
+
   def ok = "=-+<>"
 
   def needsEscape(c: Char) = {
     if ('0' <= c && c <= '9') false
     else if ('a' <= c && c <= 'z') false
     else if ('A' <= c && c <= 'Z') false
-    else if(ok contains c) false
+    else if (ok contains c) false
     else true
   }
 

@@ -35,6 +35,11 @@ object Type extends Alpha[Type, Sort] {
   }
 }
 
+sealed trait Pat {
+  def bound: Set[Id]
+  def rename(re: Map[Id, Id]): Pat
+}
+
 sealed trait Expr extends Expr.term {
   def ?(left: Expr, right: Expr) = App(Id.ite, this, left, right)
 
@@ -76,8 +81,8 @@ object Expr extends Alpha[Expr, Id] {
 
 }
 
-case class Id(name: String, index: Option[Int]) extends Expr with Expr.x {
-  def this(name: String) = this(name, None)
+case class Id(name: String, index: Option[Int]) extends Expr with Pat with Expr.x {
+  def bound = Set()
   def prime = Id(name + "'", index)
   def fresh(index: Int) = Id(name, Some(index))
   override def toString = Printer.id(this)
@@ -181,6 +186,21 @@ case class Ite(test: Expr, left: Expr, right: Expr) extends Expr {
   override def toString = sexpr("ite", test, left, right)
 }
 
+case class Case(pat: Pat, expr: Expr) extends Expr.capture[Case] {
+  def bound = pat.bound
+  def free = expr.free -- pat.bound
+  def rename(a: Map[Id, Id], re: Map[Id, Id]) = Case(pat rename a, expr rename re)
+  def subst(a: Map[Id, Id], su: Map[Id, Expr]) = Case(pat rename a, expr subst su)
+  override def toString = sexpr(pat, expr)
+}
+
+case class Match(expr: Expr, cases: List[Case]) extends Expr {
+  def free = expr.free ++ (cases flatMap (_.free))
+  def rename(re: Map[Id, Id]) = Match(expr rename re, cases map (_ rename re))
+  def subst(su: Map[Id, Expr]) = Match(expr subst su, cases map (_ subst su))
+  override def toString = sexpr("match", expr, sexpr(cases))
+}
+
 case class Select(array: Expr, index: Expr) extends Expr {
   def free = array.free ++ index.free
   def rename(re: Map[Id, Id]) = Select(array rename re, index rename re)
@@ -201,6 +221,12 @@ case class App(fun: Id, args: List[Expr]) extends Expr {
   def rename(re: Map[Id, Id]) = App(fun, args map (_ rename re))
   def subst(su: Map[Id, Expr]) = App(fun, args map (_ subst su))
   override def toString = sexpr(fun, args: _*)
+}
+
+case class UnApp(fun: Id, args: List[Id]) extends Pat {
+  def bound = Set(args: _*)
+  def rename(re: Map[Id, Id]) = UnApp(fun rename re, args map (_ rename re))
+  override def toString = sexpr(fun, args)
 }
 
 object App {
