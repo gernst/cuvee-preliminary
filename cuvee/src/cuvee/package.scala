@@ -18,6 +18,7 @@ package object cuvee {
   val Skip = Block(Nil)
 
   implicit def toNum(value: Int) = Num(value)
+  implicit def toExprs(pats: List[Pat]) = pats map (_.toExpr)
   implicit def toIds(formals: List[Formal]) = formals map (_.id)
   implicit def toTypes(formals: List[Formal]) = formals map (_.typ)
 

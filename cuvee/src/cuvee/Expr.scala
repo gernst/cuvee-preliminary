@@ -37,6 +37,7 @@ object Type extends Alpha[Type, Sort] {
 
 sealed trait Pat {
   def bound: Set[Id]
+  def toExpr: Expr
   def rename(re: Map[Id, Id]): Pat
 }
 
@@ -83,6 +84,7 @@ object Expr extends Alpha[Expr, Id] {
 
 case class Id(name: String, index: Option[Int]) extends Expr with Pat with Expr.x {
   def bound = Set()
+  def toExpr = this
   def prime = Id(name + "'", index)
   def fresh(index: Int) = Id(name, Some(index))
   override def toString = Printer.id(this)
@@ -241,6 +243,7 @@ case class App(fun: Id, args: List[Expr]) extends Expr {
 
 case class UnApp(fun: Id, args: List[Id]) extends Pat {
   def bound = Set(args: _*)
+  def toExpr = App(fun, args)
   def rename(re: Map[Id, Id]) = UnApp(fun rename re, args map (_ rename re))
   override def toString = sexpr(fun, args: _*)
 }
