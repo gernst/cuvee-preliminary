@@ -110,6 +110,7 @@ trait Solver {
 object Solver {
   def z3(timeout: Int = 1000) = process("z3", "-t:" + timeout, "-in")
   def cvc4(timeout: Int = 1000) = process("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--incremental", "--increment-triggers")
+  def princess(timeout: Int = 1000) = process("princess", "+stdin", "+quiet", "-timeoutPer=" + timeout, "+incremental")
 
   var traffic = false
 

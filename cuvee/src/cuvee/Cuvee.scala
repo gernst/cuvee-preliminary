@@ -195,6 +195,9 @@ object Cuvee {
     case "-cvc4" :: rest =>
       run(rest, source, Solver.cvc4(), report)
 
+    case "-princess" :: rest =>
+      run(rest, source, Solver.princess(), report)
+
     case "--" :: args =>
       ensure(args.length >= 1, "-- needs an SMT solver as argument")
       val _solver = Solver.process(args: _*)

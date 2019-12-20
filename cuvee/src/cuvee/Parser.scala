@@ -130,9 +130,10 @@ object Parser {
   val sat = P(Sat("sat"))
   val unsat = P(Unsat("unsat"))
   val unknown = P(Unknown("unknown"))
+  val error = P(Error("error" ~ ret("unknown")))
   val error_ = P(Error("error" ~ string))
 
-  val ack: Parser[Ack] = P(success | unsupported | parens(error_))
+  val ack: Parser[Ack] = P(success | unsupported | error | parens(error_))
   val is_sat: Parser[IsSat] = P(sat | unsat | unknown)
 
   val assertions_ = P(Assertions(expr.*))

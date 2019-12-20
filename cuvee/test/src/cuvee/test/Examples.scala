@@ -31,6 +31,11 @@ object Examples extends TestSuite {
       val solver = Solver.cvc4()
       Cuvee.run(source, solver, report)
     }
+
+    /* test(path + " (princess)") {
+        val solver = Solver.princess()
+        Cuvee.run(source, solver, report)
+    } */
   }
 
   def main(args: Array[String]) {

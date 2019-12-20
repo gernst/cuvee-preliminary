@@ -7,8 +7,8 @@ object Printer {
   def setOption(args: List[String]) = sexpr("set-option", args: _*)
 
   def reset() = sexpr("reset")
-  def push() = sexpr("push")
-  def pop() = sexpr("pop")
+  def push() = sexpr("push", 1)
+  def pop() = sexpr("pop", 1)
   def exit() = sexpr("exit")
 
   def check() = sexpr("check-sat")
