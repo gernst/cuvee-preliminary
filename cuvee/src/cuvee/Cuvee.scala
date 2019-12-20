@@ -12,7 +12,6 @@ import java.io.InputStream
 case class Cuvee(backend: Solver) extends Solver {
   var states: List[State] = List(State.default)
 
-  var simplify = false
   var printSuccess = false
   var produceModels = false
 
@@ -98,10 +97,8 @@ case class Cuvee(backend: Solver) extends Solver {
 
   def check() = backend.scoped {
     val _asserts = top.asserts map eval
-    val __asserts = if(simplify) Simplify.simplify(_asserts) else _asserts
 
-    for (expr <- __asserts) {
-      // val _expr = eval(expr)
+    for (expr <- _asserts) {
       backend.assert(expr)
     }
 
@@ -136,19 +133,16 @@ case class Cuvee(backend: Solver) extends Solver {
   def declare(sort: Sort, arity: Int) = {
     map(_ declare (sort, arity))
     backend.declare(sort, arity)
-    Simplify.backend.declare(sort, arity)
   }
 
   def define(sort: Sort, args: List[Sort], body: Type) = {
     map(_ define (sort, args, body))
     backend.define(sort, args, body)
-    Simplify.backend.define(sort, args, body)
   }
 
   def declare(id: Id, args: List[Type], res: Type) = {
     map(_ declare (id, args, res))
     backend.declare(id, args, res)
-    Simplify.backend.declare(id, args, res)
   }
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
@@ -158,17 +152,17 @@ case class Cuvee(backend: Solver) extends Solver {
     map(_ declare (id, args, res))
     map(_ assert axiom)
     backend.declare(id, args, res)
-    Simplify.backend.declare(id, args, res)
   }
 
   def declare(arities: List[Arity], decls: List[Datatype]) = {
     map(_ declare (arities, decls))
     backend.declare(arities, decls)
-    Simplify.backend.declare(arities, decls)
   }
 }
 
 object Cuvee {
+  var simplify = true
+
   def run(source: Source, backend: Solver, report: Report) {
     val solver = Cuvee(backend)
     source.run(solver, report)
@@ -178,11 +172,23 @@ object Cuvee {
     case Nil =>
       run(source, solver, report)
 
+    case "-simplify" :: rest =>
+      simplify = true
+      run(rest, source, solver, report)
+
+    case "-no-simplify" :: rest =>
+      simplify = false
+      run(rest, source, solver, report)
+      
+    case "-debug-solver" :: rest =>
+      Solver.traffic = true
+      run(rest, source, solver, report)
+
     case "-z3" :: rest =>
-      run("--" :: "z3" :: "-in" :: rest, source, solver, report)
+      run(rest, source, Solver.z3(), report)
 
     case "-cvc4" :: rest =>
-      run("--" :: "cvc4" :: "--lang" :: "smt2" :: rest, source, solver, report)
+      run(rest, source, Solver.cvc4(), report)
 
     case "--" :: args =>
       ensure(args.length >= 1, "-- needs an SMT solver as argument")
@@ -225,8 +231,8 @@ object Cuvee {
   }
 
   def main(args: Array[String]) {
-    // run(args.toList)
+    run(args.toList)
     // run(List("examples/dt.smt2"))
-    test2()
+    // test2()
   }
 }

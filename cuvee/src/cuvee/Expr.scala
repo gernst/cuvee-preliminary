@@ -186,7 +186,23 @@ case class Ite(test: Expr, left: Expr, right: Expr) extends Expr {
   override def toString = sexpr("ite", test, left, right)
 }
 
-case class Case(pat: Pat, expr: Expr) extends Expr.capture[Case] {
+case class Pair(x: Id, e: Expr) {
+  def mod = Set(x)
+  def free = e.free
+  def rename(a: Map[Id, Id], re: Map[Id, Id]) = Pair(x rename a, e rename re)
+  def subst(a: Map[Id, Id], su: Map[Id, Expr]) = Pair(x rename a, e subst su)
+  def replace(re: Map[Id, Id]) = Pair(x rename re, e rename re)
+  override def toString = sexpr(x, e)
+}
+
+case class Let(pairs: List[Pair]) extends Expr with Expr.bind[Let] {
+  def bound = Set(pairs map (_.x): _*)
+  def free = Set(pairs flatMap (_.free): _*) -- bound
+  def rename(a: Map[Id, Id], re: Map[Id, Id]) = Let(pairs map (_ rename (a, re)))
+  def subst(a: Map[Id, Id], su: Map[Id, Expr]) = Let(pairs map (_ subst (a, su)))
+}
+
+case class Case(pat: Pat, expr: Expr) extends Expr.bind[Case] {
   def bound = pat.bound
   def free = expr.free -- pat.bound
   def rename(a: Map[Id, Id], re: Map[Id, Id]) = Case(pat rename a, expr rename re)
@@ -283,7 +299,7 @@ case object Exists extends Quant {
   override def toString = "exists"
 }
 
-case class Bind(quant: Quant, formals: List[Formal], body: Expr) extends Expr with Expr.bind {
+case class Bind(quant: Quant, formals: List[Formal], body: Expr) extends Expr with Expr.bind[Bind] {
   ensure(!formals.isEmpty, "empty binding", this)
   def bound = Set(formals map (_.id): _*)
   def free = body.free -- bound
@@ -294,21 +310,21 @@ case class Bind(quant: Quant, formals: List[Formal], body: Expr) extends Expr wi
 
 case class WP(prog: Prog, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
-  def rename(re: Map[Id, Id]) = WP(prog rename re, post rename re)
+  def rename(re: Map[Id, Id]) = WP(prog replace re, post rename re)
   def subst(su: Map[Id, Expr]) = ???
   override def toString = sexpr("wp", prog, post)
 }
 
 case class Box(prog: Prog, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
-  def rename(re: Map[Id, Id]) = Box(prog rename re, post rename re)
+  def rename(re: Map[Id, Id]) = Box(prog replace re, post rename re)
   def subst(su: Map[Id, Expr]) = ???
   override def toString = sexpr("box", prog, post)
 }
 
 case class Dia(prog: Prog, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
-  def rename(re: Map[Id, Id]) = Dia(prog rename re, post rename re)
+  def rename(re: Map[Id, Id]) = Dia(prog replace re, post rename re)
   def subst(su: Map[Id, Expr]) = ???
   override def toString = sexpr("dia", prog, post)
 }
@@ -316,15 +332,15 @@ case class Dia(prog: Prog, post: Expr) extends Expr {
 sealed trait Prog {
   def mod: Set[Id]
   def read: Set[Id]
-  def rename(re: Map[Id, Id]): Prog
+  def replace(re: Map[Id, Id]): Prog
 }
 
 case class Block(progs: List[Prog], withOld: Boolean) extends Prog {
   def mod = Set(progs flatMap (_.mod): _*)
   def read = Set(progs flatMap (_.read): _*)
-  def rename(re: Map[Id, Id]) = Block(progs map (_ rename re))
+  def replace(re: Map[Id, Id]) = Block(progs map (_ replace re))
   def ++(that: Block) = Block(this.progs ++ that.progs)
-  override def toString = sexpr("block", progs.mkString: _*)
+  override def toString = sexpr("block", progs: _*)
 }
 
 object Block extends (List[Prog] => Block) {
@@ -336,29 +352,22 @@ object Block extends (List[Prog] => Block) {
 case object Break extends Prog {
   def mod = Set()
   def read = Set()
-  def rename(re: Map[Id, Id]) = this
+  def replace(re: Map[Id, Id]) = this
   override def toString = sexpr("break")
 }
 
-case class Let(x: Id, e: Expr) {
-  def mod = Set(x)
-  def free = e.free
-  def rename(re: Map[Id, Id]) = Let(x rename re, e rename re)
-  override def toString = sexpr(x, e)
-}
-
-case class Assign(lets: List[Let]) extends Prog {
-  ensure(!lets.isEmpty, "empty assignment", this)
-  def mod = Set(lets flatMap (_.mod): _*)
-  def read = Set(lets flatMap (_.free): _*)
-  def rename(re: Map[Id, Id]) = Assign(lets map (_ rename re))
-  override def toString = sexpr("assign", sexpr(lets))
+case class Assign(pairs: List[Pair]) extends Prog {
+  ensure(!pairs.isEmpty, "empty assignment", this)
+  def mod = Set(pairs flatMap (_.mod): _*)
+  def read = Set(pairs flatMap (_.free): _*)
+  def replace(re: Map[Id, Id]) = Assign(pairs map (_ replace re))
+  override def toString = sexpr("assign", sexpr(pairs))
 }
 
 case class Spec(xs: List[Id], pre: Expr, post: Expr) extends Prog {
   def mod = xs.toSet
   def read = pre.free ++ (post.free -- mod)
-  def rename(re: Map[Id, Id]) = Spec(xs map (_ rename re), pre rename re, post rename re)
+  def replace(re: Map[Id, Id]) = Spec(xs map (_ rename re), pre rename re, post rename re)
   override def toString = sexpr("spec", sexpr(xs), pre, post)
 }
 
@@ -370,7 +379,7 @@ object Spec extends ((List[Id], Expr, Expr) => Spec) {
 case class If(test: Expr, left: Prog, right: Prog) extends Prog {
   def mod = left.mod ++ right.mod
   def read = test.free ++ left.read ++ right.read
-  def rename(re: Map[Id, Id]) = If(test rename re, left rename re, right rename re)
+  def replace(re: Map[Id, Id]) = If(test rename re, left replace re, right replace re)
   override def toString = sexpr("if", test, left, right)
 }
 
@@ -384,7 +393,7 @@ object If extends ((Expr, Prog, Option[Prog]) => If) {
 case class While(test: Expr, body: Prog, after: Prog, term: Expr, pre: Expr, post: Expr) extends Prog {
   def mod = body.mod
   def read = test.free ++ body.read
-  def rename(re: Map[Id, Id]) = While(test rename re, body rename re, after rename re, term rename re, pre rename re, post rename re)
+  def replace(re: Map[Id, Id]) = While(test rename re, body replace re, after replace re, term rename re, pre rename re, post rename re)
   override def toString = sexpr("while", test, body, after, ":termination", term, ":precondition", pre, ":postcondition", post)
 }
 

@@ -5,7 +5,7 @@ import mill.scalalib.publish._
 object cuvee extends ScalaModule {
   def scalaVersion = "2.12.8"
 
-  def mainClass = Some("cuvee.Main")
+  def mainClass = Some("cuvee.Cuvee")
 
   def ivyDeps = Agg(
     ivy"com.lihaoyi::sourcecode:0.1.7")

@@ -1,4 +1,5 @@
 import scala.io.StdIn
+import java.lang.UNIXProcess
 
 package object cuvee {
   import scala.language.implicitConversions
@@ -56,5 +57,17 @@ package object cuvee {
 
   def sexpr(args: Iterable[Any]): String = {
     args.mkString("(", " ", ")")
+  }
+
+  implicit class ProcessOps(process: Process) {
+    def pid: Long = {
+      val klass = process.getClass
+      assert(klass.getName == "java.lang.UNIXProcess")
+      val field = klass.getDeclaredField("pid");
+      field.setAccessible(true)
+      val res = field.getLong(process)
+      field.setAccessible(false)
+      res
+    }
   }
 }

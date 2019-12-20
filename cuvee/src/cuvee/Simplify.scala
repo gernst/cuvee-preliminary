@@ -1,9 +1,7 @@
 package cuvee
 
-object Simplify {
+case class Simplify(backend: Solver) {
   case object Unsat extends Exception
-
-  val backend = Solver.z3(1000)
 
   def simplify(exprs: List[Expr], pos: Boolean = true): List[Expr] = {
     simplify(exprs, eqs = Map(), pos)
@@ -76,7 +74,7 @@ object Simplify {
       val x = Id("x")
       val xs0 = Id("xs0")
       val xs_ = Expr.fresh(xs0)
-      Exists(List(Formal(x,Sort("Elem")), Formal(xs_, Sort("Lst"))), xs === x :: xs_)
+      Exists(List(Formal(x, Sort("Elem")), Formal(xs_, Sort("Lst"))), xs === x :: xs_)
     /* case Forall(formals, And.nary(args)) =>
       val _args = args map (Forall(formals, _))
       simplify(And(_args), eqs, pos)

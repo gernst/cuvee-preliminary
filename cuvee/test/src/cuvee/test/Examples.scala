@@ -19,10 +19,15 @@ object Examples extends TestSuite {
 
     val in = new File(path)
     val source = Source.file(in)
-    val solver = Solver.z3(1000)
     val report = prove_!
 
-    test(path) {
+    test(path + " (z3)") {
+      val solver = Solver.z3()
+      Cuvee.run(source, solver, report)
+    }
+
+    test(path + " (cvc4)") {
+      val solver = Solver.cvc4()
       Cuvee.run(source, solver, report)
     }
   }

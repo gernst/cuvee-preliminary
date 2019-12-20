@@ -23,7 +23,7 @@ trait Alpha[E <: Alpha.term[E, V], V <: E with Alpha.x[E, V]] {
   type term = Alpha.term[E, V]
   type x = Alpha.x[E, V]
 
-  trait capture[A] {
+  trait bind[A] {
     def bound: Set[V]
 
     def rename(a: Map[V, V], re: Map[V, V]): A
@@ -32,6 +32,12 @@ trait Alpha[E <: Alpha.term[E, V], V <: E with Alpha.x[E, V]] {
     def avoid(xs: Set[V]) = {
       val captured = bound & xs
       context.fresh(captured)
+    }
+
+    def refresh = {
+      val xs = bound
+      val alpha = avoid(xs)
+      rename(alpha, alpha)
     }
 
     def rename(re: Map[V, V]): A = {
@@ -45,16 +51,6 @@ trait Alpha[E <: Alpha.term[E, V], V <: E with Alpha.x[E, V]] {
       val alpha = avoid(xs)
       subst(alpha, su -- bound ++ alpha)
     }
-
-    def refresh = {
-      val xs = bound
-      val alpha = avoid(xs)
-      rename(alpha, alpha)
-    }
-  }
-
-  trait bind extends term with capture[E] {
-    this: E =>
   }
 
   var _index = 0

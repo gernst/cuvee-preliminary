@@ -6,6 +6,8 @@ import arse.implicits._
 class Parseable[A](p: Parser[A]) {
   def from(text: String): A = {
     import Parser.whitespace
+    if(text == null)
+      ???
     p.parseAll(text)
   }
 }
@@ -19,7 +21,8 @@ object Parser {
     "(" ~ p ~ ")"
   }
 
-  val name = S("[A-Za-z_][A-Za-z0-9_]*")
+  val name = S("[A-Za-z_][A-Za-z0-9_\\-]*")
+  val attr = S(":[A-Za-z_][A-Za-z0-9_\\-]*")
   val op = L("-") | L("+") | L("<=") | L("<") | L(">=") | L(">")
 
   val typ: Parser[Type] = P(sort | parens(array_ | list_))
@@ -65,7 +68,7 @@ object Parser {
   val box_ = P(Box("box" ~ prog ~ expr))
   val dia_ = P(Dia("dia" ~ prog ~ expr))
 
-  val let = P(Let(parens(id ~ expr)))
+  val let = P(Pair(parens(id ~ expr)))
   val lets = P(let.*)
   val assign_ = P(Assign("assign" ~ lets))
 
@@ -80,10 +83,11 @@ object Parser {
   val post = P(":postcondition" ~ expr)
   val while_ = P(While("while" ~ expr ~ prog ~ prog.? ~ term.? ~ pre.? ~ post.?))
 
-  val cmd: Parser[Cmd] = P(parens(set_logic_ | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
+  val cmd: Parser[Cmd] = P(parens(set_logic_ | set_option_ | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
     declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_))
 
   val set_logic_ = P(SetLogic("set-logic" ~ name))
+  val set_option_ = P(SetOption("set-option" ~ (attr :: name.*)))
   val get_model_ = P(GetModel("get-model"))
   val exit_ = P(Exit("exit"))
   val reset_ = P(Reset("reset"))

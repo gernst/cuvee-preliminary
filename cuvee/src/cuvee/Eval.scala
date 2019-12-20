@@ -31,7 +31,7 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
   }
 
   override def toString = {
-    val strings = su map { case (x, e) => Let(x, e) }
+    val strings = su map { case (x, e) => Pair(x, e) }
     strings.mkString("(", " ", ")")
   }
 }
@@ -41,8 +41,8 @@ object Env {
 }
 
 object Eval {
-  def eval(let: Let, env: Env, old: List[Env], st: State): (Id, Expr) = let match {
-    case Let(x, e) => (x, eval(e, env, old, st))
+  def eval(let: Pair, env: Env, old: List[Env], st: State): (Id, Expr) = let match {
+    case Pair(x, e) => (x, eval(e, env, old, st))
   }
 
   def eval(expr: Expr, env: Env, old: List[Env], st: State): Expr = expr match {

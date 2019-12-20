@@ -7,7 +7,7 @@ case class Proc(in: List[Formal], out: List[Formal], pre: Expr, body: Prog) {
     val formals = ps ++ in ++ out
     val args = xs ++ xi ++ xo
     val re = Expr.subst(formals, args)
-    (pre rename re, body rename re)
+    (pre rename re, body replace re)
   }
 }
 

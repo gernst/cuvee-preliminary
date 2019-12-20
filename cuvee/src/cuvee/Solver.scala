@@ -45,6 +45,8 @@ trait Solver {
   def declare(sort: Sort, arity: Int): Ack
   def define(sort: Sort, args: List[Sort], body: Type): Ack
 
+  def declare(formal: Formal): Ack = declare(formal.id, formal.typ)
+  def declare(id: Id, res: Type): Ack = declare(id, Nil, res)
   def declare(id: Id, args: List[Type], res: Type): Ack
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean): Ack
 
@@ -107,15 +109,18 @@ trait Solver {
 
 object Solver {
   def z3(timeout: Int = 1000) = process("z3", "-t:" + timeout, "-in")
-  def cvc4(timeout: Int = 1000) = process("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--increment-triggers")
+  def cvc4(timeout: Int = 1000) = process("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--incremental", "--increment-triggers")
 
   var traffic = false
-  
+
   case class process(args: String*) extends Solver {
     val pb = new ProcessBuilder(args: _*)
     val pr = pb.start()
+    val pid = pr.pid
     val stdout = new BufferedReader(new InputStreamReader(pr.getInputStream))
     val stdin = new PrintStream(pr.getOutputStream)
+
+    if (traffic) println(args.mkString("$ ", " ", "") + " # " + pid)
 
     ensure(setOption(":print-success", "true") == Success)
 
@@ -195,14 +200,14 @@ object Solver {
     }
 
     def write(line: String) {
-      if(traffic) println("> " + line)
+      if (traffic) println(pid + " < " + line)
       stdin.println(line)
       stdin.flush()
     }
 
     def read() = {
       val line = stdout.readLine()
-      if(traffic) println("< " + line)
+      if (traffic) println(pid + " > " + line)
       line
     }
   }

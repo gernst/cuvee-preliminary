@@ -133,7 +133,7 @@ object Refine {
       val xs = as ++ cs
       solver.declare(_EQ, xs, Sort.bool)
 
-      val List(rhs) = Simplify.con(List(observe), Map(), false)
+      val List(rhs) = ??? // Simplify.con(List(observe), Map(), false)
       solver.assert(Forall(xs, App(_EQ, xs) === rhs))
 
       val (_, as1, _, cs1, isinit, isop) = Synthesize.locksteps(a, c, solver.top)
