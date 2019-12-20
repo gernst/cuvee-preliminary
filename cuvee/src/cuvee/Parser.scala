@@ -6,7 +6,7 @@ import arse.implicits._
 class Parseable[A](p: Parser[A]) {
   def from(text: String): A = {
     import Parser.whitespace
-    if(text == null)
+    if (text == null)
       ???
     p.parseAll(text)
   }
@@ -32,10 +32,10 @@ object Parser {
   val array_ = P(Type.array("Array" ~ typ ~ typ))
   val list_ = P(Type.list("List" ~ typ))
 
-  val expr: Parser[Expr] = P(id | num | parens(bind_ | distinct_ | imp_ | and_ | or_ | eq_ | ite_ | select_ | store_ | old_ | wp_ | box_ | dia_ | app_))
+  val pat: Parser[Pat] = P(id | parens(unapp_))
+  val expr: Parser[Expr] = P(id | num | parens(bind_ | distinct_ | imp_ | and_ | or_ | eq_ | ite_ | match_ | select_ | store_ | old_ | wp_ | box_ | dia_ | app_))
 
   val id = P(Id(name | op))
-  val ids = P(id.*)
 
   val num = P(Num(bigint))
 
@@ -47,10 +47,14 @@ object Parser {
   val eq_ = P(Eq("=" ~ expr ~ expr))
   val ite_ = P(Ite("ite" ~ expr ~ expr ~ expr))
 
+  val cs = P(parens(Case(pat ~ expr)))
+  val match_ = P(Match("match" ~ expr ~ cs.*))
+
   val select_ = P(Select("select" ~ expr ~ expr))
   val store_ = P(Store("store" ~ expr ~ expr ~ expr))
 
   val app_ = P(Apps(expr.+))
+  val unapp_ = P(UnApps(id.+))
 
   val forall = Forall("forall")
   val exists = Exists("exists")
@@ -75,7 +79,7 @@ object Parser {
   val break_ = P(Break("break"))
   val asm_ = P(Spec.assume("assume" ~ expr))
   val asrt_ = P(Spec.assert("assert" ~ expr))
-  val spec_ = P(Spec("spec" ~ parens(ids) ~ expr ~ expr))
+  val spec_ = P(Spec("spec" ~ parens(id.*) ~ expr ~ expr))
   val if_ = P(If("if" ~ expr ~ prog ~ prog.?))
 
   val term = P(":termination" ~ expr)

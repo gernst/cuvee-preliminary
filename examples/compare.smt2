@@ -1,27 +1,19 @@
 (set-logic ALL)
 
 (declare-sort Elem 0)
-(declare-sort Lst 0)
+
+(declare-datatypes
+    ((Lst 0))
+    (((cons (head Elem) (tail Lst))
+      (nil))))
 
 (declare-const dash Elem)
 
-(declare-const nil Lst)
-(declare-fun   cons (Elem Lst) Lst)
-
-(assert (forall ((x Elem) (xs Lst))
-    (not (= nil (cons x xs)))))
-(assert (forall ((x Elem) (xs Lst) (y Elem) (ys Lst))
-    (=> (= (cons x xs) (cons y ys))
-        (and (= x y) (= xs ys)))))
-
-(declare-fun rmdash (Lst) Lst)
-(assert
-    (= (rmdash nil)
-       nil))
-(assert (forall ((x Elem) (xs Lst))
-    (= (rmdash (cons x xs))
-       (ite (= x dash) (rmdash xs)
-                       (cons x (rmdash xs))))))
+(define-fun-rec rmdash ((xs Lst)) Lst
+	(match xs
+		(nil nil)
+		((cons x ys) (ite (= x dash) (rmdash ys)
+                                     (cons x (rmdash ys))))))
 
 (declare-fun tolist ((Array Int Elem) Int Int) Lst)
 (assert (forall ((a (Array Int Elem)) (n Int))

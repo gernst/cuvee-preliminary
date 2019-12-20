@@ -242,7 +242,7 @@ case class App(fun: Id, args: List[Expr]) extends Expr {
 case class UnApp(fun: Id, args: List[Id]) extends Pat {
   def bound = Set(args: _*)
   def rename(re: Map[Id, Id]) = UnApp(fun rename re, args map (_ rename re))
-  override def toString = sexpr(fun, args)
+  override def toString = sexpr(fun, args: _*)
 }
 
 object App {
@@ -257,6 +257,15 @@ object Apps extends (List[Expr] => Expr) {
     case List(expr) => expr
     case (fun: Id) :: args => App(fun, args)
     case _ => error("higher-order application", exprs)
+  }
+}
+
+object UnApps extends (List[Id] => Pat) {
+  def apply(pats: List[Id]): Pat = pats match {
+    case Nil => error("empty application")
+    case List(id) => id
+    case fun :: args => UnApp(fun, args)
+    case _ => error("higher-order pattern", pats)
   }
 }
 

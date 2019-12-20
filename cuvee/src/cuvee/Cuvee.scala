@@ -146,13 +146,18 @@ case class Cuvee(backend: Solver) extends Solver {
   }
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
+    map(_ define (id, formals, res, body))
+    backend.define(id, formals, res, body, rec)
+  }
+
+  /* def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
     val xs = formals map (_.id)
     val args = formals map (_.typ)
     val axiom = Forall(formals, App(id, xs) === body)
     map(_ declare (id, args, res))
     map(_ assert axiom)
     backend.declare(id, args, res)
-  }
+  } */
 
   def declare(arities: List[Arity], decls: List[Datatype]) = {
     map(_ declare (arities, decls))
@@ -179,7 +184,7 @@ object Cuvee {
     case "-no-simplify" :: rest =>
       simplify = false
       run(rest, source, solver, report)
-      
+
     case "-debug-solver" :: rest =>
       Solver.traffic = true
       run(rest, source, solver, report)
