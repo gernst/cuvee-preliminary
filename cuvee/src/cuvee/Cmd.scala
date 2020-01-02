@@ -111,11 +111,24 @@ case class DeclareDatatypes(arities: List[Arity], decls: List[Datatype]) extends
 case class DeclareProc(id: Id, in: List[Type], ref: List[Type], out: List[Type]) extends Cmd {
   override def toString = sexpr("declare-proc", id, sexpr(in), ref)
 }
+*/
+case class DefineProc(id: Id, in: List[Formal], ref: List[Formal], body: Prog, pre: Expr, post: Expr) extends Cmd {
+  {
+    val duplicateInputDeclarations = in.map(_.id).groupBy(identity).filter(_._2.size > 1)
+    if (duplicateInputDeclarations.nonEmpty) {
+      throw Error(s"The method $id declares duplicate input parameters ${duplicateInputDeclarations.keys.mkString(", ")}")
+    }
+  }
+  override def toString = sexpr("define-proc", id, sexpr(in), ref, body, ":precondition", pre, ":postcondition", post)
 
-case class DefineProc(id: Id, in: List[Type], ref: List[Formal], body: Expr) extends Cmd {
-  override def toString = sexpr("define-proc", id, sexpr(in), ref, body)
+  def verificationCondition(state: State): Expr = {
+    val env = Env.empty.bind(in).bind(ref)
+    val wpRaw = WP(body, post)
+    val wpEval = Eval.eval(wpRaw, env, List(env), state)
+    Forall(in ++ ref, pre ==> wpEval)
+  }
 }
-
+/*
 case class DefineProcRec(id: Id, in: List[Type], ref: List[Formal], body: Expr) extends Cmd {
   override def toString = sexpr("define-proc-rec", id, sexpr(in), ref, body)
 }
