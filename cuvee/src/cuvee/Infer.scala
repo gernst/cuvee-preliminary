@@ -1,8 +1,87 @@
 package cuvee
 
+object Infer {
+  import Id._
+  import Sort._
+  import Type._
+
+  val elem = Sort("Elem")
+  val list = Sort("List")
+
+  val a = Id("a")
+  val R = Id("R")
+
+  val data = Datatype(List(), List(
+    Constr(Id("nil"), List()),
+    Constr(Id("cons"), List(Sel(head, elem), Sel(tail, list)))))
+
+  val stack = Id("stack")
+  val index = Id("index")
+  val values = Id("values")
+
+  object ListStack extends Obj(
+    List(Formal(stack, list)),
+    Proc(List(), List(), True,
+      Assign(List(Pair(stack, nil)))),
+    List(
+      "push" -> Proc(List(Formal(a, elem)), List(), True,
+        Assign(List(
+          Pair(stack, a :: stack)))),
+      "pop" -> Proc(List(), List(Formal(a, elem)), stack !== nil,
+        Assign(List(
+          Pair(stack, stack.tail),
+          Pair(a, stack.head))))))
+
+  object ArrayStack extends Obj(
+    List(Formal(index, int), Formal(values, array(int, elem))),
+    Proc(List(), List(), True,
+      Assign(List(Pair(index, 0)))),
+    List(
+      "push" -> Proc(List(Formal(a, elem)), List(), True,
+        Assign(List(
+          Pair(index, index + 1),
+          Pair(values, values store (index, a))))),
+      "pop" -> Proc(List(), List(Formal(a, elem)), index > 0,
+        Assign(List(
+          Pair(index, index - 1),
+          Pair(a, values select (index - 1)))))))
+
+  def main(args: Array[String]) {
+    val infer = new Infer(ListStack, ArrayStack, R)
+    val defn = infer.induct(list, data, 0)
+    println(defn)
+  }
+}
+
 case class Infer(A: Obj, C: Obj, R: Id) {
+  val as: List[Id] = A.state
+  val cs: List[Id] = C.state
+  val as_ = as map (_.prime)
+  val cs_ = cs map (_.prime)
+
+  ensure(
+    A.state.toSet disjoint C.state.toSet,
+    "overlapping state variables", A, C)
+
   def infer(as: List[Pat], cs: List[Pat], ctx: List[Expr]): List[Expr] = {
     ???
+  }
+
+  def step(proc: Proc, ps: List[Formal], s0: List[Id], s1: List[Id]) = {
+    val xi = proc.in
+    val xo = proc.out
+    proc call (ps, s0, xi, xo)
+  }
+
+  def lockstep(
+    ap: Proc, as0: List[Id], as1: List[Id],
+    cp: Proc, cs0: List[Id], cs1: List[Id]) = {
+
+    val Proc(ai, ao, apre, abody) = ap
+    val Proc(ci, co, cpre, cbody) = cp
+
+    val re = Expr.subst[Id](ai ++ ao, ci ++ co)
+    val cbody_ = cbody replace re
   }
 
   /**
@@ -11,20 +90,22 @@ case class Infer(A: Obj, C: Obj, R: Id) {
    *  - from the corresponding concrete transitions, where cs0 is given
    *  - specifically, add some R(as1, cs1) for a newly found cs1
    */
-  def recurse(as0: List[Pat], cs0: List[Pat], as1: List[Pat], ctx: List[Expr]): List[Expr] = {
-    val cs1: List[Id] = ???
+  def recurse(as0: List[Pat], cs0: List[Id], as1: List[Pat], ctx: List[Expr]): List[Expr] = {
+    val cs1 = cs0 map (_.prime)
     val rec = App(R, as1 ++ cs1)
-    ???
+    List(rec)
   }
 
   /**
    * Synthesize recursive calls with constraints
    *  @param a0 == as0(pos)
    */
-  def recurse(a0: Pat, pos: Int, hyp: List[Int], as0: List[Pat], cs0: List[Pat], ctx: List[Expr]): List[Expr] = a0 match {
+  def recurse(a0: Pat, pos: Int, hyp: List[Int], as0: List[Pat], cs0: List[Id], ctx: List[Expr]): List[Expr] = a0 match {
     case _: Id =>
       // No recursive invocation
-      Nil
+      val Proc(Nil, Nil, True, prog) = C.init
+      val base = Dia(prog, True)
+      List(base)
     case UnApp(fun, args) =>
       for (i <- hyp) yield {
         // a1 is the argument of the constructor for which a recursive call should be generated
@@ -55,6 +136,11 @@ case class Infer(A: Obj, C: Obj, R: Id) {
     }
 
     Match(arg, cases)
+  }
+
+  def induct(sort: Sort, data: Datatype, pos: Int): Expr = {
+    val rhs = induct(sort, data, pos, as, cs, Nil)
+    App(R, as ++ cs) === rhs
   }
 
   /**
