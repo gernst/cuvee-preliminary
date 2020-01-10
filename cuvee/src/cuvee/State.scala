@@ -122,6 +122,7 @@ object State {
       False -> (List(), Sort.bool),
 
       Id.exp -> (List(Sort.int, Sort.int), Sort.int),
+      Id.abs -> (List(Sort.int), Sort.int),
       Id.times ->(List(Sort.int, Sort.int), Sort.int),
       Id.divBy -> (List(Sort.int, Sort.int), Sort.int),
       Id.mod -> (List(Sort.int, Sort.int), Sort.int),

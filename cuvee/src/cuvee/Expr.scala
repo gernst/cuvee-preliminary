@@ -98,6 +98,7 @@ object Id extends (String => Id) {
   val ite = Id("ite")
 
   val exp = Id("exp")
+  val abs = Id("abs")
   val times = Id("*")
   val divBy = Id("/")
   val mod = Id("mod")
