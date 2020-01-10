@@ -80,7 +80,7 @@ object Parser {
   val asm_ = P(Spec.assume("assume" ~ expr))
   val asrt_ = P(Spec.assert("assert" ~ expr))
   val spec_ = P(Spec("spec" ~ parens(id.*) ~ expr ~ expr))
-  val call_ = P(Call("call" ~ id ~ parens(id.*) ~ parens(id.*)))
+  val call_ = P(Call("call" ~ id ~ parens(expr.*) ~ parens(id.*)))
   val if_ = P(If("if" ~ expr ~ prog ~ prog.?))
 
   val term = P(":termination" ~ expr)
