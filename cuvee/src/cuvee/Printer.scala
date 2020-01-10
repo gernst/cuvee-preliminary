@@ -36,6 +36,10 @@ object Printer {
     else sexpr("define-fun-rec", id, sexpr(formals), res, body)
   }
 
+  def define(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr) = {
+    sexpr("define-proc", id, sexpr(in), sexpr(out), body, ":precondition", pre, ":postcondition", post)
+  }
+
   def sel(id: Id, typ: Type) = {
     sexpr(id, typ)
   }
