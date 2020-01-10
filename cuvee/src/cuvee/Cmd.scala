@@ -61,7 +61,8 @@ object CounterExample extends ((Expr, Prog, Expr) => Cmd) {
         Assert(!(pre ==> WP(_prog, post)))
 
     case _ =>
-      Assert(!(pre ==> WP(prog, post)))
+      val _prog = Block(List(prog), withOld = true)
+      Assert(!(pre ==> WP(_prog, post)))
   }
 }
 
