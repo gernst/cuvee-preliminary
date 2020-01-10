@@ -23,6 +23,7 @@ case class Infer(A: Obj, C: Obj, R: Id) {
    */
   def recurse(a0: Pat, pos: Int, hyp: List[Int], as0: List[Pat], cs0: List[Pat], ctx: List[Expr]): List[Expr] = a0 match {
     case _: Id =>
+      // No recursive invocation
       Nil
     case UnApp(fun, args) =>
       for (i <- hyp) yield {
