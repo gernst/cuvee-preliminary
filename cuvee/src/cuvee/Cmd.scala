@@ -156,12 +156,6 @@ case class DefineProc(id: Id, in: List[Formal], out: List[Formal], body: Prog, p
 
   override def toString = Printer.define(id, in, out, body, pre, post)
 
-  def verificationCondition(state: State): Expr = {
-    val env = Env.empty.bind(in).bind(out)
-    val wpRaw = WP(body, post)
-    val wpEval = Eval.eval(wpRaw, env, List(env), state)
-    Forall(in ++ out, pre ==> wpEval)
-  }
 }
 /*
 case class DefineProcRec(id: Id, in: List[Type], ref: List[Formal], body: Expr) extends Cmd {

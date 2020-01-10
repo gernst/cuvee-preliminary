@@ -11,9 +11,4 @@ object CmdTest extends TestSuite {
       case e: Error => assertEquals(e.getMessage, "The method my-proc declares duplicate input parameters x")
     }
   }
-
-  test("absolute function verification condition") {
-    val verificationCondition = ParserTest.abs.verificationCondition(State.default)
-    assertEquals(verificationCondition, Forall(List(Formal(Id("x"), Sort("Int"))), True ==> ((Id("x") < 0 ==> 0 - Id("x") >= 0) && !(Id("x") < 0) ==> Id("x") >= 0)))
-  }
 }
