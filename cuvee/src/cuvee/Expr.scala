@@ -419,3 +419,20 @@ object While extends ((Expr, Prog, Option[Prog], Option[Expr], Option[Expr], Opt
     While(test, body, _after, _term, _pre, _post)
   }
 }
+
+case class CallProc(name: Id, in: List[Expr], out: List[Id]) extends Prog {
+  private val modVars = out.toSet
+  private val readVars = in.flatMap(_.free).distinct.toSet;
+
+  {
+    val duplicateOuts = out.groupBy(identity).filter(_._2.size > 1)
+    if (duplicateOuts.nonEmpty) {
+      throw Error(s"The procedure call to $name declares duplicate output parameters ${duplicateOuts.keys.mkString(", ")}")
+    }
+  }
+  override def toString = sexpr("call-proc", sexpr(in), sexpr(out))
+
+  override def mod: Set[Id] = modVars
+  override def read: Set[Id] = readVars
+  override def replace(re: Map[Id, Id]): Prog = ??? // XXX
+}

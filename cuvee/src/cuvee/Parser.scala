@@ -64,7 +64,7 @@ object Parser {
   val formals = P(formal.*)
   val bind_ = P(Bind(quant ~ parens(formals) ~ expr))
 
-  val prog: Parser[Prog] = P(parens(break_ | assign_ | asm_ | asrt_ | spec_ | if_ | while_ | block_))
+  val prog: Parser[Prog] = P(parens(break_ | assign_ | asm_ | asrt_ | spec_ | call_proc_ | if_ | while_ | block_))
   val progs = P(prog.*)
   val block_ = P(Block("block" ~ progs))
 
@@ -80,6 +80,7 @@ object Parser {
   val asm_ = P(Spec.assume("assume" ~ expr))
   val asrt_ = P(Spec.assert("assert" ~ expr))
   val spec_ = P(Spec("spec" ~ parens(id.*) ~ expr ~ expr))
+  val call_proc_ = P(CallProc("call-proc" ~ id ~ parens(id.*) ~ parens(id.*)))
   val if_ = P(If("if" ~ expr ~ prog ~ prog.?))
 
   val term = P(":termination" ~ expr)

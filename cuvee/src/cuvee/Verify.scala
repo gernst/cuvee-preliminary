@@ -10,6 +10,7 @@ case class Verify(commands: Iterable[Cmd]) extends Source {
     for (cmd <- commands) {
       cmd match {
         case proc: DefineProc =>
+          solver.define(proc.id, proc.in, proc.out, proc. body, proc.pre, proc.post)
           report.apply(solver.push())
           report.apply(solver.assert(!Verify.verificationCondition(proc, solver.top)))
           report.apply(solver.check())
