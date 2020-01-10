@@ -18,7 +18,7 @@
 
 (assert-counterexample
     (>= x 0)
-    (call-proc zero-proc (x) (y))
+    (call zero-proc (x) (y))
     (= y 0))
 
 (check-sat)

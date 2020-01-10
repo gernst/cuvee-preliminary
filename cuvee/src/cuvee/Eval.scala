@@ -166,23 +166,31 @@ object Eval {
       val step = Forall(formals, (_test && _phi1) ==> wp(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
 
       use && base && step
-    case CallProc(name, in, out) :: rest =>
-      val definition: DefineProc = st.procdefs.get(name) match {
-        case Some(value) => value
-        case None => throw Error(s"Call to undefined procedure $name")
-      }
 
-      if (in.size != definition.in.size) {
-        throw Error(s"Call to procedure $name requires ${definition.in.size} arguments but ${in.size} were given");
-      }
-      if (out.size != definition.out.size) {
-        throw Error(s"Call to procedure $name requires ${definition.out.size} return values but ${out.size} were given");
-      }
-      val preCondition = definition.pre.subst(definition.in.map(_.id).zip(in).toMap)
-      val postCondition = definition.post.subst(definition.in.map(_.id).zip(in).toMap)
-        .subst(definition.out.map(_.id).zip(out).toMap)
+    case Call(name, in, out) :: rest if st.procdefs contains name =>
+      val spec = contract(name, out, in, st)
+      wp(spec :: rest, break, post, env0, old, st)
 
-      wp(Spec(out, preCondition, postCondition) :: rest, break, post, env0, old, st)
+    case Call(name, _, _) :: rest =>
+      throw Error(s"Call to unknown procedure $name")
+  }
+
+  def contract(name: Id, out: List[Id], in: List[Expr], st: State): Spec = {
+    val DefineProc(_, xs, ys, _, pre, post) = st procdefs name
+
+    if (in.size != xs.size) {
+      throw Error(s"Call to procedure $name requires ${xs.size} arguments but ${in.size} were given");
+    }
+    if (out.size != ys.size) {
+      throw Error(s"Call to procedure $name requires ${ys.size} return values but ${out.size} were given");
+    }
+
+    val su1 = Expr.subst(xs, in)
+    val su2 = Expr.subst(ys, out)
+    val _pre = pre subst su1
+    val _post = post subst (su1 ++ su2)
+
+    Spec(out, _pre, _post)
   }
 
   def box(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
@@ -240,6 +248,13 @@ object Eval {
       val step = Forall(formals, (_test && _phi1) ==> box(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
 
       use && base && step
+
+    case Call(name, in, out) :: rest if st.procdefs contains name =>
+      val spec = contract(name, out, in, st)
+      box(spec :: rest, break, post, env0, old, st)
+
+    case Call(name, _, _) :: rest =>
+      throw Error(s"Call to unknown procedure $name")
   }
 
   def dia(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
@@ -298,5 +313,12 @@ object Eval {
       val step = Forall(formals, (_test && _phi1) ==> dia(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
 
       use && base && step
+
+    case Call(name, in, out) :: rest if st.procdefs contains name =>
+      val spec = contract(name, out, in, st)
+      dia(spec :: rest, break, post, env0, old, st)
+
+    case Call(name, _, _) :: rest =>
+      throw Error(s"Call to unknown procedure $name")
   }
 }
