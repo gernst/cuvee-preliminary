@@ -91,7 +91,7 @@ case class Infer(A: Obj, C: Obj, R: Id, st: State) {
     aproc: Proc, as0: List[Expr], as1: List[Id],
     cproc: Proc, cs0: List[Expr], cs1: List[Id]) = {
     val aphi = step(aproc, as, as0, as1)
-    val cphi = step(aproc, as, as0, as1)
+    val cphi = step(cproc, cs, cs0, cs1)
     aphi ++ cphi
   }
 
@@ -111,15 +111,19 @@ case class Infer(A: Obj, C: Obj, R: Id, st: State) {
   }
 
   def base(fun: Id, pos: Int, as0: List[Id], cs0: List[Id], ctx: List[Expr]): List[Expr] = {
+    // lockstep(ainit, as, as0, cinit, cs, cs0)
     step(cinit, cs, cs0)
   }
 
   def recurse(fun: Id, args: List[Id], pos: Int, hyp: List[Int], as0: List[Id], cs0: List[Id], ctx: List[Expr]): List[Expr] = {
     for (i <- hyp) yield {
+      // a0 is the current pattern for the inductive argument
+      val a0 = App(fun, args)
       // a1 is the argument of the constructor for which a recursive call should be generated
       val a1 = args(i)
+      val as0_ = as0 updated (pos, a0)
       val as1 = as0 updated (pos, a1)
-      val phis = recurse(as0, cs0, as1, ctx)
+      val phis = recurse(as0_, cs0, as1, ctx)
       And(phis)
     }
   }
