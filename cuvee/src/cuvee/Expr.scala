@@ -147,10 +147,17 @@ case class Eq(left: Expr, right: Expr) extends Expr {
 }
 
 object Eq extends ((Expr, Expr) => Expr) {
+  def zip(pairs: List[(Expr, Expr)]): List[Expr] = {
+    pairs map { case (left, right) => Eq(left, right) }
+  }
+  
   def apply(lefts: List[Expr], rights: List[Expr]): Expr = {
     ensure(lefts.size == rights.size, "equations length mismatch", lefts, rights)
-    val eqs = (lefts zip rights) map { case (left, right) => Eq(left, right) }
-    And(eqs)
+    apply(lefts zip rights)
+  }
+  
+  def apply(pairs: List[(Expr, Expr)]): Expr = {
+    And(zip(pairs))
   }
 }
 

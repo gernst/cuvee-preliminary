@@ -3,6 +3,11 @@ package cuvee
 case class Proc(in: List[Formal], out: List[Formal], pre: Expr, body: Prog) {
   def sig = (in map (_.typ), out map (_.typ))
 
+  def call(ps: List[Formal], xs: List[Id]): (List[Formal], List[Formal], Expr, Prog) = {
+    val (pre, body) = call(ps, xs, in, out)
+    (in, out, pre, body)
+  }
+
   def call(ps: List[Formal], xs: List[Id], xi: List[Id], xo: List[Id]): (Expr, Prog) = {
     val formals = ps ++ in ++ out
     val args = xs ++ xi ++ xo

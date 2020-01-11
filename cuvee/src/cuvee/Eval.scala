@@ -4,6 +4,10 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
   def contains(id: Id) = su contains id
   def apply(id: Id) = su apply id
 
+  def eqs = {
+    Eq.zip(su.toList)
+  }
+
   def check(xs: Iterable[Id]) {
     for (x <- xs)
       ensure(su contains x, "undeclared program variable", x, su.keySet)
@@ -38,6 +42,24 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
 
 object Env {
   val empty = Env(Map.empty, Map.empty)
+}
+
+case class Path(fresh: List[Formal], path: List[Expr], env: Env) {
+  def ::(phi: Expr) = {
+    Path(fresh, phi :: path, env)
+  }
+
+  def bind(fs: List[Formal]) = {
+    Path(fresh ++ fs, path, env)
+  }
+
+  def toExpr = {
+    Exists(fresh, And(env.eqs ++ path))
+  }
+}
+
+object Path {
+  val empty = Path(List.empty, List.empty, Env.empty)
 }
 
 object Eval {
@@ -194,7 +216,7 @@ object Eval {
       val (formals, env1) = env0 havoc mod
       val _phi = eval(phi, env0, old, st)
       val _psi = eval(psi, env1, env0 :: old, st)
-      _phi ==> Forall(formals, _psi ==> box(rest, break, post, env0, old, st))
+      _phi ==> Forall(formals, _psi ==> box(rest, break, post, env1, old, st))
 
     case If(test, left, right) :: rest =>
       val _test = eval(test, env0, old, st)
@@ -251,7 +273,7 @@ object Eval {
       val (formals, env1) = env0 havoc mod
       val _phi = eval(phi, env0, old, st)
       val _psi = eval(psi, env1, env0 :: old, st)
-      _phi && Exists(formals, _psi && dia(rest, break, post, env0, old, st))
+      _phi && Exists(formals, _psi && dia(rest, break, post, env1, old, st))
 
     case If(test, left, right) :: rest =>
       val _test = eval(test, env0, old, st)
@@ -281,5 +303,40 @@ object Eval {
       val step = Forall(formals, (_test && _phi1) ==> dia(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
 
       use && base && step
+  }
+
+  def rel(prog: Prog, params: List[Formal], st: State): List[Path] = {
+    val env = Env.empty bind params
+    rel(List(prog), env, List(), st)
+  }
+
+  def rel(progs: List[Prog], env0: Env, old: List[Env], st: State): List[Path] = progs match {
+    case Nil =>
+      List(Path(List.empty, List.empty, env0))
+
+    case Block(progs, withOld) :: rest =>
+      val old_ = if (withOld) env0 :: old else old
+      rel(progs ++ rest, env0, old_, st)
+
+    case Assign(lets) :: rest =>
+      val pairs = lets map (eval(_, env0, old, st))
+      val (xs, _es) = pairs.unzip
+      val env1 = env0 assign (xs, _es)
+      rel(rest, env1, old, st)
+
+    case Spec(mod, phi, psi) :: rest =>
+      val (formals, env1) = env0 havoc mod
+      val _phi = eval(phi, env0, old, st)
+      val _psi = eval(psi, env1, env0 :: old, st)
+      for (path <- rel(rest, env1, old, st))
+        yield _phi :: _psi :: path bind formals
+
+    case If(test, left, right) :: rest =>
+      val _test = eval(test, env0, old, st)
+      val _left = for (path <- rel(left :: rest, env0, old, st))
+        yield _test :: path
+      val _right = for (path <- rel(right :: rest, env0, old, st))
+        yield !_test :: path
+      _left ++ _right
   }
 }

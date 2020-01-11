@@ -47,17 +47,21 @@ object Infer {
           Pair(a, values select (index - 1)))))))
 
   def main(args: Array[String]) {
-    val infer = new Infer(ListStack, ArrayStack, R)
+    var st = State.default
+    st = st declare (list, 0, data)
+    val infer = new Infer(ListStack, ArrayStack, R, st)
     val defn = infer.induct(list, data, 0)
     println(defn)
   }
 }
 
-case class Infer(A: Obj, C: Obj, R: Id) {
-  val as: List[Id] = A.state
-  val cs: List[Id] = C.state
+case class Infer(A: Obj, C: Obj, R: Id, st: State) {
+  val as = A.state
+  val cs = C.state
   val as_ = as map (_.prime)
   val cs_ = cs map (_.prime)
+  val ainit = A.init
+  val cinit = C.init
 
   ensure(
     A.state.toSet disjoint C.state.toSet,
@@ -67,21 +71,28 @@ case class Infer(A: Obj, C: Obj, R: Id) {
     ???
   }
 
-  def step(proc: Proc, ps: List[Formal], s0: List[Id], s1: List[Id]) = {
-    val xi = proc.in
-    val xo = proc.out
-    proc call (ps, s0, xi, xo)
+  def step(proc: Proc, ps: List[Formal], xs: List[Id]): List[Expr] = {
+    val (xi, xo, pre, prog) = proc call (ps, xs)
+    val paths = Eval.rel(prog, ps ++ xi ++ xo, st)
+    List(pre, Or(paths map (_.toExpr)))
+  }
+
+  def step(proc: Proc, ps: List[Formal], xs0: List[Expr], xs1: List[Id]): List[Expr] = {
+    val (xi, xo, pre, prog) = proc call (ps, xs1)
+    val su = Expr.subst(xs1, xs0)
+    val ty = ps map (_.typ)
+    val env0 = Env(su, Map(xs1 zip ty: _*))
+    val env1 = env0 bind (xi ++ xo)
+    val paths = Eval.rel(List(prog), env1, List(), st)
+    List(pre, Or(paths map (_.toExpr)))
   }
 
   def lockstep(
-    ap: Proc, as0: List[Id], as1: List[Id],
-    cp: Proc, cs0: List[Id], cs1: List[Id]) = {
-
-    val Proc(ai, ao, apre, abody) = ap
-    val Proc(ci, co, cpre, cbody) = cp
-
-    val re = Expr.subst[Id](ai ++ ao, ci ++ co)
-    val cbody_ = cbody replace re
+    aproc: Proc, as0: List[Expr], as1: List[Id],
+    cproc: Proc, cs0: List[Expr], cs1: List[Id]) = {
+    val aphi = step(aproc, as, as0, as1)
+    val cphi = step(aproc, as, as0, as1)
+    aphi ++ cphi
   }
 
   /**
@@ -90,30 +101,27 @@ case class Infer(A: Obj, C: Obj, R: Id) {
    *  - from the corresponding concrete transitions, where cs0 is given
    *  - specifically, add some R(as1, cs1) for a newly found cs1
    */
-  def recurse(as0: List[Pat], cs0: List[Id], as1: List[Pat], ctx: List[Expr]): List[Expr] = {
+  def recurse(as0: List[Expr], cs0: List[Id], as1: List[Id], ctx: List[Expr]): List[Expr] = {
     val cs1 = cs0 map (_.prime)
     val rec = App(R, as1 ++ cs1)
-    List(rec)
+    val ops = for (((_, aproc), (_, cproc)) <- A.ops zip C.ops) yield {
+      And(lockstep(aproc, as0, as1, cproc, cs0, cs1))
+    }
+    List(rec, Or(ops))
   }
 
-  /**
-   * Synthesize recursive calls with constraints
-   *  @param a0 == as0(pos)
-   */
-  def recurse(a0: Pat, pos: Int, hyp: List[Int], as0: List[Pat], cs0: List[Id], ctx: List[Expr]): List[Expr] = a0 match {
-    case _: Id =>
-      // No recursive invocation
-      val Proc(Nil, Nil, True, prog) = C.init
-      val base = Dia(prog, True)
-      List(base)
-    case UnApp(fun, args) =>
-      for (i <- hyp) yield {
-        // a1 is the argument of the constructor for which a recursive call should be generated
-        val a1 = args(i)
-        val as1 = as0 updated (pos, a1)
-        val phis = recurse(as0, cs0, as1, ctx)
-        And(phis)
-      }
+  def base(fun: Id, pos: Int, as0: List[Id], cs0: List[Id], ctx: List[Expr]): List[Expr] = {
+    step(cinit, cs, cs0)
+  }
+
+  def recurse(fun: Id, args: List[Id], pos: Int, hyp: List[Int], as0: List[Id], cs0: List[Id], ctx: List[Expr]): List[Expr] = {
+    for (i <- hyp) yield {
+      // a1 is the argument of the constructor for which a recursive call should be generated
+      val a1 = args(i)
+      val as1 = as0 updated (pos, a1)
+      val phis = recurse(as0, cs0, as1, ctx)
+      And(phis)
+    }
   }
 
   /**
@@ -159,13 +167,13 @@ case class Infer(A: Obj, C: Obj, R: Id) {
     val hyp = for ((sel, i) <- sels.zipWithIndex if sel.typ == sort)
       yield i
 
-    val pat = UnApps(id :: args)
-    val as_ = as updated (pos, pat)
-
     // synthesize constraints for this case
-    val phis = recurse(pat, pos, hyp, as_, cs, ctx)
-    val expr = And(phis)
+    val phis = if (args.isEmpty) {
+      base(id, pos, as, cs, ctx)
+    } else {
+      recurse(id, args, pos, hyp, as, cs, ctx)
+    }
 
-    Case(pat, expr)
+    Case(UnApps(id :: args), And(phis))
   }
 }
