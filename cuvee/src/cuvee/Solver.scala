@@ -272,7 +272,7 @@ object Solver {
 
     def assert(expr: Expr) = {
       if (expr == False) sat = Unsat
-      write(Printer.assert(expr))
+      write(PrettyPrinter.assert(expr))
       Success
     }
 
@@ -307,7 +307,7 @@ object Solver {
     }
 
     override def define(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr) = {
-      write(Printer.define(id, in, out, body, pre, post))
+      write(PrettyPrinter.define(id, in, out, body, pre, post))
       Success
     }
 
