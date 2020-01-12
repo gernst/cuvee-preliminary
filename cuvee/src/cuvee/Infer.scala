@@ -47,11 +47,15 @@ object Infer {
           Pair(a, values select (index - 1)))))))
 
   def main(args: Array[String]) {
+    val solver = Solver.z3(1000)
+    val simp = new Simplify(solver)
     var st = State.default
     st = st declare (list, 0, data)
     val infer = new Infer(ListStack, ArrayStack, R, st)
-    val defn = infer.induct(list, data, 0)
-    println(defn)
+    val Eq(_R, rhs) = infer.induct(list, data, 0)
+    val _rhs = simp(rhs)
+    println(_R)
+    println(_rhs)
   }
 }
 
@@ -83,8 +87,10 @@ case class Infer(A: Obj, C: Obj, R: Id, st: State) {
     val ty = ps map (_.typ)
     val env0 = Env(su, Map(xs1 zip ty: _*))
     val env1 = env0 bind (xi ++ xo)
+    println("  env: " + env1)
+    val _pre = Eval.eval(pre, env1, List(), st)
     val paths = Eval.rel(List(prog), env1, List(), st)
-    List(pre, Or(paths map (_.toExpr)))
+    List(_pre, Or(paths map (_.toExpr)))
   }
 
   def lockstep(
@@ -104,8 +110,16 @@ case class Infer(A: Obj, C: Obj, R: Id, st: State) {
   def recurse(as0: List[Expr], cs0: List[Id], as1: List[Id], ctx: List[Expr]): List[Expr] = {
     val cs1 = cs0 map (_.prime)
     val rec = App(R, as1 ++ cs1)
-    val ops = for (((_, aproc), (_, cproc)) <- A.ops zip C.ops) yield {
-      And(lockstep(aproc, as0, as1, cproc, cs0, cs1))
+    val ops = for (((aname, aproc), (cname, cproc)) <- A.ops zip C.ops) yield {
+      val phis = lockstep(aproc, as0, as1, cproc, cs0, cs1)
+      assert(aname == cname)
+      println(aname)
+      println("  A: " + sexpr(as0) + " ~> " + sexpr(as1))
+      println("  C: " + sexpr(cs0) + " ~> " + sexpr(cs1))
+      for (phi <- phis if phi != True)
+        println("  " + phi)
+      println()
+      And(phis)
     }
     List(rec, Or(ops))
   }

@@ -22,6 +22,10 @@ case class Simplify(backend: Solver) {
       _phi :: _rest
   }
 
+  def apply(phi: Expr): Expr = {
+    simplify(phi, eqs = Map(), pos = true)
+  }
+
   def simplify(phi: Expr, eqs: Map[Id, Expr], pos: Boolean): Expr = {
     val _phi = _simplify(phi, eqs, pos)
     //    println("simplify: ")
@@ -95,6 +99,14 @@ case class Simplify(backend: Solver) {
       val bind__ = __simplify(bind_, eqs, pos)
       val rest = assuming(bind__, eqs, con(move, _, pos))
       And(bind__ :: rest) */
+    case Match(arg, cases) =>
+      val _arg = rewrite(arg, eqs)
+      val _cases = cases map {
+        case Case(pat, body) =>
+          val eq = pat.toExpr === arg
+          Case(pat, assuming(eq, eqs, simplify(body, _, pos)))
+      }
+      Match(_arg, _cases)
     case bind: Bind =>
       __simplify(bind, eqs, pos)
     case _ =>
@@ -116,7 +128,7 @@ case class Simplify(backend: Solver) {
     case id: Id if (eqs contains id) =>
       eqs(id)
     case Eq(left, right) =>
-      Eq(rewrite(left, eqs), rewrite(right, eqs))
+      eq(rewrite(left, eqs), rewrite(right, eqs))
     case Ite(test, left, right) =>
       Ite(rewrite(test, eqs), rewrite(left, eqs), rewrite(right, eqs))
     case Select(array, index) =>
@@ -125,6 +137,10 @@ case class Simplify(backend: Solver) {
       Store(rewrite(array, eqs), rewrite(index, eqs), rewrite(value, eqs))
     case Distinct(args) =>
       Distinct(args map (rewrite(_, eqs)))
+    case App(Id.head, List(App(Id.cons, List(head, tail)))) =>
+      head
+    case App(Id.tail, List(App(Id.cons, List(head, tail)))) =>
+      tail
     case App(fun, args) =>
       App(fun, args map (rewrite(_, eqs)))
     case _ =>
@@ -197,6 +213,11 @@ case class Simplify(backend: Solver) {
       and(_args)
     case _ =>
       phi
+  }
+
+  def eq(left: Expr, right: Expr): Expr = {
+    if (left == right) True
+    else Eq(left, right)
   }
 
   def not(phi: Expr) = phi match {
