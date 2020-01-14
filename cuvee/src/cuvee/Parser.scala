@@ -113,7 +113,8 @@ object Parser {
   val define_fun_ = P(DefineFun("define-fun" ~ id ~ parens(formals) ~ typ ~ expr))
   val define_fun_rec_ = P(DefineFunRec("define-fun-rec" ~ id ~ parens(formals) ~ typ ~ expr))
 
-  val define_proc_ = P(DefineProc("define-proc" ~ id ~ parens(formals) ~ parens(formals) ~ prog ~ pre ~ post))
+  val define_proc_ = P(DefineProc("define-proc" ~ id ~ parens(formals) ~ parens(formals) ~ prog
+    ~ pre.?.map(_.getOrElse(True)) ~ post.?.map(_.getOrElse(True))))
 
   val sel = P(Sel(parens(id ~ typ)))
   val constr = P(parens(Constr(id ~ sel.*)))

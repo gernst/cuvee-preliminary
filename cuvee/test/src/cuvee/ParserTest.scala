@@ -27,4 +27,11 @@ object ParserTest extends TestSuite {
         ":postcondition (>= y 0))")
     assertEquals(proc, abs)
   }
+
+  test("parse procedure without pre- or postcondition") {
+    val proc = new Parseable(Parser.cmd).from("(define-proc empty ()" +
+      "() (block))")
+    assertEquals(proc, DefineProc(Id("empty"), List(), List(), Block(List()),
+      True, True))
+  }
 }
