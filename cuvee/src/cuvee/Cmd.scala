@@ -108,6 +108,15 @@ case class DeclareDatatypes(arities: List[Arity], decls: List[Datatype]) extends
 
 case class DefineClass(name: Id, fields: List[Formal], procs: List[DefineProc]) extends Def
 
+/**
+ * Defines a refinement: a relation between an abstract and a concrete type
+ *
+ * @param abstr abstract type and the variable name to refer to it in the relation
+ * @param concr concrete type and the variable name to refer to it in the relation
+ * @param relation members of classes can be referred to with "class_member"
+ */
+case class DefineRefinement(abstr: Formal, concr: Formal, relation: Expr) extends Def
+
 // (declare-datatypes () ((Lst (cons (head Elem) (tail Lst)) (nil))))
 
 /*
