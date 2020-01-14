@@ -64,6 +64,7 @@ case class State(
 
   def define(proc: DefineProc) = {
     ensure(!(procs contains proc.id), "procedure already defined", proc.id)
+    proc.check
     val ins = proc.in.map(_.typ)
     val outs = proc.out.map(_.typ)
     copy(

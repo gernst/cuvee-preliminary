@@ -125,7 +125,8 @@ case class DeclareProc(id: Id, in: List[Type], ref: List[Type], out: List[Type])
  * @param post
  */
 case class DefineProc(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr) extends Def {
-  {
+
+  def check = {
     val inVars = in.map(_.id)
     val duplicateInputDeclarations = inVars.groupBy(identity).filter(_._2.size > 1)
     if (duplicateInputDeclarations.nonEmpty) {
