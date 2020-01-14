@@ -12,13 +12,7 @@ object VerifyTest extends TestSuite {
     test("verify " + file) {
       Expr._index = 0
       val in = new File(file)
-      val source = try {
-        Verify(Source.file(in).cmds)
-      } catch {
-        case any: Throwable =>
-          printToStringStackTrace(any)
-          throw any
-      }
+      val source: Source = runUnwrappingErrors(Verify(Source.file(in).cmds))
 
       println(s"Verification condition for $file")
       println()
@@ -36,6 +30,17 @@ object VerifyTest extends TestSuite {
     assertEquals(verificationCondition, Forall(List(Formal(Id("x"), Sort("Int"))), True ==> ((Id("x") < 0 ==> 0 - Id("x") >= 0) && !(Id("x") < 0) ==> Id("x") >= 0)))
   }
 
+  def runUnwrappingErrors[A](fun: => A): A = {
+    try {
+      fun
+    } catch {
+      case any: Throwable =>
+        printToStringStackTrace(any)
+        throw any
+    }
+  }
+
+  @scala.annotation.tailrec
   def printToStringStackTrace(t: Throwable): Unit = {
     println(t)
     if (t.getCause != null && t.getCause != t) {

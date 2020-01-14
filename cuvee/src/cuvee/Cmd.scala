@@ -106,6 +106,8 @@ case class DeclareDatatypes(arities: List[Arity], decls: List[Datatype]) extends
   override def toString = Printer.declare(arities, decls)
 }
 
+case class DefineClass(name: Id, fields: List[Formal], procs: List[DefineProc]) extends Def
+
 // (declare-datatypes () ((Lst (cons (head Elem) (tail Lst)) (nil))))
 
 /*
