@@ -2,7 +2,6 @@ package cuvee
 
 import java.io.File
 
-import cuvee.CmdTest.{assertEquals, test}
 import cuvee.test.TestSuite
 
 object VerifyTest extends TestSuite {
@@ -11,6 +10,7 @@ object VerifyTest extends TestSuite {
     "examples/verifications/gcd-proc.smt2",
     "examples/verifications/zero-proc.smt2")) {
     test("verify " + file) {
+      Expr._index = 0
       val in = new File(file)
       val source = try {
         Verify(Source.file(in).cmds)
