@@ -88,6 +88,8 @@ case class Id(name: String, index: Option[Int]) extends Expr with Pat with Expr.
   def prime = Id(name + "'", index)
   def fresh(index: Int) = Id(name, Some(index))
   override def toString = Printer.id(this)
+
+  def :=(other: Expr) = Assign(List(Pair(this, other)))
 }
 
 object Id extends (String => Id) {
