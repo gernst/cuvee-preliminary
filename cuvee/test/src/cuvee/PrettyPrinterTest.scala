@@ -17,5 +17,9 @@ object PrettyPrinterTest extends TestSuite {
     assertEquals(print(Forall(List(("x", "Int")), App("f", "x") ==> (("x" || "a") && ("y" || "a")))), "∀ x: Int. f(x) ⟹ (x ∨ a) ∧ (y ∨ a)")
   }
 
+  test("comma separator stays at the end of the line") {
+    assertEquals(PrettyPrinter.breakIfNecessary(List(List("a"), List("a")), ", ", 3), List("a, ", "  a"))
+  }
+
   private def print(expr: Expr): String = PrettyExpr(expr).print mkString "\n"
 }

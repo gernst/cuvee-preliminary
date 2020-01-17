@@ -124,7 +124,7 @@ object PrettyPrinter {
           builder = if (indent && !first.eq("{")) {
             l match {
               case " " => builder ++ (("  " + j + first) :: tail)
-              case _ => builder.updated(builder.size - 1, builder.last + j + first) ++ (("  " + first) :: tail)
+              case _ => builder.updated(builder.size - 1, builder.last + j) ++ (("  " + first) :: tail)
             }
           } else {
             builder.updated(builder.size - 1, builder.last + l + j + first) ++ tail
