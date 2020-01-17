@@ -8,7 +8,8 @@ class Parseable[A](p: Parser[A]) {
     import Parser.whitespace
     if (text == null)
       ???
-    p.parseAll(text)
+    val withoutComments = text split raw"[\r\n]+" filter (!_.startsWith(";")) mkString "\n"
+    p.parseAll(withoutComments)
   }
 }
 

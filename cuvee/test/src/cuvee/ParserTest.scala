@@ -47,7 +47,15 @@ object ParserTest extends TestSuite {
     assertEquals(proc, DefineRefinement(("as", "abstract-class"), ("cs", "concrete-class"), "cs_member" === (Num(0) - "as_member")))
   }
 
+  test("parse comment") {
+    assertEquals(parseCmds("; foo\n; bar"), List())
+  }
+
   private def parseCmd(str: String): Cmd = {
     VerifyTest.runUnwrappingErrors(new Parseable(Parser.cmd).from(str))
+  }
+
+  private def parseCmds(str: String): List[Cmd] = {
+    VerifyTest.runUnwrappingErrors(new Parseable(Parser.cmd*).from(str))
   }
 }
