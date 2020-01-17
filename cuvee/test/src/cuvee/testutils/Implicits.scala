@@ -7,7 +7,28 @@ import cuvee.{Formal, Id, Sort}
  * import cuvee.testutils.Implicits._
  */
 object Implicits {
-    implicit def id(s: String): Id = Id(s)
+    val indexed = raw"^(.+?)(\d+)?$$".r // +? is reluctant
 
-    implicit def formal(f: (String, String)): Formal = Formal(Id(f._1), Sort(f._2))
+    private def splitIndex(s: String): (String, Option[Int]) = {
+        val m = indexed.pattern.matcher(s)
+        if (!m.find()) {
+            throw new IllegalArgumentException("What is this: " + s)
+        }
+        m.group(2) match {
+            case null => (s, None)
+            case any: String => (m.group(1), Some(Integer.parseInt(any)))
+        }
+    }
+
+    implicit def id(s: String): Id = {
+        val (base, index) = splitIndex(s)
+        Id(base, index)
+    }
+
+    implicit def sort(s: String): Sort = {
+        val (base, index) = splitIndex(s)
+        Sort(base, index)
+    }
+
+    implicit def formal(f: (String, String)): Formal = Formal(id(f._1), sort(f._2))
 }

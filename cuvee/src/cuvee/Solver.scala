@@ -57,6 +57,8 @@ trait Solver {
    */
   def define(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr): Ack
 
+  def define(clazz: DefineClass): Ack
+
   def assert(expr: Expr): Ack
 
   def setOption(args: String*): Ack = {
@@ -206,6 +208,8 @@ object Solver {
       Success
     }
 
+    override def define(clazz: DefineClass): Ack = Success
+
     def declare(arities: List[Arity], decls: List[Datatype]) = {
       write(Printer.declare(arities, decls))
       Ack.from(read())
@@ -308,6 +312,11 @@ object Solver {
 
     override def define(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr) = {
       write(PrettyPrinter.define(id, in, out, body, pre, post))
+      Success
+    }
+
+    override def define(clazz: DefineClass): Ack = {
+      write("class definition...")
       Success
     }
 

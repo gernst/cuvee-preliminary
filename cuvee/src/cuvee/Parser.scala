@@ -117,7 +117,7 @@ object Parser {
   val define_proc_ = P(DefineProc("define-proc" ~ id ~ parens(formals) ~ parens(formals) ~ prog
     ~ pre.?.map(_.getOrElse(True)) ~ post.?.map(_.getOrElse(True))))
 
-  val define_class_ = P(DefineClass("define-class" ~ id ~ parens(formals) ~ parens(parens(define_proc_).*)))
+  val define_class_ = P(DefineClass("define-class" ~ sort ~ parens(formals) ~ parens(define_proc_).*))
   val define_refinement_ = P(DefineRefinement("refinement" ~ formal ~ formal ~ expr))
 
   val sel = P(Sel(parens(id ~ typ)))
