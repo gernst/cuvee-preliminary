@@ -88,6 +88,8 @@ case class Id(name: String, index: Option[Int]) extends Expr with Pat with Expr.
   def prime = Id(name + "'", index)
   def fresh(index: Int) = Id(name, Some(index))
   override def toString = Printer.id(this)
+
+  def :=(other: Expr) = Assign(List(Pair(this, other)))
 }
 
 object Id extends (String => Id) {
@@ -98,6 +100,7 @@ object Id extends (String => Id) {
   val ite = Id("ite")
 
   val exp = Id("exp")
+  val abs = Id("abs")
   val times = Id("*")
   val divBy = Id("/")
   val mod = Id("mod")
@@ -424,4 +427,18 @@ object While extends ((Expr, Prog, Option[Prog], Option[Expr], Option[Expr], Opt
     val _post = post getOrElse True
     While(test, body, _after, _term, _pre, _post)
   }
+}
+
+case class Call(name: Id, in: List[Expr], out: List[Id]) extends Prog {
+  {
+    val duplicateOuts = out.groupBy(identity).filter(_._2.size > 1)
+    if (duplicateOuts.nonEmpty) {
+      throw Error(s"The procedure call to $name declares duplicate output parameters ${duplicateOuts.keys.mkString(", ")}")
+    }
+  }
+
+  def mod = out.toSet
+  def read = in.flatMap(_.free).distinct.toSet
+  def replace(re: Map[Id, Id]) = Call(name, in map (_ rename re), out map (_ rename re))
+  override def toString = sexpr("call", sexpr(in), sexpr(out))
 }

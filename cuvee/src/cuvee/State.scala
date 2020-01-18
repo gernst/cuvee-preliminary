@@ -7,6 +7,9 @@ case class State(
   funs: Map[Id, (List[Type], Type)],
   fundefs: Map[Id, (List[Id], Expr)],
 
+  procs: Map[Id, (List[Type], List[Type])],
+  procdefs: Map[Id, DefineProc], // XXX DefineProc used directly here?
+
   rasserts: List[Expr],
   model: Option[Model]) {
   
@@ -57,6 +60,16 @@ case class State(
     copy(
       funs = funs + (id -> (args, res)),
       fundefs = fundefs + (id -> (ids, body)))
+  }
+
+  def define(proc: DefineProc) = {
+    ensure(!(procs contains proc.id), "procedure already defined", proc.id)
+    proc.check
+    val ins = proc.in.map(_.typ)
+    val outs = proc.out.map(_.typ)
+    copy(
+      procs = procs + (proc.id -> (ins, outs)),
+      procdefs = procdefs + (proc.id -> proc))
   }
   
   def declare(sort: Sort, arity: Int, decl: Datatype): State = {
@@ -110,6 +123,7 @@ object State {
       False -> (List(), Sort.bool),
 
       Id.exp -> (List(Sort.int, Sort.int), Sort.int),
+      Id.abs -> (List(Sort.int), Sort.int),
       Id.times ->(List(Sort.int, Sort.int), Sort.int),
       Id.divBy -> (List(Sort.int, Sort.int), Sort.int),
       Id.mod -> (List(Sort.int, Sort.int), Sort.int),
@@ -139,6 +153,9 @@ object State {
       Id.select -> Fun.select,
       Id.store -> Fun.store */),
     fundefs = Map(),
+
+    procs = Map(),
+    procdefs = Map(),
 
     rasserts = Nil,
     model = None)

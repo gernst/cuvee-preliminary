@@ -61,7 +61,8 @@ object CounterExample extends ((Expr, Prog, Expr) => Cmd) {
         Assert(!(pre ==> WP(_prog, post)))
 
     case _ =>
-      Assert(!(pre ==> WP(prog, post)))
+      val _prog = Block(List(prog), withOld = true)
+      Assert(!(pre ==> WP(_prog, post)))
   }
 }
 
@@ -111,11 +112,54 @@ case class DeclareDatatypes(arities: List[Arity], decls: List[Datatype]) extends
 case class DeclareProc(id: Id, in: List[Type], ref: List[Type], out: List[Type]) extends Cmd {
   override def toString = sexpr("declare-proc", id, sexpr(in), ref)
 }
+*/
 
-case class DefineProc(id: Id, in: List[Type], ref: List[Formal], body: Expr) extends Cmd {
-  override def toString = sexpr("define-proc", id, sexpr(in), ref, body)
+/**
+ * Defines a procedure.
+ *
+ * @param id  name of the procedure
+ * @param in  the list of input arguments. The ids must be unique.
+ * @param out the list of output arguments. Ids may turn up multiple times, but their types must be equal.
+ * @param body must modify all of (out \ in). Must at most modify (in ∪ out).
+ * @param pre precondition of the procedure. May only refer to in and global identifiers.
+ * @param post
+ */
+case class DefineProc(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr) extends Def {
+
+  def check = {
+    val inVars = in.map(_.id)
+    val duplicateInputDeclarations = inVars.groupBy(identity).filter(_._2.size > 1)
+    if (duplicateInputDeclarations.nonEmpty) {
+      throw Error(s"The method $id declares duplicate input parameters ${duplicateInputDeclarations.keys.mkString(", ")}")
+    }
+
+    // the outputs may have the same variable name in multiple places if the type is equal.
+    // outputs may overlap with inputs but, again, the type must be equal
+    val nonUniqueAgruments = (in ++ out).groupBy(_.id).filter(_._2.map(_.typ).distinct.size > 1)
+    if (nonUniqueAgruments.nonEmpty) {
+      throw Error(s"The method $id declares non-unique type for argument ${nonUniqueAgruments.keys.mkString(", ")}")
+    }
+
+    // procedure must at most modify its output variables
+    val modifiableVariables = (in ++ out).map(_.id).distinct
+    val modifiedVariables = body.mod
+    val illegallyModifiedVariables = modifiedVariables.filter(!modifiableVariables.contains(_))
+    if (illegallyModifiedVariables.nonEmpty) {
+      throw Error(s"The method $id modifies undeclared output parameters ${illegallyModifiedVariables.mkString(", ")}")
+    }
+
+    // procedure must at least modify output variables that are not input variables
+    val outputsThatMustBeSet = out.map(_.id).filter(!inVars.contains(_))
+    val unsetOutputs = outputsThatMustBeSet.filter(!modifiedVariables.contains(_))
+    if (unsetOutputs.nonEmpty) {
+      throw Error(s"The method $id does not modify its output parameters ${unsetOutputs.mkString(", ")}")
+    }
+  }
+
+  override def toString = Printer.define(id, in, out, body, pre, post)
+
 }
-
+/*
 case class DefineProcRec(id: Id, in: List[Type], ref: List[Formal], body: Expr) extends Cmd {
   override def toString = sexpr("define-proc-rec", id, sexpr(in), ref, body)
 }
