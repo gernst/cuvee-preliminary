@@ -141,7 +141,7 @@ case object Unsupported extends Ack {
   override def toString = "unsupported"
 }
 
-case class Error(info: Seq[Any]) extends Exception with Ack {
+case class Error(info: Seq[Any]) extends Exception(info.mkString("\n")) with Ack {
   override def toString = Printer.error(info)
 }
 
