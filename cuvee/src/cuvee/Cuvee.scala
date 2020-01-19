@@ -151,7 +151,7 @@ case class Cuvee(backend: Solver) extends Solver {
   }
 
   override def define(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr): Ack = {
-    map(_ define DefineProc(id, in, out, body, pre, post))
+    map(_ define (id, in, out, body, pre, post))
     backend.define(id, in, out, body, pre, post)
   }
 

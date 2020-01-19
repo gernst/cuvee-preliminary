@@ -8,7 +8,7 @@ case class State(
   fundefs: Map[Id, (List[Id], Expr)],
 
   procs: Map[Id, (List[Type], List[Type])],
-  procdefs: Map[Id, DefineProc], // XXX DefineProc used directly here?
+  procdefs: Map[Id, (List[Id], List[Id], Prog, Expr, Expr)],
 
   rasserts: List[Expr],
   model: Option[Model]) {
@@ -62,14 +62,14 @@ case class State(
       fundefs = fundefs + (id -> (ids, body)))
   }
 
-  def define(proc: DefineProc) = {
-    ensure(!(procs contains proc.id), "procedure already defined", proc.id)
-    proc.check
-    val ins = proc.in.map(_.typ)
-    val outs = proc.out.map(_.typ)
+  def define(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr) = {
+    ensure(!(procs contains id), "procedure already defined", id)
+    // proc.check
+    val ins = in map(_.typ)
+    val outs = out map(_.typ)
     copy(
-      procs = procs + (proc.id -> (ins, outs)),
-      procdefs = procdefs + (proc.id -> proc))
+      procs = procs + (id -> (ins, outs)),
+      procdefs = procdefs + (id -> (in, out, body, pre, post)))
   }
   
   def declare(sort: Sort, arity: Int, decl: Datatype): State = {

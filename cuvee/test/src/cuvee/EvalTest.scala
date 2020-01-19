@@ -24,7 +24,7 @@ object EvalTest extends TestSuite {
 
   test("function call") {
     // define function forward(x) = x
-    val state = State.default.define(DefineProc(Id("forward"), formal(a, int), formal(b, int), assign(b, a), True, Eq(b, a)))
+    val state = State.default.define(Id("forward"), formal(a, int), formal(b, int), assign(b, a), True, Eq(b, a))
     val env = Env.empty.bind(formal(x, int) ++ formal(y, int))
     val code = Call(Id("forward"), List(x * 2), List(y))
     val wp = WP(code, y === Old(x) * 2)

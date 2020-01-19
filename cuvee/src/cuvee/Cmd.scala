@@ -159,6 +159,15 @@ case class DefineProc(id: Id, in: List[Formal], out: List[Formal], body: Prog, p
   override def toString = Printer.define(id, in, out, body, pre, post)
 
 }
+
+object DefineProc extends ((Id, List[Formal], List[Formal], Prog, Option[Expr], Option[Expr]) => DefineProc) {
+  def apply(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Option[Expr], post: Option[Expr]): DefineProc = {
+    val _pre = pre.getOrElse(True)
+    val _post = post.getOrElse(True)
+    DefineProc(id, in, out, body, _pre, _post)
+  }
+}
+
 /*
 case class DefineProcRec(id: Id, in: List[Type], ref: List[Formal], body: Expr) extends Cmd {
   override def toString = sexpr("define-proc-rec", id, sexpr(in), ref, body)

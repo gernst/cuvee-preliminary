@@ -194,18 +194,14 @@ object Eval {
       wp(spec :: rest, break, post, env0, old, st)
 
     case Call(name, _, _) :: rest =>
-      throw Error(s"Call to unknown procedure $name")
+      error("unknown procedure", name)
   }
 
   def contract(name: Id, out: List[Id], in: List[Expr], st: State): Spec = {
-    val DefineProc(_, xs, ys, _, pre, post) = st procdefs name
+    val (xs, ys, _, pre, post) = st procdefs name
 
-    if (in.size != xs.size) {
-      throw Error(s"Call to procedure $name requires ${xs.size} arguments but ${in.size} were given");
-    }
-    if (out.size != ys.size) {
-      throw Error(s"Call to procedure $name requires ${ys.size} return values but ${out.size} were given");
-    }
+    ensure(in.length == xs.length, "wrong number of inputs", name, xs, in)
+    ensure(out.length == ys.length, "wrong number of outputs", name, ys, out)
 
     val su1 = Expr.subst(xs, in)
     val su2 = Expr.subst(ys, out)
@@ -276,7 +272,7 @@ object Eval {
       box(spec :: rest, break, post, env0, old, st)
 
     case Call(name, _, _) :: rest =>
-      throw Error(s"Call to unknown procedure $name")
+      error("unknown procedure", name)
   }
 
   def dia(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
@@ -341,7 +337,7 @@ object Eval {
       dia(spec :: rest, break, post, env0, old, st)
 
     case Call(name, _, _) :: rest =>
-      throw Error(s"Call to unknown procedure $name")
+      error("unknown procedure", name)
   }
 
   def rel(prog: Prog, params: List[Formal], st: State): List[Path] = {
