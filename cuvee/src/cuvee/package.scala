@@ -35,6 +35,29 @@ package object cuvee {
     }
   }
 
+  implicit class IterableOps[A](self: Iterable[A]) {
+    def _insert(a: A, as: List[(A, List[A])], eq: (A, A) => Boolean): List[(A, List[A])] = as match {
+      case Nil => List((a, List(a)))
+      case (b, bs) :: cs if eq(a, b) => (a, b :: bs) :: cs
+      case c :: cs => c :: _insert(a, cs, eq)
+    }
+
+    def _classes(eq: (A, A) => Boolean): List[(A, List[A])] = {
+      self.foldLeft(Nil: List[(A, List[A])]) {
+        case (as, a) => _insert(a, as, eq)
+      }
+    }
+
+    def classes(eq: (A, A) => Boolean) = {
+      for ((_, as) <- _classes(eq) if as.length > 1)
+        yield as
+    }
+
+    def duplicates(eq: (A, A) => Boolean) = {
+      classes(eq).flatten
+    }
+  }
+
   def ok = "=-+<>"
 
   def needsEscape(c: Char) = {
