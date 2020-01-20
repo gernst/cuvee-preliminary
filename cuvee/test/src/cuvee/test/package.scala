@@ -10,7 +10,8 @@ package object test {
       def apply(res: Res) = res match {
         case res: IsSat =>
           assertEquals(res, Unsat)
-        case _ =>
+        case any =>
+          assertEquals(res, Success)
       }
     }
   }

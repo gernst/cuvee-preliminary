@@ -10,6 +10,8 @@ case class State(
   procs: Map[Id, (List[Type], List[Type])],
   procdefs: Map[Id, (List[Id], List[Id], Prog, Expr, Expr)],
 
+  classes: Map[Type, DefineClass],
+
   rasserts: List[Expr],
   model: Option[Model]) {
   
@@ -71,7 +73,14 @@ case class State(
       procs = procs + (id -> (ins, outs)),
       procdefs = procdefs + (id -> (in, out, body, pre, post)))
   }
-  
+
+  def define(clazz: DefineClass): State = {
+    ensure(!(classes contains clazz.name), "class already defined", clazz.name)
+    copy(
+      classes = classes + (clazz.name -> clazz)
+    )
+  }
+
   def declare(sort: Sort, arity: Int, decl: Datatype): State = {
     val st = declare(sort, arity)
     ensure(arity == decl.params.length, "arity mismatch", arity, decl.params)
@@ -156,6 +165,8 @@ object State {
 
     procs = Map(),
     procdefs = Map(),
+
+    classes = Map(),
 
     rasserts = Nil,
     model = None)

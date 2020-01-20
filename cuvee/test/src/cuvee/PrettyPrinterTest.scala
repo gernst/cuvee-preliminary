@@ -1,5 +1,6 @@
 package cuvee
 
+import cuvee.testutils.Implicits._
 import cuvee.PrettyPrinter.{BinaryOperator, PrettyId, PrettyExpr}
 import cuvee.test.TestSuite
 
@@ -16,9 +17,9 @@ object PrettyPrinterTest extends TestSuite {
     assertEquals(print(Forall(List(("x", "Int")), App("f", "x") ==> (("x" || "a") && ("y" || "a")))), "∀ x: Int. f(x) ⟹ (x ∨ a) ∧ (y ∨ a)")
   }
 
-  private implicit def id(s: String): Id = Id(s)
-
-  private implicit def formal(f: (String, String)): Formal = Formal(Id(f._1), Sort(f._2))
+  test("comma separator stays at the end of the line") {
+    assertEquals(PrettyPrinter.breakIfNecessary(List(List("a"), List("a")), ", ", 3), List("a, ", "  a"))
+  }
 
   private def print(expr: Expr): String = PrettyExpr(expr).print mkString "\n"
 }

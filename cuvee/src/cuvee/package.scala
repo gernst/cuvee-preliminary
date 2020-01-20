@@ -94,4 +94,9 @@ package object cuvee {
       res
     }
   }
+
+  implicit class FormalList(formals: List[Formal]) {
+    def prime = formals map (_.prime)
+    def priming = formals map (_.id) map (id => id -> id.prime) toMap
+  }
 }

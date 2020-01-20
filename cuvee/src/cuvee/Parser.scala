@@ -8,7 +8,8 @@ class Parseable[A](p: Parser[A]) {
     import Parser.whitespace
     if (text == null)
       ???
-    p.parseAll(text)
+    val withoutComments = text split raw"[\r\n]+" filter (!_.startsWith(";")) mkString "\n"
+    p.parseAll(withoutComments)
   }
 }
 
@@ -89,7 +90,7 @@ object Parser {
   val while_ = P(While("while" ~ expr ~ prog ~ prog.? ~ term.? ~ pre.? ~ post.?))
 
   val cmd: Parser[Cmd] = P(parens(set_logic_ | set_option_ | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
-    declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_ | define_proc_))
+    declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_ | define_proc_ | define_class_ | define_refinement_))
 
   val set_logic_ = P(SetLogic("set-logic" ~ name))
   val set_option_ = P(SetOption("set-option" ~ (attr :: name.*)))
@@ -114,6 +115,9 @@ object Parser {
   val define_fun_rec_ = P(DefineFunRec("define-fun-rec" ~ id ~ parens(formals) ~ typ ~ expr))
 
   val define_proc_ = P(DefineProc("define-proc" ~ id ~ parens(formals) ~ parens(formals) ~ prog ~ pre.? ~ post.?))
+
+  val define_class_ = P(DefineClass("define-class" ~ sort ~ parens(formals) ~ parens(define_proc_).*))
+  val define_refinement_ = P(DefineRefinement("refinement" ~ formal ~ formal ~ expr))
 
   val sel = P(Sel(parens(id ~ typ)))
   val constr = P(parens(Constr(id ~ sel.*)))
