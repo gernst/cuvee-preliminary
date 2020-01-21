@@ -1,6 +1,6 @@
 package cuvee
 
-case class Proc(in: List[Formal], out: List[Formal], pre: Expr, body: Prog) {
+case class Proc(in: List[Formal], out: List[Formal], pre: Expr, body: Prog, post: Expr = True) {
   def sig = (in map (_.typ), out map (_.typ))
 
   def call(ps: List[Formal], xs: List[Id], xi: List[Id], xo: List[Id]): (Expr, Prog) = {
@@ -11,7 +11,7 @@ case class Proc(in: List[Formal], out: List[Formal], pre: Expr, body: Prog) {
   }
 }
 
-case class Obj(state: List[Formal], init: Proc, ops: List[(String, Proc)]) {
+case class Obj(state: List[Formal], init: Proc, ops: List[(Id, Proc)]) {
   def refine(that: Obj) = {
     import Obj.diagram
 
@@ -22,8 +22,8 @@ case class Obj(state: List[Formal], init: Proc, ops: List[(String, Proc)]) {
     val Rxs = App(R, as ++ cs)
 
     val init = diagram(
-      as, "init" -> this.init,
-      cs, "init" -> that.init,
+      as, Id("init") -> this.init,
+      cs, Id("init") -> that.init,
       True, Rxs)
 
     val ops = for ((aproc, cproc) <- (this.ops zip that.ops)) yield {
@@ -39,15 +39,15 @@ case class Obj(state: List[Formal], init: Proc, ops: List[(String, Proc)]) {
 
 object Obj {
   def diagram(
-    as: List[Formal], aproc: (String, Proc),
-    cs: List[Formal], cproc: (String, Proc),
+    as: List[Formal], aproc: (Id, Proc),
+    cs: List[Formal], cproc: (Id, Proc),
     R0: Expr, R1: Expr): Expr = {
 
     val (aop, ap) = aproc
     val (cop, cp) = cproc
 
-    val Proc(ai, ao, apre, abody) = ap
-    val Proc(ci, co, cpre, cbody) = cp
+    val Proc(ai, ao, apre, abody, _) = ap
+    val Proc(ci, co, cpre, cbody, _) = cp
 
     val co_ = co map (_.prime)
 

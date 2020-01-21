@@ -8,9 +8,9 @@ case class State(
   fundefs: Map[Id, (List[Id], Expr)],
 
   procs: Map[Id, (List[Type], List[Type])],
-  procdefs: Map[Id, DefineProc], // XXX DefineProc used directly here?
+  procdefs: Map[Id, Proc],
 
-  classes: Map[Type, DefineClass],
+  objects: Map[Type, Obj],
 
   rasserts: List[Expr],
   model: Option[Model]) {
@@ -64,21 +64,22 @@ case class State(
       fundefs = fundefs + (id -> (ids, body)))
   }
 
-  def define(proc: DefineProc) = {
-    ensure(!(procs contains proc.id), "procedure already defined", proc.id)
-    proc.check
+  def define(id: Id, proc: Proc) = {
+    ensure(!(procs contains id), "procedure already defined", id)
+    Verify.checkProc(id, proc)
     val ins = proc.in.map(_.typ)
     val outs = proc.out.map(_.typ)
     copy(
-      procs = procs + (proc.id -> (ins, outs)),
-      procdefs = procdefs + (proc.id -> proc))
+      procs = procs + (id -> (ins, outs)),
+      procdefs = procdefs + (id -> proc))
   }
 
-  def define(clazz: DefineClass): State = {
-    ensure(!(classes contains clazz.name), "class already defined", clazz.name)
+  def define(typ: Type, state: List[Formal], procs: List[(Id, Proc)]): State = {
+    ensure(!(objects contains typ), "object already defined", typ)
+    ensure(procs.count(_._1 == Id("init")) == 1, s"object $typ must define exactly one init method")
+    procs.foreach(proc => Verify.checkProc(proc._1, proc._2, state))
     copy(
-      classes = classes + (clazz.name -> clazz)
-    )
+      objects = objects + (typ -> Obj(state, procs.filter(_._1 == Id("init")).head._2, procs.filter(_._1 != Id("init")))))
   }
 
   def declare(sort: Sort, arity: Int, decl: Datatype): State = {
@@ -166,7 +167,7 @@ object State {
     procs = Map(),
     procdefs = Map(),
 
-    classes = Map(),
+    objects = Map(),
 
     rasserts = Nil,
     model = None)

@@ -176,7 +176,7 @@ object Eval {
   }
 
   def contract(name: Id, out: List[Id], in: List[Expr], st: State): Spec = {
-    val DefineProc(_, xs, ys, _, pre, post) = st procdefs name
+    val Proc(xs, ys, pre, _, post) = st procdefs name
 
     if (in.size != xs.size) {
       throw Error(s"Call to procedure $name requires ${xs.size} arguments but ${in.size} were given");

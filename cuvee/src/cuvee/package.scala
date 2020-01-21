@@ -13,6 +13,11 @@ package object cuvee {
       throw Error(info)
   }
 
+  def ensure(test: Boolean, info: => String): Unit = {
+    if (!test)
+      throw Error(info)
+  }
+
   val True = Id("true")
   val False = Id("false")
   val Skip = Block(Nil)
