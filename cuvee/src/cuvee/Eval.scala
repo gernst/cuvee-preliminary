@@ -349,6 +349,9 @@ object Eval {
     case Nil =>
       List(Path(List.empty, List.empty, env0))
 
+    case Break :: rest =>
+      error("break not within while", env0, st)
+
     case Block(progs, withOld) :: rest =>
       val old_ = if (withOld) env0 :: old else old
       rel(progs ++ rest, env0, old_, st)
@@ -373,5 +376,18 @@ object Eval {
       val _right = for (path <- rel(right :: rest, env0, old, st))
         yield !_test :: path
       _left ++ _right
+
+    case While(test, body, after, term, phi, psi) :: rest =>
+      val mod = body.mod ++ after.mod
+      val mod_ = mod.toList
+      val spec = Spec(mod_, phi, !test && psi)
+      rel(spec :: rest, env0, old, st)
+
+    case Call(name, in, out) :: rest if st.procdefs contains name =>
+      val spec = contract(name, out, in, st)
+      rel(spec :: rest, env0, old, st)
+
+    case Call(name, _, _) :: rest =>
+      error("unknown procedure", name)
   }
 }

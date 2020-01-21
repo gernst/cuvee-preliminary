@@ -106,7 +106,7 @@ case class DeclareDatatypes(arities: List[Arity], decls: List[Datatype]) extends
   override def toString = Printer.declare(arities, decls)
 }
 
-case class DefineClass(name: Type, fields: List[Formal], procs: List[DefineProc]) extends Def {
+case class DefineClass(name: Type, obj: Obj) extends Def {
   def prefixedMembers(instanceName: Id): List[Formal] = fields.map(f => Formal(Id(s"${instanceName}_${f.id}"), f.typ))
 
   def prefixingMembers(instanceName: Id): Map[Id, Id] = fields.map(f => (f.id -> Id(s"${instanceName}_${f.id}"))) toMap
@@ -204,7 +204,10 @@ case class DeclareProc(id: Id, in: List[Type], ref: List[Type], out: List[Type])
  * @param pre precondition of the procedure. May only refer to in and global identifiers.
  * @param post
  */
-case class DefineProc(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr) extends Def {
+case class DefineProc(id: Id, proc: Proc) extends Def {
+  def in = proc.in
+  def out = proc.out
+  def body = proc.body
 
   def check = {
     val inVars = in.map(_.id)
@@ -236,7 +239,7 @@ case class DefineProc(id: Id, in: List[Formal], out: List[Formal], body: Prog, p
     }
   }
 
-  override def toString = Printer.define(id, in, out, body, pre, post)
+  override def toString = Printer.define(id, proc)
 
 }
 
@@ -244,7 +247,8 @@ object DefineProc extends ((Id, List[Formal], List[Formal], Prog, Option[Expr], 
   def apply(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Option[Expr], post: Option[Expr]): DefineProc = {
     val _pre = pre.getOrElse(True)
     val _post = post.getOrElse(True)
-    DefineProc(id, in, out, body, _pre, _post)
+    val proc = Proc(in, out, _pre, _post, body)
+    DefineProc(id, proc)
   }
 }
 

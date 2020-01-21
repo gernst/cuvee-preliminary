@@ -16,7 +16,7 @@ object Printer {
   def model() = sexpr("get-model")
 
   def assert(expr: Expr) = sexpr("assert", expr)
-  
+
   def id(id: Id) = mangle(id)
 
   def declare(sort: Sort, arity: Int) = {
@@ -36,7 +36,8 @@ object Printer {
     else sexpr("define-fun-rec", id, sexpr(formals), res, body)
   }
 
-  def define(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr) = {
+  def define(id: Id, proc: Proc) = {
+    val Proc(in, out, pre, post, body) = proc
     sexpr("define-proc", id, sexpr(in), sexpr(out), body, ":precondition", pre, ":postcondition", post)
   }
 
@@ -226,7 +227,7 @@ object PrettyPrinter {
       case Dia(prog, post) => ???
     }
 
-    case class PrettyIte(test: PrettyExpr, thenn: PrettyExpr, ellse: PrettyExpr) extends  PrettyExpr {
+    case class PrettyIte(test: PrettyExpr, thenn: PrettyExpr, ellse: PrettyExpr) extends PrettyExpr {
       override def print: List[String] = {
         breakIfNecessary(List(printSub(test), surround(" ? ", printSub(thenn), ""), surround(" : ", printSub(ellse), "")))
       }

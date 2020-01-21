@@ -8,7 +8,7 @@ case class State(
   fundefs: Map[Id, (List[Id], Expr)],
 
   procs: Map[Id, (List[Type], List[Type])],
-  procdefs: Map[Id, (List[Id], List[Id], Prog, Expr, Expr)],
+  procdefs: Map[Id, Proc],
 
   classes: Map[Type, DefineClass],
 
@@ -64,14 +64,14 @@ case class State(
       fundefs = fundefs + (id -> (ids, body)))
   }
 
-  def define(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr) = {
+  def define(id: Id, proc: Proc) = {
     ensure(!(procs contains id), "procedure already defined", id)
     // proc.check
-    val ins = in map(_.typ)
-    val outs = out map(_.typ)
+    val ins = proc.in map(_.typ)
+    val outs = proc.out map(_.typ)
     copy(
       procs = procs + (id -> (ins, outs)),
-      procdefs = procdefs + (id -> (in, out, body, pre, post)))
+      procdefs = procdefs + (id -> proc))
   }
 
   def define(clazz: DefineClass): State = {
