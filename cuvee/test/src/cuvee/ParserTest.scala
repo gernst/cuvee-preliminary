@@ -4,11 +4,10 @@ import cuvee.test.TestSuite
 import cuvee.testutils.Implicits._
 
 object ParserTest extends TestSuite {
-  val abs = DefineProc(Id("abs"), List(Formal(Id("x"), Sort("Int"))), List(Formal(Id("y"), Sort("Int"))),
-    If(App(Id("<"), Id("x"), Num(0)), Assign(List(Pair(Id("y"), App(Id("-"), Num(0), Id("x"))))), Assign(List(Pair(Id("y"), Id("x"))))),
+  val abs = DefineProc(Id("abs"), Proc(List(Formal(Id("x"), Sort("Int"))), List(Formal(Id("y"), Sort("Int"))),
     Id("true"),
-    App(Id(">="), Id("y"), Num(0))
-  )
+    App(Id(">="), Id("y"), Num(0)),
+    If(App(Id("<"), Id("x"), Num(0)), Assign(List(Pair(Id("y"), App(Id("-"), Num(0), Id("x"))))), Assign(List(Pair(Id("y"), Id("x")))))))
 
   test("parse number") {
     val number = new Parseable(Parser.expr).from("2")
@@ -31,15 +30,24 @@ object ParserTest extends TestSuite {
 
   test("parse procedure without pre- or postcondition") {
     val proc = parseCmd("(define-proc empty () () (block))")
-    assertEquals(proc, DefineProc(Id("empty"), List(), List(), Block(List()),
-      True, True))
+    assertEquals(
+      proc,
+      DefineProc(
+        Id("empty"),
+        Proc(List(), List(), True, True, Block(List()))))
   }
 
   test("parse class") {
     val proc = parseCmd("(define-class counter-thing ((counter Int)) " +
-      "(define-proc init () () (assign (counter 0)) :postcondition (= counter 0))" +
-      ")")
-    assertEquals(proc, DefineClass("counter-thing", List(("counter", "Int")), List(DefineProc("init", List(), List(), "counter" := 0, True, "counter" === 0))))
+      "(define-proc init () () (assign (counter 0)) :postcondition (= counter 0))" + ")")
+    assertEquals(
+      proc,
+      DefineClass(
+        "counter-thing",
+        Obj(
+          List(("counter", "Int")),
+          Proc(List(), List(), True, "counter" === 0, "counter" := 0),
+          Nil)))
   }
 
   test("parse refinement") {
