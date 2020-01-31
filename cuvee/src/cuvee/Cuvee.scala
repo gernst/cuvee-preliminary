@@ -200,10 +200,10 @@ object Cuvee {
   }
 
   def main(args: Array[String]) {
-    // run(args.toList)
-    val solver = Solver.stdout
-    val source = Source.file(new File("examples/gcd.smt2"))
-    val report = Report.stdout
-    run(source, solver, report)
+    run(args.toList)
+    // val solver = Solver.stdout
+    // val source = Source.file(new File("examples/gcd.smt2"))
+    // val report = Report.stdout
+    // run(source, solver, report)
   }
 }
