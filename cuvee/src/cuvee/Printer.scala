@@ -35,6 +35,10 @@ object Printer {
     if (!rec) sexpr("define-fun", id, sexpr(formals), res, body)
     else sexpr("define-fun-rec", id, sexpr(formals), res, body)
   }
+  
+  def proc(in: List[Formal], out: List[Formal], pre: Expr, post: Expr, body: Prog) = {
+    
+  }
 
   def define(id: Id, proc: Proc) = {
     val Proc(in, out, pre, post, body) = proc

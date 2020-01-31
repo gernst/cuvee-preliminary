@@ -100,7 +100,8 @@ object VerifyTest extends TestSuite {
         (id("withdraw"), Proc(List[Formal](("amount", "Int")), List[Formal](("new-balance", "Int")), True, Id("amount") > 0 && Id("amount") <= "balance", Block(List("balance" := (Id("balance") - "amount"), "new-balance" := "balance")))))))
 
     val cState: List[Formal] = List(("debit", "Int"), ("credit", "Int"), ("max-overdraft", "Int"))
-    st = st.define("double-account", Obj(cState, 
+    st = st.define("double-account", Obj(
+      cState,
       Proc(List[Formal](("maximum-overdraft", "Int")), List(), True, Id("maximum-overdraft") >= 0, Block(List("debit" := 0, "credit" := 0, "max-overdraft" := "maximum-overdraft"))),
       List(
         (id("deposit"), Proc(List[Formal](("amount", "Int")), List[Formal](("new-balance", "Int")), True, Id("amount") > 0, Block(List("credit" := (Id("credit") + "amount"), "new-balance" := Id("credit") - "debit")))),

@@ -218,13 +218,6 @@ object Cuvee {
       val _report = Report.file(out)
       run(rest, source, solver, _report)
 
-    case "-refine" :: apath :: cpath :: rest =>
-      ensure(source == Source.stdin, "input can be given only once")
-      val afile = new File(apath)
-      val cfile = new File(cpath)
-      val _source = Refine.file(afile, cfile)
-      run(rest, _source, solver, report)
-
     case path :: rest =>
       ensure(source == Source.stdin, "input can be given only once")
       val in = new File(path)
@@ -233,7 +226,7 @@ object Cuvee {
   }
 
   def run(args: List[String]) {
-    run(args.toList, Source.stdin, Solver.stdout, Report.stdout)
+    run(args, Source.stdin, Solver.stdout, Report.stdout)
   }
 
   def main(args: Array[String]) {

@@ -107,7 +107,7 @@ case class DeclareDatatypes(arities: List[Arity], decls: List[Datatype]) extends
 }
 
 case class DefineClass(sort: Sort, obj: Obj) extends Def {
-  
+
 }
 
 /**
@@ -177,7 +177,7 @@ object Error extends (String => Error) {
   def apply(msg: String): Error = {
     Error(Seq(msg))
   }
-  
+
   def apply(msg: String, info: Any*): Error = {
     Error(msg +: info)
   }
