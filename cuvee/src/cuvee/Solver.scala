@@ -52,12 +52,8 @@ trait Solver {
 
   def declare(arities: List[Arity], decls: List[Datatype]): Ack
 
-  /**
-   * Defines a procedure
-   */
-  def define(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr): Ack
-
-  def define(clazz: DefineClass): Ack
+  def define(id: Id, proc: Proc): Ack
+  def define(sort: Sort, obj: Obj): Ack
 
   def assert(expr: Expr): Ack
 
@@ -105,8 +101,10 @@ trait Solver {
         Some(define(id, formals, res, body, false))
       case DefineFunRec(id, formals, res, body) =>
         Some(define(id, formals, res, body, true))
-      case DefineProc(id, in, out, body, pre, post) =>
-        Some(define(id, in, out, body, pre, post))
+      case DefineProc(id, proc) =>
+        Some(define(id, proc))
+      case DefineClass(sort, obj) =>
+        Some(define(sort, obj))
       case DeclareDatatypes(arity, decls) =>
         Some(declare(arity, decls))
 
@@ -204,11 +202,13 @@ object Solver {
       Ack.from(read())
     }
 
-    override def define(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr) = {
-      Success
+    def define(id: Id, proc: Proc) = {
+      Error("unsupported", id, proc)
     }
 
-    override def define(clazz: DefineClass): Ack = Success
+    def define(sort: Sort, obj: Obj): Ack = {
+      Error("unsupported", sort, obj)
+    }
 
     def declare(arities: List[Arity], decls: List[Datatype]) = {
       write(Printer.declare(arities, decls))
@@ -276,7 +276,7 @@ object Solver {
 
     def assert(expr: Expr) = {
       if (expr == False) sat = Unsat
-      write(PrettyPrinter.assert(expr))
+      write(Printer.assert(expr))
       Success
     }
 
@@ -310,13 +310,13 @@ object Solver {
       Success
     }
 
-    override def define(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr) = {
-      write(PrettyPrinter.define(id, in, out, body, pre, post))
+    def define(id: Id, proc: Proc) = {
+      write(Printer.define(id, proc))
       Success
     }
 
-    override def define(clazz: DefineClass): Ack = {
-      write("class definition...")
+    def define(sort: Sort, obj: Obj): Ack = {
+      write(Printer.define(sort, obj))
       Success
     }
 

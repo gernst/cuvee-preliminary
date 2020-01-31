@@ -13,6 +13,11 @@ package object cuvee {
       throw Error(info)
   }
 
+  def ensure(test: Boolean, info: => String): Unit = {
+    if (!test)
+      throw Error(info)
+  }
+
   val True = Id("true")
   val False = Id("false")
   val Skip = Block(Nil)
@@ -73,6 +78,11 @@ package object cuvee {
     val Id(name, index) = id
     if (name exists needsEscape) "|" + (name __ index) + "|"
     else name __ index
+  }
+  
+  def sexpr2(ab: (Any, Any)): String = {
+    val (a,b) = ab
+    "(" + a + " " + b + ")"
   }
 
   def sexpr(arg0: Any, args: Any*): String = {

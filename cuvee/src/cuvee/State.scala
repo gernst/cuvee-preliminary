@@ -10,7 +10,7 @@ case class State(
   procs: Map[Id, (List[Type], List[Type])],
   procdefs: Map[Id, Proc],
 
-  classes: Map[Type, DefineClass],
+  objects: Map[Sort, Obj],
 
   rasserts: List[Expr],
   model: Option[Model]) {
@@ -66,19 +66,21 @@ case class State(
 
   def define(id: Id, proc: Proc) = {
     ensure(!(procs contains id), "procedure already defined", id)
-    // proc.check
-    val ins = proc.in map(_.typ)
-    val outs = proc.out map(_.typ)
+    Verify.checkProc(id, proc)
+    val ins: List[Type] = proc.in
+    val outs: List[Type] = proc.out
     copy(
       procs = procs + (id -> (ins, outs)),
       procdefs = procdefs + (id -> proc))
   }
 
-  def define(clazz: DefineClass): State = {
-    ensure(!(classes contains clazz.name), "class already defined", clazz.name)
+  def define(sort: Sort, obj: Obj): State = {
+    val Obj(state, init, ops) = obj
+    ensure(!(objects contains sort), "object already defined", sort)
+    Verify.checkProc(Id.init, init, state)
+    ops.foreach(proc => Verify.checkProc(proc._1, proc._2, state))
     copy(
-      classes = classes + (clazz.name -> clazz)
-    )
+      objects = objects + (sort -> obj))
   }
 
   def declare(sort: Sort, arity: Int, decl: Datatype): State = {
@@ -166,7 +168,7 @@ object State {
     procs = Map(),
     procdefs = Map(),
 
-    classes = Map(),
+    objects = Map(),
 
     rasserts = Nil,
     model = None)

@@ -24,10 +24,10 @@ object Infer {
     Proc(List(), List(), True, True,
       Assign(List(Pair(stack, nil)))),
     List(
-      "push" -> Proc(List(Formal(a, elem)), List(), True, True,
+      Id("push") -> Proc(List(Formal(a, elem)), List(), True, True,
         Assign(List(
           Pair(stack, a :: stack)))),
-      "pop" -> Proc(List(), List(Formal(a, elem)), stack !== nil, True,
+      Id("pop") -> Proc(List(), List(Formal(a, elem)), stack !== nil, True,
         Assign(List(
           Pair(stack, stack.tail),
           Pair(a, stack.head))))))
@@ -37,11 +37,11 @@ object Infer {
     Proc(List(), List(), True, True,
       Assign(List(Pair(index, 0)))),
     List(
-      "push" -> Proc(List(Formal(a, elem)), List(), True, True,
+      Id("push") -> Proc(List(Formal(a, elem)), List(), True, True,
         Assign(List(
           Pair(index, index + 1),
           Pair(values, values store (index, a))))),
-      "pop" -> Proc(List(), List(Formal(a, elem)), index > 0, True,
+      Id("pop") -> Proc(List(), List(Formal(a, elem)), index > 0, True,
         Assign(List(
           Pair(index, index - 1),
           Pair(a, values select (index - 1)))))))

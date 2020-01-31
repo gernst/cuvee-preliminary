@@ -198,7 +198,7 @@ object Eval {
   }
 
   def contract(name: Id, out: List[Id], in: List[Expr], st: State): Spec = {
-    val (xs, ys, _, pre, post) = st procdefs name
+    val Proc(xs, ys, pre, post, body) = st procdefs name
 
     ensure(in.length == xs.length, "wrong number of inputs", name, xs, in)
     ensure(out.length == ys.length, "wrong number of outputs", name, ys, out)

@@ -41,6 +41,11 @@ object Printer {
     sexpr("define-proc", id, sexpr(in), sexpr(out), body, ":precondition", pre, ":postcondition", post)
   }
 
+  def define(sort: Sort, obj: Obj) = {
+    val Obj(state, init, ops) = obj
+    sexpr("define-class", sort :: sexpr(state) :: sexpr("init", init) :: (ops map sexpr2) : _*)
+  }
+
   def sel(id: Id, typ: Type) = {
     sexpr(id, typ)
   }

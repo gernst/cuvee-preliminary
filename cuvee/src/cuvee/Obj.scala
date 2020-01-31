@@ -16,7 +16,15 @@ case class Proc(in: List[Formal], out: List[Formal], pre: Expr, post: Expr, body
   }
 }
 
-case class Obj(state: List[Formal], init: Proc, ops: List[(String, Proc)]) {
+object Proc extends ((List[Formal], List[Formal], Prog, Option[Expr], Option[Expr]) => Proc) {
+  def apply(in: List[Formal], out: List[Formal], body: Prog, pre: Option[Expr], post: Option[Expr]): Proc = {
+    val _pre = pre.getOrElse(True)
+    val _post = post.getOrElse(True)
+    Proc(in, out, _pre, _post, body)
+  }
+}
+
+case class Obj(state: List[Formal], init: Proc, ops: List[(Id, Proc)]) {
   def refine(that: Obj) = {
     import Obj.diagram
 
@@ -27,8 +35,8 @@ case class Obj(state: List[Formal], init: Proc, ops: List[(String, Proc)]) {
     val Rxs = App(R, as ++ cs)
 
     val init = diagram(
-      as, "init" -> this.init,
-      cs, "init" -> that.init,
+      as, Id("init") -> this.init,
+      cs, Id("init") -> that.init,
       True, Rxs)
 
     val ops = for ((aproc, cproc) <- (this.ops zip that.ops)) yield {
@@ -42,10 +50,10 @@ case class Obj(state: List[Formal], init: Proc, ops: List[(String, Proc)]) {
   }
 }
 
-object Obj {
+object Obj extends ((List[Formal], Proc, List[(Id, Proc)]) => Obj) {
   def diagram(
-    as: List[Formal], aproc: (String, Proc),
-    cs: List[Formal], cproc: (String, Proc),
+    as: List[Formal], aproc: (Id, Proc),
+    cs: List[Formal], cproc: (Id, Proc),
     R0: Expr, R1: Expr): Expr = {
 
     val (aop, ap) = aproc

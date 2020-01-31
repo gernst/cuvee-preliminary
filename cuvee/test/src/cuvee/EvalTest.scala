@@ -1,6 +1,7 @@
 package cuvee
 
 import cuvee.test.TestSuite
+import cuvee.testutils.Implicits._
 
 object EvalTest extends TestSuite {
   private val a: Id = Id("a")
@@ -11,7 +12,7 @@ object EvalTest extends TestSuite {
 
   test("wp old value with double reassign") {
     // x = x * 2; x = x * 2; y = x;
-    val code = Block(List(assign(x, x * 2), assign(x, x * 2), assign(y, x)))
+    val code = Block(List(x := x * 2, x := x * 2, y := x))
 
     val wp = WP(code, y === Old(x) * 2 * 2)
 
@@ -24,7 +25,11 @@ object EvalTest extends TestSuite {
 
   test("function call") {
     // define function forward(x) = x
+<<<<<<< HEAD
     val state = State.default.define(Id("forward"), formal(a, int), formal(b, int), assign(b, a), True, Eq(b, a))
+=======
+    val state = State.default.define("forward", Proc(formal(a, int), formal(b, int), True, b := a, b === a))
+>>>>>>> tillerino/verify-refinements
     val env = Env.empty.bind(formal(x, int) ++ formal(y, int))
     val code = Call(Id("forward"), List(x * 2), List(y))
     val wp = WP(code, y === Old(x) * 2)
@@ -34,5 +39,4 @@ object EvalTest extends TestSuite {
 
   def formal(id: Id, sort: Sort) = List(Formal(id, sort))
 
-  def assign(id: Id, expr: Expr) = Assign(List(Pair(id, expr)))
-}
+  }
