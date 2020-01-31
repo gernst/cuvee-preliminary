@@ -23,34 +23,33 @@ trait Alpha[E <: Alpha.term[E, V], V <: E with Alpha.x[E, V]] {
   type term = Alpha.term[E, V]
   type x = Alpha.x[E, V]
 
-  trait bind extends term {
-    this: E =>
+  trait bind[A] {
     def bound: Set[V]
 
-    def rename(a: Map[V, V], re: Map[V, V]): E
-    def subst(a: Map[V, V], su: Map[V, E]): E
+    def rename(a: Map[V, V], re: Map[V, V]): A
+    def subst(a: Map[V, V], su: Map[V, E]): A
 
     def avoid(xs: Set[V]) = {
       val captured = bound & xs
       context.fresh(captured)
     }
 
-    def rename(re: Map[V, V]) = {
+    def refresh = {
+      val xs = bound
+      val alpha = avoid(xs)
+      rename(alpha, alpha)
+    }
+
+    def rename(re: Map[V, V]): A = {
       val xs = context.free(re)
       val alpha = avoid(xs)
       rename(alpha, re -- bound ++ alpha)
     }
 
-    def subst(su: Map[V, E]) = {
+    def subst(su: Map[V, E]): A = {
       val xs = context.free(su)
       val alpha = avoid(xs)
       subst(alpha, su -- bound ++ alpha)
-    }
-
-    def refresh = {
-      val xs = bound
-      val alpha = avoid(xs)
-      rename(alpha, alpha)
     }
   }
 
@@ -64,6 +63,10 @@ trait Alpha[E <: Alpha.term[E, V], V <: E with Alpha.x[E, V]] {
   def id(xs: Iterable[V]): Map[V, V] = {
     val ys = xs map (x => (x, x))
     ys.toMap
+  }
+
+  def fresh(x: V) = {
+    x fresh nextIndex
   }
 
   def fresh(xs: Iterable[V]): Map[V, V] = {

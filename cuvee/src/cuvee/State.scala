@@ -23,13 +23,20 @@ case class State(
     Env(su, ty)
   }
   
-  def declare(sort: Sort, arity: Int) = {
+  def const(id: Id): Formal = {
+    ensure(funs contains id, "undeclared identifier", id, funs)
+    val (args, res) = funs(id)
+    ensure(args.isEmpty, "not constant", id)
+    Formal(id, res)
+  }
+  
+  def declare(sort: Sort, arity: Int): State = {
     ensure(!(sorts contains sort), "sort already defined", sort)
     copy(
       sorts = sorts + (sort -> arity))
   }
 
-  def define(sort: Sort, args: List[Sort], body: Type) = {
+  def define(sort: Sort, args: List[Sort], body: Type): State = {
     ensure(!(sorts contains sort), "sort already defined", sort)
     val arity = args.length
     copy(
@@ -37,19 +44,42 @@ case class State(
       sortdefs = sortdefs + (sort -> (args, body)))
   }
 
-  def declare(id: Id, args: List[Type], res: Type) = {
+  def declare(id: Id, args: List[Type], res: Type): State = {
     ensure(!(funs contains id), "function already defined", id)
     copy(
       funs = funs + (id -> (args, res)))
   }
 
-  def define(id: Id, formals: List[Formal], res: Type, body: Expr) = {
+  def define(id: Id, formals: List[Formal], res: Type, body: Expr): State = {
     ensure(!(funs contains id), "const already defined", id)
     val args = formals map (_.typ)
     val ids = formals map (_.id)
     copy(
       funs = funs + (id -> (args, res)),
       fundefs = fundefs + (id -> (ids, body)))
+  }
+  
+  def declare(sort: Sort, arity: Int, decl: Datatype): State = {
+    val st = declare(sort, arity)
+    ensure(arity == decl.params.length, "arity mismatch", arity, decl.params)
+      
+    decl.constrs.foldLeft(st) {
+      case (st, Constr(id, sels)) =>
+        val args = sels map (_.typ)
+        val st_ = st declare (id, args, sort)
+        sels.foldLeft(st_) {
+          case (st, Sel(id, typ)) =>
+            st declare (id, List(sort), typ)
+        }
+    }
+  }
+  
+  def declare(arities: List[Arity], decls: List[Datatype]): State = {
+    ensure(arities.length == decls.length, "length mismatch", arities, decls)
+    (arities zip decls).foldLeft(this) {
+      case (st, (Arity(sort, arity), decl)) =>
+        st declare(sort, arity, decl)
+    }
   }
   
   def assert(expr: Expr) = {
@@ -74,7 +104,7 @@ object State {
       Sort.bool -> 0,
       Sort.int -> 0),
     sortdefs = Map(),
-
+    
     funs = Map(
       True -> (List(), Sort.bool),
       False -> (List(), Sort.bool),

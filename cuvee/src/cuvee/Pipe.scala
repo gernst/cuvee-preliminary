@@ -62,10 +62,11 @@ object Source {
       new String(buf, "UTF-8")
     }
 
-    def run(solver: Solver, report: Report) {
-      val input = read()
-      val cmds = Script.from(input)
+    def cmds = {
+      Script.from(read())
+    }
 
+    def run(solver: Solver, report: Report) {
       for (cmd <- cmds) {
         safe(cmd, solver, report)
       }

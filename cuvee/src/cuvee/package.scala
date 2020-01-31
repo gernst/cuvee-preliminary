@@ -1,4 +1,5 @@
 import scala.io.StdIn
+import java.lang.UNIXProcess
 
 package object cuvee {
   import scala.language.implicitConversions
@@ -17,6 +18,10 @@ package object cuvee {
   val Skip = Block(Nil)
 
   implicit def toNum(value: Int) = Num(value)
+  implicit def toExprs(pats: List[Pat]) = pats map (_.toExpr)
+  implicit def toIds(formals: List[Formal]) = formals map (_.id)
+  implicit def toTypes(formals: List[Formal]) = formals map (_.typ)
+  implicit def toTyping(formals: List[Formal]) = formals map (f => (f.id, f.typ))
 
   implicit class StringOps(self: String) {
     def __(index: Option[Int]): String = index match {
@@ -77,5 +82,17 @@ package object cuvee {
 
   def sexpr(args: Iterable[Any]): String = {
     args.mkString("(", " ", ")")
+  }
+
+  implicit class ProcessOps(process: Process) {
+    def pid: Long = {
+      val klass = process.getClass
+      assert(klass.getName == "java.lang.UNIXProcess")
+      val field = klass.getDeclaredField("pid");
+      field.setAccessible(true)
+      val res = field.getLong(process)
+      field.setAccessible(false)
+      res
+    }
   }
 }

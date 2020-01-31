@@ -1,4 +1,5 @@
 (set-logic ALL)
+(set-option :produce-models true)
 (declare-const x Int)
 (declare-const y Int)
 

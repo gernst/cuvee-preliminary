@@ -29,11 +29,13 @@ trait Solver {
   }
 
   def isSat(phi: Expr) = {
-    check(phi) == Sat
+    val sat = check(phi)
+    sat == Sat
   }
 
   def isUnsat(phi: Expr) = {
-    check(phi) == Unsat
+    val sat = check(phi)
+    sat == Unsat
   }
 
   def check(): IsSat
@@ -43,13 +45,21 @@ trait Solver {
   def declare(sort: Sort, arity: Int): Ack
   def define(sort: Sort, args: List[Sort], body: Type): Ack
 
+  def declare(formal: Formal): Ack = declare(formal.id, formal.typ)
+  def declare(id: Id, res: Type): Ack = declare(id, Nil, res)
   def declare(id: Id, args: List[Type], res: Type): Ack
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean): Ack
+
+  def declare(arities: List[Arity], decls: List[Datatype]): Ack
 
   def assert(expr: Expr): Ack
 
   def setOption(args: String*): Ack = {
     setOption(args.toList)
+  }
+
+  def exec(line: String): Option[Res] = {
+    exec(Cmd.from(line))
   }
 
   def exec(cmd: Cmd): Option[Res] = {
@@ -88,6 +98,8 @@ trait Solver {
         Some(define(id, formals, res, body, false))
       case DefineFunRec(id, formals, res, body) =>
         Some(define(id, formals, res, body, true))
+      case DeclareDatatypes(arity, decls) =>
+        Some(declare(arity, decls))
 
       case Assert(expr) =>
         Some(assert(expr))
@@ -97,13 +109,19 @@ trait Solver {
 
 object Solver {
   def z3(timeout: Int = 1000) = process("z3", "-t:" + timeout, "-in")
-  def cvc4(timeout: Int = 1000) = process("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--increment-triggers")
+  def cvc4(timeout: Int = 1000) = process("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--incremental", "--increment-triggers")
+  def princess(timeout: Int = 1000) = process("princess", "+stdin", "+quiet", "-timeoutPer=" + timeout, "+incremental")
+
+  var traffic = false
 
   case class process(args: String*) extends Solver {
     val pb = new ProcessBuilder(args: _*)
     val pr = pb.start()
+    val pid = pr.pid
     val stdout = new BufferedReader(new InputStreamReader(pr.getInputStream))
     val stdin = new PrintStream(pr.getOutputStream)
+
+    if (traffic) println(args.mkString("$ ", " ", "") + " # " + pid)
 
     ensure(setOption(":print-success", "true") == Success)
 
@@ -177,15 +195,20 @@ object Solver {
       Ack.from(read())
     }
 
+    def declare(arities: List[Arity], decls: List[Datatype]) = {
+      write(Printer.declare(arities, decls))
+      Ack.from(read())
+    }
+
     def write(line: String) {
-      // println("> " + line)
+      if (traffic) println(pid + " < " + line)
       stdin.println(line)
       stdin.flush()
     }
 
     def read() = {
       val line = stdout.readLine()
-      // println("< " + line)
+      if (traffic) println(pid + " > " + line)
       line
     }
   }
@@ -237,7 +260,7 @@ object Solver {
     }
 
     def assert(expr: Expr) = {
-      if(expr == False) sat = Unsat
+      if (expr == False) sat = Unsat
       write(Printer.assert(expr))
       Success
     }
@@ -269,6 +292,11 @@ object Solver {
 
     def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
       write(Printer.define(id, formals, res, body, rec))
+      Success
+    }
+
+    def declare(arities: List[Arity], decls: List[Datatype]) = {
+      write(Printer.declare(arities, decls))
       Success
     }
 

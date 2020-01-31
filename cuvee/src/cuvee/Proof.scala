@@ -31,7 +31,7 @@ case class Neg(phi: Expr) extends Proof {
 }
 
 case class Cases(cases: List[Proof]) extends Proof {
-  def toExpr = Or(cases map (_.toExpr))
+  def toExpr = Or.nary(cases map (_.toExpr))
   override def toString = sexpr("or", cases: _*)
 }
 
@@ -47,7 +47,7 @@ object Cases {
 
 case class Goal(scope: List[Formal], props: List[Proof]) extends Proof {
   override def toString = sexpr("forall", sexpr(scope), sexpr("and", props: _*))
-  def toExpr = Forall(scope, And(props map (_.toExpr)))
+  def toExpr = Forall(scope, And.nary(props map (_.toExpr)))
 
   def assume(phi: List[Expr]): Goal = {
     phi.foldLeft(this)(_ assume _)

@@ -95,13 +95,10 @@ case class Cuvee(backend: Solver) extends Solver {
     Eval.eval(expr, env, old, top)
   }
 
-  def check() = {
-    backend.push()
+  def check() = backend.scoped {
     val _asserts = top.asserts map eval
-    val __asserts = Simplify.simplify(_asserts)
 
-    for (expr <- __asserts) {
-      // val _expr = eval(expr)
+    for (expr <- _asserts) {
       backend.assert(expr)
     }
 
@@ -112,7 +109,6 @@ case class Cuvee(backend: Solver) extends Solver {
       map(_ withModel model)
     }
 
-    backend.pop()
     res
   }
 
@@ -137,7 +133,6 @@ case class Cuvee(backend: Solver) extends Solver {
   def declare(sort: Sort, arity: Int) = {
     map(_ declare (sort, arity))
     backend.declare(sort, arity)
-    Simplify.backend.declare(sort, arity)
   }
 
   def define(sort: Sort, args: List[Sort], body: Type) = {
@@ -148,21 +143,31 @@ case class Cuvee(backend: Solver) extends Solver {
   def declare(id: Id, args: List[Type], res: Type) = {
     map(_ declare (id, args, res))
     backend.declare(id, args, res)
-    Simplify.backend.declare(id, args, res)
   }
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
+    map(_ define (id, formals, res, body))
+    backend.define(id, formals, res, body, rec)
+  }
+
+  /* def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
     val xs = formals map (_.id)
     val args = formals map (_.typ)
     val axiom = Forall(formals, App(id, xs) === body)
     map(_ declare (id, args, res))
     map(_ assert axiom)
     backend.declare(id, args, res)
-    Simplify.backend.declare(id, args, res)
+  } */
+
+  def declare(arities: List[Arity], decls: List[Datatype]) = {
+    map(_ declare (arities, decls))
+    backend.declare(arities, decls)
   }
 }
 
 object Cuvee {
+  var simplify = true
+
   def run(source: Source, backend: Solver, report: Report) {
     val solver = Cuvee(backend)
     source.run(solver, report)
@@ -172,11 +177,26 @@ object Cuvee {
     case Nil =>
       run(source, solver, report)
 
+    case "-simplify" :: rest =>
+      simplify = true
+      run(rest, source, solver, report)
+
+    case "-no-simplify" :: rest =>
+      simplify = false
+      run(rest, source, solver, report)
+
+    case "-debug-solver" :: rest =>
+      Solver.traffic = true
+      run(rest, source, solver, report)
+
     case "-z3" :: rest =>
-      run("--" :: "z3" :: "-in" :: rest, source, solver, report)
+      run(rest, source, Solver.z3(), report)
 
     case "-cvc4" :: rest =>
-      run("--" :: "cvc4" :: "--lang" :: "smt2" :: rest, source, solver, report)
+      run(rest, source, Solver.cvc4(), report)
+
+    case "-princess" :: rest =>
+      run(rest, source, Solver.princess(), report)
 
     case "--" :: args =>
       ensure(args.length >= 1, "-- needs an SMT solver as argument")
@@ -188,8 +208,15 @@ object Cuvee {
       val _report = Report.file(out)
       run(rest, source, solver, _report)
 
+    case "-refine" :: apath :: cpath :: rest =>
+      ensure(source == Source.stdin, "input can be given only once")
+      val afile = new File(apath)
+      val cfile = new File(cpath)
+      val _source = Refine.file(afile, cfile)
+      run(rest, _source, solver, report)
+
     case path :: rest =>
-      ensure(source == Source.stdin, "only a single input file is supported")
+      ensure(source == Source.stdin, "input can be given only once")
       val in = new File(path)
       val _source = Source.file(in)
       run(rest, _source, solver, report)
@@ -201,9 +228,5 @@ object Cuvee {
 
   def main(args: Array[String]) {
     run(args.toList)
-    // val solver = Solver.stdout
-    // val source = Source.file(new File("examples/gcd.smt2"))
-    // val report = Report.stdout
-    // run(source, solver, report)
   }
 }
