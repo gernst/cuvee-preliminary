@@ -21,6 +21,7 @@ package object cuvee {
   implicit def toExprs(pats: List[Pat]) = pats map (_.toExpr)
   implicit def toIds(formals: List[Formal]) = formals map (_.id)
   implicit def toTypes(formals: List[Formal]) = formals map (_.typ)
+  implicit def toTyping(formals: List[Formal]) = formals map (f => (f.id, f.typ))
 
   implicit class StringOps(self: String) {
     def __(index: Option[Int]): String = index match {
