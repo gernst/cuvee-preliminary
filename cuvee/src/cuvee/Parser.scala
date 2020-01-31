@@ -8,7 +8,8 @@ class Parseable[A](p: Parser[A]) {
     import Parser.whitespace
     if (text == null)
       ???
-    p.parseAll(text)
+    val withoutComments = text split raw"[\r\n]+" filter (!_.startsWith(";")) mkString "\n"
+    p.parseAll(withoutComments)
   }
 }
 
@@ -64,7 +65,7 @@ object Parser {
   val formals = P(formal.*)
   val bind_ = P(Bind(quant ~ parens(formals) ~ expr))
 
-  val prog: Parser[Prog] = P(parens(break_ | assign_ | asm_ | asrt_ | spec_ | if_ | while_ | block_))
+  val prog: Parser[Prog] = P(parens(break_ | assign_ | asm_ | asrt_ | spec_ | call_ | if_ | while_ | block_))
   val progs = P(prog.*)
   val block_ = P(Block("block" ~ progs))
 
@@ -80,6 +81,7 @@ object Parser {
   val asm_ = P(Spec.assume("assume" ~ expr))
   val asrt_ = P(Spec.assert("assert" ~ expr))
   val spec_ = P(Spec("spec" ~ parens(id.*) ~ expr ~ expr))
+  val call_ = P(Call("call" ~ id ~ parens(expr.*) ~ parens(id.*)))
   val if_ = P(If("if" ~ expr ~ prog ~ prog.?))
 
   val term = P(":termination" ~ expr)
@@ -88,7 +90,7 @@ object Parser {
   val while_ = P(While("while" ~ expr ~ prog ~ prog.? ~ term.? ~ pre.? ~ post.?))
 
   val cmd: Parser[Cmd] = P(parens(set_logic_ | set_option_ | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
-    declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_))
+    declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_ | define_proc_ | define_class_ | define_refinement_))
 
   val set_logic_ = P(SetLogic("set-logic" ~ name))
   val set_option_ = P(SetOption("set-option" ~ (attr :: name.*)))
@@ -111,6 +113,11 @@ object Parser {
   val declare_fun_ = P(DeclareFun("declare-fun" ~ id ~ parens(types) ~ typ))
   val define_fun_ = P(DefineFun("define-fun" ~ id ~ parens(formals) ~ typ ~ expr))
   val define_fun_rec_ = P(DefineFunRec("define-fun-rec" ~ id ~ parens(formals) ~ typ ~ expr))
+
+  val define_proc_ = P(DefineProc("define-proc" ~ id ~ parens(formals) ~ parens(formals) ~ prog ~ pre.? ~ post.?))
+
+  val define_class_ = P(DefineClass("define-class" ~ sort ~ parens(formals) ~ parens(define_proc_).*))
+  val define_refinement_ = P(DefineRefinement("refinement" ~ formal ~ formal ~ expr))
 
   val sel = P(Sel(parens(id ~ typ)))
   val constr = P(parens(Constr(id ~ sel.*)))

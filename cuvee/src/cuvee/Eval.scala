@@ -188,6 +188,27 @@ object Eval {
       val step = Forall(formals, (_test && _phi1) ==> wp(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
 
       use && base && step
+
+    case Call(name, in, out) :: rest if st.procdefs contains name =>
+      val spec = contract(name, out, in, st)
+      wp(spec :: rest, break, post, env0, old, st)
+
+    case Call(name, _, _) :: rest =>
+      error("unknown procedure", name)
+  }
+
+  def contract(name: Id, out: List[Id], in: List[Expr], st: State): Spec = {
+    val (xs, ys, _, pre, post) = st procdefs name
+
+    ensure(in.length == xs.length, "wrong number of inputs", name, xs, in)
+    ensure(out.length == ys.length, "wrong number of outputs", name, ys, out)
+
+    val su1 = Expr.subst(xs, in)
+    val su2 = Expr.subst(ys, out)
+    val _pre = pre subst su1
+    val _post = post subst (su1 ++ su2)
+
+    Spec(out, _pre, _post)
   }
 
   def box(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
@@ -245,6 +266,13 @@ object Eval {
       val step = Forall(formals, (_test && _phi1) ==> box(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
 
       use && base && step
+
+    case Call(name, in, out) :: rest if st.procdefs contains name =>
+      val spec = contract(name, out, in, st)
+      box(spec :: rest, break, post, env0, old, st)
+
+    case Call(name, _, _) :: rest =>
+      error("unknown procedure", name)
   }
 
   def dia(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
@@ -303,6 +331,13 @@ object Eval {
       val step = Forall(formals, (_test && _phi1) ==> dia(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
 
       use && base && step
+
+    case Call(name, in, out) :: rest if st.procdefs contains name =>
+      val spec = contract(name, out, in, st)
+      dia(spec :: rest, break, post, env0, old, st)
+
+    case Call(name, _, _) :: rest =>
+      error("unknown procedure", name)
   }
 
   def rel(prog: Prog, params: List[Formal], st: State): List[Path] = {
@@ -313,6 +348,9 @@ object Eval {
   def rel(progs: List[Prog], env0: Env, old: List[Env], st: State): List[Path] = progs match {
     case Nil =>
       List(Path(List.empty, List.empty, env0))
+
+    case Break :: rest =>
+      error("break not within while", env0, st)
 
     case Block(progs, withOld) :: rest =>
       val old_ = if (withOld) env0 :: old else old
@@ -338,5 +376,18 @@ object Eval {
       val _right = for (path <- rel(right :: rest, env0, old, st))
         yield !_test :: path
       _left ++ _right
+
+    case While(test, body, after, term, phi, psi) :: rest =>
+      val mod = body.mod ++ after.mod
+      val mod_ = mod.toList
+      val spec = Spec(mod_, phi, !test && psi)
+      rel(spec :: rest, env0, old, st)
+
+    case Call(name, in, out) :: rest if st.procdefs contains name =>
+      val spec = contract(name, out, in, st)
+      rel(spec :: rest, env0, old, st)
+
+    case Call(name, _, _) :: rest =>
+      error("unknown procedure", name)
   }
 }

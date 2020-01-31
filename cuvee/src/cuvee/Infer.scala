@@ -21,27 +21,27 @@ object Infer {
 
   object ListStack extends Obj(
     List(Formal(stack, list)),
-    Proc(List(), List(), True,
+    Proc(List(), List(), True, True,
       Assign(List(Pair(stack, nil)))),
     List(
-      "push" -> Proc(List(Formal(a, elem)), List(), True,
+      "push" -> Proc(List(Formal(a, elem)), List(), True, True,
         Assign(List(
           Pair(stack, a :: stack)))),
-      "pop" -> Proc(List(), List(Formal(a, elem)), stack !== nil,
+      "pop" -> Proc(List(), List(Formal(a, elem)), stack !== nil, True,
         Assign(List(
           Pair(stack, stack.tail),
           Pair(a, stack.head))))))
 
   object ArrayStack extends Obj(
     List(Formal(index, int), Formal(values, array(int, elem))),
-    Proc(List(), List(), True,
+    Proc(List(), List(), True, True,
       Assign(List(Pair(index, 0)))),
     List(
-      "push" -> Proc(List(Formal(a, elem)), List(), True,
+      "push" -> Proc(List(Formal(a, elem)), List(), True, True,
         Assign(List(
           Pair(index, index + 1),
           Pair(values, values store (index, a))))),
-      "pop" -> Proc(List(), List(Formal(a, elem)), index > 0,
+      "pop" -> Proc(List(), List(Formal(a, elem)), index > 0, True,
         Assign(List(
           Pair(index, index - 1),
           Pair(a, values select (index - 1)))))))
@@ -76,13 +76,13 @@ case class Infer(A: Obj, C: Obj, R: Id, st: State) {
   }
 
   def step(proc: Proc, ps: List[Formal], xs: List[Id]): List[Expr] = {
-    val (xi, xo, pre, prog) = proc call (ps, xs)
+    val (xi, xo, pre, post, prog) = proc call (ps, xs)
     val paths = Eval.rel(prog, ps ++ xi ++ xo, st)
     List(pre, Or(paths map (_.toExpr)))
   }
 
   def step(proc: Proc, ps: List[Formal], xs0: List[Expr], xs1: List[Id]): List[Expr] = {
-    val (xi, xo, pre, prog) = proc call (ps, xs1)
+    val (xi, xo, pre, post, prog) = proc call (ps, xs1)
     val su = Expr.subst(xs1, xs0)
     val ty = ps map (_.typ)
     val env0 = Env(su, Map(xs1 zip ty: _*))

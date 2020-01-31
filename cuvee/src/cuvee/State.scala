@@ -7,6 +7,11 @@ case class State(
   funs: Map[Id, (List[Type], Type)],
   fundefs: Map[Id, (List[Id], Expr)],
 
+  procs: Map[Id, (List[Type], List[Type])],
+  procdefs: Map[Id, Proc],
+
+  classes: Map[Type, DefineClass],
+
   rasserts: List[Expr],
   model: Option[Model]) {
   
@@ -58,7 +63,24 @@ case class State(
       funs = funs + (id -> (args, res)),
       fundefs = fundefs + (id -> (ids, body)))
   }
-  
+
+  def define(id: Id, proc: Proc) = {
+    ensure(!(procs contains id), "procedure already defined", id)
+    // proc.check
+    val ins = proc.in map(_.typ)
+    val outs = proc.out map(_.typ)
+    copy(
+      procs = procs + (id -> (ins, outs)),
+      procdefs = procdefs + (id -> proc))
+  }
+
+  def define(clazz: DefineClass): State = {
+    ensure(!(classes contains clazz.name), "class already defined", clazz.name)
+    copy(
+      classes = classes + (clazz.name -> clazz)
+    )
+  }
+
   def declare(sort: Sort, arity: Int, decl: Datatype): State = {
     val st = declare(sort, arity)
     ensure(arity == decl.params.length, "arity mismatch", arity, decl.params)
@@ -110,6 +132,7 @@ object State {
       False -> (List(), Sort.bool),
 
       Id.exp -> (List(Sort.int, Sort.int), Sort.int),
+      Id.abs -> (List(Sort.int), Sort.int),
       Id.times ->(List(Sort.int, Sort.int), Sort.int),
       Id.divBy -> (List(Sort.int, Sort.int), Sort.int),
       Id.mod -> (List(Sort.int, Sort.int), Sort.int),
@@ -139,6 +162,11 @@ object State {
       Id.select -> Fun.select,
       Id.store -> Fun.store */),
     fundefs = Map(),
+
+    procs = Map(),
+    procdefs = Map(),
+
+    classes = Map(),
 
     rasserts = Nil,
     model = None)

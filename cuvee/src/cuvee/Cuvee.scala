@@ -150,6 +150,16 @@ case class Cuvee(backend: Solver) extends Solver {
     backend.define(id, formals, res, body, rec)
   }
 
+  override def define(id: Id, in: List[Formal], out: List[Formal], body: Prog, pre: Expr, post: Expr): Ack = {
+    map(_ define (id, in, out, body, pre, post))
+    backend.define(id, in, out, body, pre, post)
+  }
+
+  override def define(clazz: DefineClass): Ack = {
+    map(_ define clazz)
+    backend.define(clazz)
+  }
+
   /* def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
     val xs = formals map (_.id)
     val args = formals map (_.typ)
