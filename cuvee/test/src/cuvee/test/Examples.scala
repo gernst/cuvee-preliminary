@@ -13,6 +13,7 @@ object Examples extends TestSuite {
     "gcd.smt2",
     "map.smt2",
     "max.smt2",
+    "loop.smt2",
     "compare.smt2")
 
   for (file <- tests if file.endsWith(".smt2")) {

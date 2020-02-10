@@ -22,8 +22,14 @@ object Parser {
     "(" ~ p ~ ")"
   }
 
-  val name = S("[A-Za-z_][A-Za-z0-9_\\-]*")
-  val attr = S(":[A-Za-z_][A-Za-z0-9_\\-]*")
+  val simple = S("[a-zA-Z_~!@$%^&*+=<>.?/\\-][0-9a-zA-Z_~!@$%^&*+=<>.?/\\-]*")
+  val quoted = S("\\|[0-9a-zA-Z_~!@$%^&*+=<>.?/\"'(),:;{}#`\\[\\] \t\r\n\\-]*\\|") map {
+    str => str.substring(1, str.length - 1)
+  }
+
+
+  val name = simple | quoted
+  val attr = S(":[A-Za-z_][A-Za-z0-9_!|$:\\-]*")
   val op = L("-") | L("+") | L("<=") | L("<") | L(">=") | L(">")
 
   val typ: Parser[Type] = P(sort | parens(array_ | list_))
