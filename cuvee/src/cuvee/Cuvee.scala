@@ -9,7 +9,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.InputStream
 
-case class Cuvee(backend: Solver) extends Solver {
+case class Cuvee(backend: Solver) extends ExtSolver {
   var states: List[State] = List(State.default)
 
   var printSuccess = false

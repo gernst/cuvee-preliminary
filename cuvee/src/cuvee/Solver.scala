@@ -105,7 +105,7 @@ trait Solver {
         Some(assert(expr))
 
       case ext: ExtCmd if this.isInstanceOf[ExtSolver] =>
-        this.asInstanceOf[ExtSolver].execExt(ext)
+        this.asInstanceOf[ExtSolver].execExtNoLog(ext)
 
       case _ => Some(Error("not supported"))
     }
@@ -119,7 +119,7 @@ trait ExtSolver extends Solver {
   def define(id: Id, proc: Proc): Ack
   def define(sort: Sort, obj: Obj): Ack
 
-  private def execExt(ext: ExtCmd): Option[Res] = ext match {
+  def execExtNoLog(ext: ExtCmd): Option[Res] = ext match {
     case DefineProc(id, proc) => Some(define(id, proc))
     case DefineClass(sort, obj) => Some(define(sort, obj))
 
