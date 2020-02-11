@@ -10,7 +10,7 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
 
   def check(xs: Iterable[Id]) {
     for (x <- xs)
-      ensure(su contains x, "undeclared program variable", x, su.keySet)
+      ensure(su contains x, "undeclared variable", x, su.keySet)
   }
 
   def bind(fs: List[Formal]): Env = {
@@ -21,9 +21,13 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
     Env(su ++ re, ty ++ xt)
   }
 
+  def assignUnchecked(xs: List[Id], es: List[Expr]): Env = {
+    Env(su ++ (xs zip es), ty)
+  }
+
   def assign(xs: List[Id], es: List[Expr]): Env = {
     check(xs)
-    Env(su ++ (xs zip es), ty)
+    assignUnchecked(xs, es)
   }
 
   def havoc(xs: Iterable[Id]): (List[Formal], Env) = {
@@ -95,11 +99,11 @@ object Eval {
 
     case Ite(test, left, right) =>
       Ite(eval(test, env, old, st), eval(left, env, old, st), eval(right, env, old, st))
-      
+
     case Let(lets, body) =>
       val pairs = lets map (eval(_, env, old, st))
       val (xs, _es) = pairs.unzip
-      eval(body, env assign (xs, _es), old, st)
+      eval(body, env assignUnchecked (xs, _es), old, st)
 
     case Select(array, index) =>
       Select(eval(array, env, old, st), eval(index, env, old, st))
