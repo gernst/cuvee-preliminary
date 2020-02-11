@@ -152,12 +152,20 @@ case class Cuvee(backend: Solver) extends Solver {
 
   def define(id: Id, proc: Proc): Ack = {
     map(_ define (id, proc))
-    backend.define(id, proc)
+    backend match {
+      case solver: ExtSolver =>
+        solver.define(id, proc)
+      case _ => Success
+    }
   }
 
   def define(sort: Sort, obj: Obj): Ack = {
     map(_ define (sort, obj))
-    backend.define(sort, obj)
+    backend match {
+      case solver: ExtSolver =>
+        solver.define(sort, obj)
+      case _ => Success
+    }
   }
 
   /* def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {

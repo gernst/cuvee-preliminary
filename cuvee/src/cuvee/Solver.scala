@@ -52,9 +52,6 @@ trait Solver {
 
   def declare(arities: List[Arity], decls: List[Datatype]): Ack
 
-  def define(id: Id, proc: Proc): Ack
-  def define(sort: Sort, obj: Obj): Ack
-
   def assert(expr: Expr): Ack
 
   def setOption(args: String*): Ack = {
@@ -101,16 +98,32 @@ trait Solver {
         Some(define(id, formals, res, body, false))
       case DefineFunRec(id, formals, res, body) =>
         Some(define(id, formals, res, body, true))
-      case DefineProc(id, proc) =>
-        Some(define(id, proc))
-      case DefineClass(sort, obj) =>
-        Some(define(sort, obj))
       case DeclareDatatypes(arity, decls) =>
         Some(declare(arity, decls))
 
       case Assert(expr) =>
         Some(assert(expr))
+
+      case ext: ExtCmd if this.isInstanceOf[ExtSolver] =>
+        this.asInstanceOf[ExtSolver].execExt(ext)
+
+      case _ => Some(Error("not supported"))
     }
+  }
+}
+
+/**
+ * A solver extended with non-SMT-LIB functionality, e.g. procedure and class declarations.
+ */
+trait ExtSolver extends Solver {
+  def define(id: Id, proc: Proc): Ack
+  def define(sort: Sort, obj: Obj): Ack
+
+  private def execExt(ext: ExtCmd): Option[Res] = ext match {
+    case DefineProc(id, proc) => Some(define(id, proc))
+    case DefineClass(sort, obj) => Some(define(sort, obj))
+
+    case _ => Some(Error("not supported"))
   }
 }
 
@@ -202,14 +215,6 @@ object Solver {
       Ack.from(read())
     }
 
-    def define(id: Id, proc: Proc) = {
-      Error("unsupported", id, proc)
-    }
-
-    def define(sort: Sort, obj: Obj): Ack = {
-      Error("unsupported", sort, obj)
-    }
-
     def declare(arities: List[Arity], decls: List[Datatype]) = {
       write(Printer.declare(arities, decls))
       Ack.from(read())
@@ -235,7 +240,7 @@ object Solver {
 
   val stdout = print(System.out)
 
-  case class print(stream: PrintStream) extends Solver {
+  case class print(stream: PrintStream) extends ExtSolver {
     var sat: IsSat = Unknown
 
     def setLogic(logic: String) = {

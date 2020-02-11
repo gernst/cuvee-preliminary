@@ -1,8 +1,13 @@
 package cuvee
 
 sealed trait Cmd
+/** Non-SMT-LIB commands */
+sealed trait ExtCmd extends Cmd
+
 sealed trait Decl extends Cmd
 sealed trait Def extends Cmd
+/** Non-SMT-LIB definitions */
+sealed trait ExtDef extends ExtCmd
 
 object Cmd extends Parseable(Parser.cmd)
 object Script extends Parseable(Parser.script)
@@ -106,7 +111,7 @@ case class DeclareDatatypes(arities: List[Arity], decls: List[Datatype]) extends
   override def toString = Printer.declare(arities, decls)
 }
 
-case class DefineClass(sort: Sort, obj: Obj) extends Def {
+case class DefineClass(sort: Sort, obj: Obj) extends ExtDef {
 
 }
 
@@ -117,7 +122,7 @@ case class DefineClass(sort: Sort, obj: Obj) extends Def {
  * @param concr concrete type and the variable name to refer to it in the relation
  * @param relation members of classes can be referred to with "class_member"
  */
-case class DefineRefinement(abstr: Formal, concr: Formal, relation: Expr) extends Def
+case class DefineRefinement(abstr: Formal, concr: Formal, relation: Expr) extends ExtDef
 
 // (declare-datatypes () ((Lst (cons (head Elem) (tail Lst)) (nil))))
 
@@ -131,13 +136,8 @@ case class DeclareProc(id: Id, in: List[Type], ref: List[Type], out: List[Type])
  * Defines a procedure.
  *
  * @param id  name of the procedure
- * @param in  the list of input arguments. The ids must be unique.
- * @param out the list of output arguments. Ids may turn up multiple times, but their types must be equal.
- * @param body must modify all of (out \ in). Must at most modify (in ∪ out).
- * @param pre precondition of the procedure. May only refer to in and global identifiers.
- * @param post
  */
-case class DefineProc(id: Id, proc: Proc) extends Def {
+case class DefineProc(id: Id, proc: Proc) extends ExtDef {
   def in = proc.in
   def out = proc.out
   def body = proc.body

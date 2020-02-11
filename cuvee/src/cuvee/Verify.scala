@@ -29,9 +29,8 @@ case class Verify(commands: Iterable[Cmd]) extends Source {
     }
   }
 
-  private def verifyProcedure(solver: Cuvee, report: Report, proc: Proc, surroundingClass: Option[DefineClass]) = {
-    ???
-    // report(solver.check(!Verify.verificationCondition(proc, solver.top, surroundingClass)))
+  private def verifyProcedure(solver: Cuvee, report: Report, proc: Proc, surroundingClass: Option[Obj]) = {
+     report(solver.check(!Verify.verificationCondition(proc, solver.top, surroundingClass)))
   }
 }
 
