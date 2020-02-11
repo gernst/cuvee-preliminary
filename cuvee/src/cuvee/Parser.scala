@@ -22,6 +22,8 @@ object Parser {
     "(" ~ p ~ ")"
   }
 
+  // https://github.com/smtlib/jSMTLIB
+  // SMT/src/org/smtlib/sexpr/Lexer.java
   val simple = S("[a-zA-Z_~!@$%^&*+=<>.?/\\-][0-9a-zA-Z_~!@$%^&*+=<>.?/\\-]*")
   val quoted = S("\\|[0-9a-zA-Z_~!@$%^&*+=<>.?/\"'(),:;{}#`\\[\\] \t\r\n\\-]*\\|") map {
     str => str.substring(1, str.length - 1)
@@ -45,6 +47,8 @@ object Parser {
   val id = P(Id(name | op))
 
   val num = P(Num(bigint))
+  val pair = P(Pair(parens(id ~ expr)))
+  val pairs = P(pair.*)
 
   val old_ = P(Old("old" ~ expr))
   val imp_ = P(Imp("=>" ~ expr ~ expr)) // singled out to avoid clash with "="
@@ -53,6 +57,7 @@ object Parser {
   val distinct_ = P(Distinct("distinct" ~ expr.*))
   val eq_ = P(Eq("=" ~ expr ~ expr))
   val ite_ = P(Ite("ite" ~ expr ~ expr ~ expr))
+  val let_ = P(Let("let" ~ parens(pairs) ~ expr))
 
   val cs = P(parens(Case(pat ~ expr)))
   val match_ = P(Match("match" ~ expr ~ cs.*))
@@ -79,9 +84,7 @@ object Parser {
   val box_ = P(Box("box" ~ prog ~ expr))
   val dia_ = P(Dia("dia" ~ prog ~ expr))
 
-  val let = P(Pair(parens(id ~ expr)))
-  val lets = P(let.*)
-  val assign_ = P(Assign("assign" ~ lets))
+  val assign_ = P(Assign("assign" ~ pairs))
 
   val break_ = P(Break("break"))
   val asm_ = P(Spec.assume("assume" ~ expr))

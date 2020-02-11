@@ -207,11 +207,12 @@ case class Pair(x: Id, e: Expr) {
   override def toString = sexpr(x, e)
 }
 
-case class Let(pairs: List[Pair]) extends Expr with Expr.bind[Let] {
+case class Let(pairs: List[Pair], body: Expr) extends Expr with Expr.bind[Let] {
   def bound = Set(pairs map (_.x): _*)
-  def free = Set(pairs flatMap (_.free): _*) -- bound
-  def rename(a: Map[Id, Id], re: Map[Id, Id]) = Let(pairs map (_ rename (a, re)))
-  def subst(a: Map[Id, Id], su: Map[Id, Expr]) = Let(pairs map (_ subst (a, su)))
+  def free = Set(pairs flatMap (_.free): _*) ++ (body.free -- bound)
+  def rename(a: Map[Id, Id], re: Map[Id, Id]) = Let(pairs map (_ rename (a, re)), body rename re)
+  def subst(a: Map[Id, Id], su: Map[Id, Expr]) = Let(pairs map (_ subst (a, su)), body subst su)
+  override def toString = sexpr("let", sexpr(pairs), body)
 }
 
 case class Case(pat: Pat, expr: Expr) extends Expr.bind[Case] {

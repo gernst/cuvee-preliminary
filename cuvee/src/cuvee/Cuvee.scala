@@ -15,6 +15,8 @@ case class Cuvee(backend: Solver) extends Solver {
   var printSuccess = false
   var produceModels = false
 
+  val simplify = Simplify(backend)
+
   override def toString = Printer.solver(this)
 
   def top = states.head
@@ -92,7 +94,12 @@ case class Cuvee(backend: Solver) extends Solver {
   def eval(expr: Expr): Expr = {
     val env = top.env
     val old = Nil
-    Eval.eval(expr, env, old, top)
+    val _expr = Eval.eval(expr, env, old, top)
+    if (Cuvee.simplify) {
+      simplify(_expr)
+    } else {
+      _expr
+    }
   }
 
   def check() = backend.scoped {

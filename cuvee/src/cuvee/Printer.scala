@@ -189,7 +189,7 @@ object PrettyPrinter {
       case id: Id => PrettyId(mangle(id))
       case Num(value) => PrettyId(value toString)
 
-      case Let(pairs) => ???
+      case Let(pairs, body) => ???
       case Match(expr, cases) => ???
 
       // ordered by precedence except where undefined or wildcard (e.g. general function application)

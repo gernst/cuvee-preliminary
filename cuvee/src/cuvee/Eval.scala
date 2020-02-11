@@ -95,6 +95,11 @@ object Eval {
 
     case Ite(test, left, right) =>
       Ite(eval(test, env, old, st), eval(left, env, old, st), eval(right, env, old, st))
+      
+    case Let(lets, body) =>
+      val pairs = lets map (eval(_, env, old, st))
+      val (xs, _es) = pairs.unzip
+      eval(body, env assign (xs, _es), old, st)
 
     case Select(array, index) =>
       Select(eval(array, env, old, st), eval(index, env, old, st))
