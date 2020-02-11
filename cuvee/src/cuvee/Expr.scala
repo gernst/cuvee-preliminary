@@ -153,12 +153,12 @@ object Eq extends ((Expr, Expr) => Expr) {
   def zip(pairs: List[(Expr, Expr)]): List[Expr] = {
     pairs map { case (left, right) => Eq(left, right) }
   }
-  
+
   def apply(lefts: List[Expr], rights: List[Expr]): Expr = {
     ensure(lefts.size == rights.size, "equations length mismatch", lefts, rights)
     apply(lefts zip rights)
   }
-  
+
   def apply(pairs: List[(Expr, Expr)]): Expr = {
     And(zip(pairs))
   }
@@ -281,6 +281,13 @@ object UnApps extends (List[Id] => Pat) {
     case fun :: args => UnApp(fun, args)
     case _ => error("higher-order pattern", pats)
   }
+}
+
+case class As(id: Id, sort: Sort) extends Expr {
+  def free = id.free
+  def rename(re: Map[Id, Id]) = As(id rename re, sort)
+  def subst(su: Map[Id, Expr]) = id subst su
+  override def toString = sexpr("as", id, sort)
 }
 
 case class Old(expr: Expr) extends Expr {

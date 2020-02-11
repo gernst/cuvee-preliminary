@@ -1,9 +1,10 @@
 package cuvee.test.parser
 
-import minitest.SimpleTestSuite
 import java.io.File
+
 import cuvee.Source
 import cuvee.time
+import minitest.SimpleTestSuite
 
 object CHC2019 extends SimpleTestSuite {
   val path = "chc-comp19-benchmarks"

@@ -4,6 +4,7 @@ import mill.scalalib.publish._
 
 object cuvee extends ScalaModule {
   def scalaVersion = "2.12.8"
+  def forkArgs = Seq("-Xss32m")
 
   def mainClass = Some("cuvee.Cuvee")
 
@@ -11,6 +12,7 @@ object cuvee extends ScalaModule {
     ivy"com.lihaoyi::sourcecode:0.1.7")
 
   object test extends Tests {
+    def forkArgs = Seq("-Xss32m")
     def ivyDeps = Agg(ivy"io.monix::minitest:2.7.0")
     def testFrameworks = Seq("minitest.runner.Framework")
     def unmanagedClasspath = cuvee.unmanagedClasspath
