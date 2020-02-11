@@ -1,7 +1,7 @@
 package cuvee
 
-case class Verify(commands: Iterable[Cmd]) extends Source {
-  def run(solver: Solver, report: Report): Unit = solver match {
+case class Verify(commands: Iterable[ExtCmd]) extends Source[ExtCmd] {
+  def run(solver: Solver[ExtCmd], report: Report): Unit = solver match {
     case cuvee: Cuvee => run(cuvee, report)
     case _ => ???
   }
@@ -14,8 +14,7 @@ case class Verify(commands: Iterable[Cmd]) extends Source {
           verifyProcedure(solver, report, proc, None)
         case DefineClass(sort, obj) =>
           report(solver.define(sort, obj))
-          ???
-          // clazz.procs.foreach(verifyProcedure(solver, report, _, Some(clazz)))
+          obj.ops.foreach(proc => verifyProcedure(solver, report, proc._2, Some(obj)))
         case refinement: DefineRefinement =>
           Verify.verificationConditions(refinement, solver.top).foreach(vc => {
             report(solver.check(!vc))
