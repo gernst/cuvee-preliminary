@@ -5,8 +5,8 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.File
 
-trait Solver {
-  var rlog: List[Cmd] = Nil
+sealed trait Solver[-C >: Cmd <: ExtCmd] {
+  var rlog: List[ExtCmd] = Nil // can't use generic C here
   def log = rlog.reverse
 
   def setLogic(logic: String): Ack
@@ -62,7 +62,7 @@ trait Solver {
     exec(Cmd.from(line))
   }
 
-  def exec(cmd: Cmd): Option[Res] = {
+  def exec(cmd: C): Option[Res] = {
     rlog = cmd :: rlog
 
     cmd match {
@@ -104,22 +104,24 @@ trait Solver {
       case Assert(expr) =>
         Some(assert(expr))
 
-      case ext: ExtCmd if this.isInstanceOf[ExtSolver] =>
-        this.asInstanceOf[ExtSolver].execExtNoLog(ext)
-
       case _ => Some(Error("not supported"))
     }
   }
 }
 
+trait SmtSolver extends Solver[Cmd] {
+
+}
+
 /**
  * A solver extended with non-SMT-LIB functionality, e.g. procedure and class declarations.
  */
-trait ExtSolver extends Solver {
+trait ExtSolver extends SmtSolver with Solver[ExtCmd] {
   def define(id: Id, proc: Proc): Ack
   def define(sort: Sort, obj: Obj): Ack
 
-  def execExtNoLog(ext: ExtCmd): Option[Res] = ext match {
+  override def exec(ext: ExtCmd): Option[Res] = ext match {
+    case smt: Cmd => super.exec(smt)
     case DefineProc(id, proc) => Some(define(id, proc))
     case DefineClass(sort, obj) => Some(define(sort, obj))
 
@@ -134,7 +136,7 @@ object Solver {
 
   var traffic = false
 
-  case class process(args: String*) extends Solver {
+  case class process(args: String*) extends SmtSolver {
     val pb = new ProcessBuilder(args: _*)
     val pr = pb.start()
     val pid = pr.pid
@@ -334,6 +336,11 @@ object Solver {
       stream.println(line)
       stream.flush()
     }
+  }
+
+  def test() = {
+    var ext: Solver[ExtCmd] = null;
+    var smt: Solver[Cmd] = ext;
   }
 }
 

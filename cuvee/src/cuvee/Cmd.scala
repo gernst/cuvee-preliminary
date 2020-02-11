@@ -1,16 +1,21 @@
 package cuvee
 
-sealed trait Cmd
-/** Non-SMT-LIB commands */
-sealed trait ExtCmd extends Cmd
+/** All commands */
+sealed trait ExtCmd
+/** SMT-LIB commands only */
+sealed trait Cmd extends ExtCmd
 
 sealed trait Decl extends Cmd
-sealed trait Def extends Cmd
-/** Non-SMT-LIB definitions */
+
+/** All definitions */
 sealed trait ExtDef extends ExtCmd
+/** SMT-LIB definitions only */
+sealed trait Def extends Cmd with ExtDef
 
 object Cmd extends Parseable(Parser.cmd)
 object Script extends Parseable(Parser.script)
+object ExtCmd extends Parseable(Parser.extCmd)
+object ExtScript extends Parseable(Parser.extScript)
 
 case class SetLogic(logic: String) extends Cmd {
   override def toString = Printer.setLogic(logic)

@@ -123,7 +123,7 @@ object VerifyTest extends TestSuite {
     test("verify " + file) {
       Expr._index = 0
       val in = new File(file)
-      val source: Source = runUnwrappingErrors(Verify(Source.file(in).cmds))
+      val source: Source[ExtCmd] = runUnwrappingErrors(Verify(Source.file(in, ExtScript).cmds))
 
       println(s"Verification condition for $file")
       println()
