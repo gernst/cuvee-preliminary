@@ -4,6 +4,11 @@ object Printer {
   def setLogic(logic: String) = sexpr("set-logic", logic)
   def setOption(args: List[String]) = sexpr("set-option", args: _*)
 
+  def setInfo(attr: String, arg: Option[Any]) = arg match {
+    case None => sexpr("set-info", attr)
+    case Some(arg) => sexpr("set-info", attr, arg)
+  }
+
   def reset() = sexpr("reset")
   def push() = sexpr("push", 1)
   def pop() = sexpr("pop", 1)
@@ -33,7 +38,7 @@ object Printer {
     if (!rec) sexpr("define-fun", id, sexpr(formals), res, body)
     else sexpr("define-fun-rec", id, sexpr(formals), res, body)
   }
-  
+
   def define(id: Id, proc: Proc) = {
     val Proc(in, out, pre, post, body) = proc
     sexpr("define-proc", id, sexpr(in), sexpr(out), body, ":precondition", pre, ":postcondition", post)
@@ -41,7 +46,7 @@ object Printer {
 
   def define(sort: Sort, obj: Obj) = {
     val Obj(state, init, ops) = obj
-    sexpr("define-class", sort :: sexpr(state) :: sexpr("init", init) :: (ops map sexpr2) : _*)
+    sexpr("define-class", sort :: sexpr(state) :: sexpr("init", init) :: (ops map sexpr2): _*)
   }
 
   def sel(id: Id, typ: Type) = {
@@ -187,7 +192,7 @@ object PrettyPrinter {
       case id: Id => PrettyId(mangle(id))
       case Num(value) => PrettyId(value toString)
 
-      case Let(pairs) => ???
+      case Let(pairs, body) => ???
       case Match(expr, cases) => ???
 
       // ordered by precedence except where undefined or wildcard (e.g. general function application)

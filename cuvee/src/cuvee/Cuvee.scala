@@ -16,6 +16,7 @@ case class Cuvee(backend: Solver[Cmd]) extends ExtSolver {
   var produceModels = false
 
   override def toString = log.mkString("\n")
+  val simplify = Simplify(backend)
 
   def top = states.head
 
@@ -92,7 +93,12 @@ case class Cuvee(backend: Solver[Cmd]) extends ExtSolver {
   def eval(expr: Expr): Expr = {
     val env = top.env
     val old = Nil
-    Eval.eval(expr, env, old, top)
+    val _expr = Eval.eval(expr, env, old, top)
+    if (Cuvee.simplify) {
+      simplify(_expr)
+    } else {
+      _expr
+    }
   }
 
   def check() = backend.scoped {

@@ -25,6 +25,10 @@ case class SetOption(args: List[String]) extends Cmd {
   override def toString = Printer.setOption(args)
 }
 
+case class SetInfo(attr: String, arg: Option[Any]) extends Cmd {
+  override def toString = Printer.setInfo(attr, arg)
+}
+
 object GetModel extends Cmd {
   override def toString = Printer.model()
 }

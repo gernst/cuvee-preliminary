@@ -86,8 +86,8 @@ package object cuvee {
   }
 
   def sexpr(arg0: Any, args: Any*): String = {
-    if (args.isEmpty) "(" + arg0 + ")"
-    else "(" + arg0 + " " + args.mkString(" ") + ")"
+    if (args.isEmpty) s"($arg0)"
+    else s"($arg0 ${args.mkString(" ")})"
   }
 
   def sexpr(args: Iterable[Any]): String = {
@@ -109,5 +109,13 @@ package object cuvee {
   implicit class FormalList(formals: List[Formal]) {
     def prime = formals map (_.prime)
     def priming = formals map (_.id) map (id => id -> id.prime) toMap
+  }
+  
+  def time[A](f: => A) = {
+    val start = System.currentTimeMillis
+    val a = f
+    val end = System.currentTimeMillis
+    val t = end - start
+    (t, a)
   }
 }

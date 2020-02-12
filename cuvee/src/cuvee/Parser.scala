@@ -22,8 +22,16 @@ object Parser {
     "(" ~ p ~ ")"
   }
 
-  val name = S("[A-Za-z_][A-Za-z0-9_\\-]*")
-  val attr = S(":[A-Za-z_][A-Za-z0-9_\\-]*")
+  // https://github.com/smtlib/jSMTLIB
+  // SMT/src/org/smtlib/sexpr/Lexer.java
+  val simple = S("[a-zA-Z_~!@$%^&*+=<>.?/\\-][0-9a-zA-Z_~!@$%^&*+=<>.?/\\-]*")
+  val quoted = S("\\|[0-9a-zA-Z_~!@$%^&*+=<>.?/\"'(),:;{}#`\\[\\] \t\r\n\\-]*\\|") map {
+    str => str.substring(1, str.length - 1)
+  }
+
+
+  val name = simple | quoted
+  val attr = S(":[A-Za-z_][A-Za-z0-9_!|$:\\-]*")
   val op = L("-") | L("+") | L("<=") | L("<") | L(">=") | L(">")
 
   val typ: Parser[Type] = P(sort | parens(array_ | list_))
@@ -34,12 +42,16 @@ object Parser {
   val list_ = P(Type.list("List" ~ typ))
 
   val pat: Parser[Pat] = P(id | parens(unapp_))
-  val expr: Parser[Expr] = P(id | num | parens(bind_ | distinct_ | imp_ | and_ | or_ | eq_ | ite_ | match_ | select_ | store_ | old_ | wp_ | box_ | dia_ | app_))
+  val expr: Parser[Expr] = P(id | num | parens(as_ | bind_ | distinct_ | imp_ | and_ | or_ | eq_ | ite_ | let_ | match_ | select_ | store_ | old_ | wp_ | box_ | dia_ | app_))
 
   val id = P(Id(name | op))
 
   val num = P(Num(bigint))
+  val pair = P(Pair(parens(id ~ expr)))
+  val pairs = P(pair.*)
 
+  
+  val as_ = P(As("as" ~ id ~ sort))
   val old_ = P(Old("old" ~ expr))
   val imp_ = P(Imp("=>" ~ expr ~ expr)) // singled out to avoid clash with "="
   val and_ = P(And.nary("and" ~ expr.*))
@@ -47,6 +59,7 @@ object Parser {
   val distinct_ = P(Distinct("distinct" ~ expr.*))
   val eq_ = P(Eq("=" ~ expr ~ expr))
   val ite_ = P(Ite("ite" ~ expr ~ expr ~ expr))
+  val let_ = P(Let("let" ~ parens(pairs) ~ expr))
 
   val cs = P(parens(Case(pat ~ expr)))
   val match_ = P(Match("match" ~ expr ~ cs.*))
@@ -73,9 +86,7 @@ object Parser {
   val box_ = P(Box("box" ~ prog ~ expr))
   val dia_ = P(Dia("dia" ~ prog ~ expr))
 
-  val let = P(Pair(parens(id ~ expr)))
-  val lets = P(let.*)
-  val assign_ = P(Assign("assign" ~ lets))
+  val assign_ = P(Assign("assign" ~ pairs))
 
   val break_ = P(Break("break"))
   val asm_ = P(Spec.assume("assume" ~ expr))
@@ -89,7 +100,7 @@ object Parser {
   val post = P(":postcondition" ~ expr)
   val while_ = P(While("while" ~ expr ~ prog ~ prog.? ~ term.? ~ pre.? ~ post.?))
 
-  val cmd_ : Parser[Cmd] = P(set_logic_ | set_option_ | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
+  val cmd_ : Parser[Cmd] = P(set_logic_ | set_option_ | set_info_  | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
     declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_)
 
   val cmd: Parser[Cmd] = P(parens(cmd_))
@@ -98,6 +109,7 @@ object Parser {
 
   val set_logic_ = P(SetLogic("set-logic" ~ name))
   val set_option_ = P(SetOption("set-option" ~ (attr :: name.*)))
+  val set_info_ = P(SetInfo("set-info" ~ attr ~ (string | name).?))
   val get_model_ = P(GetModel("get-model"))
   val exit_ = P(Exit("exit"))
   val reset_ = P(Reset("reset"))

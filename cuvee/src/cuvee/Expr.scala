@@ -153,12 +153,12 @@ object Eq extends ((Expr, Expr) => Expr) {
   def zip(pairs: List[(Expr, Expr)]): List[Expr] = {
     pairs map { case (left, right) => Eq(left, right) }
   }
-  
+
   def apply(lefts: List[Expr], rights: List[Expr]): Expr = {
     ensure(lefts.size == rights.size, "equations length mismatch", lefts, rights)
     apply(lefts zip rights)
   }
-  
+
   def apply(pairs: List[(Expr, Expr)]): Expr = {
     And(zip(pairs))
   }
@@ -207,11 +207,12 @@ case class Pair(x: Id, e: Expr) {
   override def toString = sexpr(x, e)
 }
 
-case class Let(pairs: List[Pair]) extends Expr with Expr.bind[Let] {
+case class Let(pairs: List[Pair], body: Expr) extends Expr with Expr.bind[Let] {
   def bound = Set(pairs map (_.x): _*)
-  def free = Set(pairs flatMap (_.free): _*) -- bound
-  def rename(a: Map[Id, Id], re: Map[Id, Id]) = Let(pairs map (_ rename (a, re)))
-  def subst(a: Map[Id, Id], su: Map[Id, Expr]) = Let(pairs map (_ subst (a, su)))
+  def free = Set(pairs flatMap (_.free): _*) ++ (body.free -- bound)
+  def rename(a: Map[Id, Id], re: Map[Id, Id]) = Let(pairs map (_ rename (a, re)), body rename re)
+  def subst(a: Map[Id, Id], su: Map[Id, Expr]) = Let(pairs map (_ subst (a, su)), body subst su)
+  override def toString = sexpr("let", sexpr(pairs), body)
 }
 
 case class Case(pat: Pat, expr: Expr) extends Expr.bind[Case] {
@@ -280,6 +281,13 @@ object UnApps extends (List[Id] => Pat) {
     case fun :: args => UnApp(fun, args)
     case _ => error("higher-order pattern", pats)
   }
+}
+
+case class As(id: Id, sort: Sort) extends Expr {
+  def free = id.free
+  def rename(re: Map[Id, Id]) = As(id rename re, sort)
+  def subst(su: Map[Id, Expr]) = id subst su
+  override def toString = sexpr("as", id, sort)
 }
 
 case class Old(expr: Expr) extends Expr {
