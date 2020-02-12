@@ -1,8 +1,6 @@
 package cuvee
 
 object Printer {
-  def solver(solver: Solver) = solver.log.mkString("\n")
-
   def setLogic(logic: String) = sexpr("set-logic", logic)
   def setOption(args: List[String]) = sexpr("set-option", args: _*)
 

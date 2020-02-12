@@ -20,7 +20,7 @@ object Examples extends TestSuite {
     val path = dir + "/" + file
 
     val in = new File(path)
-    val source = Source.file(in)
+    val source = Source.file(in, ExtScript)
     val report = prove_!
 
     test(path + " (z3)") {
