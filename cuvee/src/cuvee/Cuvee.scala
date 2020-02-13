@@ -9,14 +9,14 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.InputStream
 
-case class Cuvee(backend: Solver[SmtCmd]) extends ExtSolver {
+case class Cuvee(prover: Solver[SmtCmd], backend: Solver[SmtCmd]) extends ExtSolver {
   var states: List[State] = List(State.default)
 
   var printSuccess = false
   var produceModels = false
 
   override def toString = log.mkString("\n")
-  val simplify = Simplify(backend)
+  val simplify = Simplify(prover)
 
   def top = states.head
 
@@ -192,35 +192,42 @@ case class Cuvee(backend: Solver[SmtCmd]) extends ExtSolver {
 object Cuvee {
   var simplify = true
 
-  def run[C >: SmtCmd <: Cmd](source: Source[Cmd], backend: Solver[C], report: Report) {
-    val solver = Cuvee(backend)
+  def run[C >: SmtCmd <: Cmd](source: Source[Cmd], prover: Solver[C], backend: Solver[C], report: Report) {
+    val solver = Cuvee(prover, backend)
     source.run(solver, report)
   }
 
-  def runWithArgs[C >: SmtCmd <: Cmd](args: List[String], source: Source[Cmd], solver: Solver[C], report: Report): Unit = args match {
+  def run[C >: SmtCmd <: Cmd](source: Source[Cmd], backend: Solver[C], report: Report) {
+    run(source, backend, backend, report)
+  }
+
+  def runWithArgs[C >: SmtCmd <: Cmd](args: List[String], source: Source[Cmd], prover: Solver[C], backend: Solver[C], report: Report): Unit = args match {
     case Nil =>
-      run(source, solver, report)
+      run(source, ???, backend, report)
 
     case "-simplify" :: rest =>
       simplify = true
-      runWithArgs(rest, source, solver, report)
+      runWithArgs(rest, source, prover, backend, report)
 
     case "-no-simplify" :: rest =>
       simplify = false
-      runWithArgs(rest, source, solver, report)
+      runWithArgs(rest, source, prover, backend, report)
 
     case "-debug-solver" :: rest =>
       Solver.traffic = true
-      runWithArgs(rest, source, solver, report)
+      runWithArgs(rest, source, prover, backend, report)
 
     case "-z3" :: rest =>
-      runWithArgs(rest, source, Solver.z3(), report)
+      ensure(rest.isEmpty, "-z3 must be the last argument")
+      run(source, Solver.z3(), report)
 
     case "-cvc4" :: rest =>
-      runWithArgs(rest, source, Solver.cvc4(), report)
+      ensure(rest.isEmpty, "-cvc4 must be the last argument")
+      run(source, Solver.cvc4(), report)
 
     case "-princess" :: rest =>
-      runWithArgs(rest, source, Solver.princess(), report)
+      ensure(rest.isEmpty, "-princess must be the last argument")
+      run(source, Solver.princess(), report)
 
     case "--" :: args =>
       ensure(args.length >= 1, "-- needs an SMT solver as argument")
@@ -230,17 +237,17 @@ object Cuvee {
     case "-o" :: path :: rest =>
       val out = new File(path)
       val _report = Report.file(out)
-      runWithArgs(rest, source, solver, _report)
+      runWithArgs(rest, source, prover, backend, _report)
 
     case path :: rest =>
       ensure(source == Source.stdin(Cmd), "input can be given only once")
       val in = new File(path)
       val _source = Source.file(in, ExtScript)
-      runWithArgs(rest, _source, solver, report)
+      runWithArgs(rest, _source, prover, backend, report)
   }
 
   def run(args: List[String]) {
-    runWithArgs(args, Source.stdin(Cmd), Solver.stdout, Report.stdout)
+    runWithArgs(args, Source.stdin(Cmd), Solver.default, Solver.stdout, Report.stdout)
   }
 
   def main(args: Array[String]) {
