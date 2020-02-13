@@ -9,13 +9,15 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.InputStream
 
-case class Cuvee(prover: Solver, backend: Solver) extends Solver {
+case class Cuvee(backend: Solver) extends Solver {
   var states: List[State] = List(State.default)
 
   var printSuccess = false
   var produceModels = false
 
   override def toString = log.mkString("\n")
+
+  val prover = Solver.default
   val simplify = Simplify(prover)
 
   def top = states.head
@@ -191,30 +193,26 @@ case class Cuvee(prover: Solver, backend: Solver) extends Solver {
 object Cuvee {
   var simplify = true
 
-  def run(source: Source, prover: Solver, backend: Solver, report: Report) {
-    val solver = Cuvee(prover, backend)
+  def run(source: Source, backend: Solver, report: Report) {
+    val solver = Cuvee(backend)
     source.run(solver, report)
   }
 
-  def run(source: Source, backend: Solver, report: Report) {
-    run(source, backend, backend, report)
-  }
-
-  def runWithArgs(args: List[String], source: Source, prover: Solver, backend: Solver, report: Report): Unit = args match {
+  def runWithArgs(args: List[String], source: Source, backend: Solver, report: Report): Unit = args match {
     case Nil =>
-      run(source, ???, backend, report)
+      run(source, backend, report)
 
     case "-simplify" :: rest =>
       simplify = true
-      runWithArgs(rest, source, prover, backend, report)
+      runWithArgs(rest, source, backend, report)
 
     case "-no-simplify" :: rest =>
       simplify = false
-      runWithArgs(rest, source, prover, backend, report)
+      runWithArgs(rest, source, backend, report)
 
     case "-debug-solver" :: rest =>
       Solver.traffic = true
-      runWithArgs(rest, source, prover, backend, report)
+      runWithArgs(rest, source, backend, report)
 
     case "-z3" :: rest =>
       ensure(rest.isEmpty, "-z3 must be the last argument")
@@ -236,17 +234,17 @@ object Cuvee {
     case "-o" :: path :: rest =>
       val out = new File(path)
       val _report = Report.file(out)
-      runWithArgs(rest, source, prover, backend, _report)
+      runWithArgs(rest, source, backend, _report)
 
     case path :: rest =>
       ensure(source == Source.stdin, "input can be given only once")
       val in = new File(path)
       val _source = Source.file(in)
-      runWithArgs(rest, _source, prover, backend, report)
+      runWithArgs(rest, _source, backend, report)
   }
 
   def run(args: List[String]) {
-    runWithArgs(args, Source.stdin, Solver.default, Solver.stdout, Report.stdout)
+    runWithArgs(args, Source.stdin, Solver.stdout, Report.stdout)
   }
 
   def main(args: Array[String]) {
