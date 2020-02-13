@@ -1,7 +1,7 @@
 package cuvee
 
-case class Verify(commands: Iterable[Cmd]) extends Source[Cmd] {
-  def run(solver: Solver[Cmd], report: Report): Unit = solver match {
+case class Verify(commands: Iterable[Cmd]) extends Source {
+  def run(solver: Solver, report: Report): Unit = solver match {
     case cuvee: Cuvee => run(cuvee, report)
     case _ => ???
   }

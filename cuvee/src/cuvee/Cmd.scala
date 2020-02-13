@@ -1,68 +1,58 @@
 package cuvee
 
-/** All commands */
 sealed trait Cmd
-/** SMT-LIB commands only */
-sealed trait SmtCmd extends Cmd
-
-sealed trait Decl extends SmtCmd
-
-/** All definitions */
+sealed trait Decl extends Cmd
 sealed trait Def extends Cmd
-/** SMT-LIB definitions only */
-sealed trait SmtDef extends SmtCmd with Def
 
-object SmtCmd extends Parseable(Parser.cmd)
+object Cmd extends Parseable(Parser.cmd)
 object Script extends Parseable(Parser.script)
-object Cmd extends Parseable(Parser.extCmd)
-object ExtScript extends Parseable(Parser.extScript)
 
-case class SetLogic(logic: String) extends SmtCmd {
+case class SetLogic(logic: String) extends Cmd {
   override def toString = Printer.setLogic(logic)
 }
 
-case class SetOption(args: List[String]) extends SmtCmd {
+case class SetOption(args: List[String]) extends Cmd {
   override def toString = Printer.setOption(args)
 }
 
-case class SetInfo(attr: String, arg: Option[Any]) extends SmtCmd {
+case class SetInfo(attr: String, arg: Option[Any]) extends Cmd {
   override def toString = Printer.setInfo(attr, arg)
 }
 
-object GetModel extends SmtCmd {
+object GetModel extends Cmd {
   override def toString = Printer.model()
 }
 
-case object Exit extends SmtCmd {
+case object Exit extends Cmd {
   override def toString = Printer.exit()
 }
 
-case object Reset extends SmtCmd {
+case object Reset extends Cmd {
   override def toString = Printer.reset()
 }
 
-case object Push extends SmtCmd {
+case object Push extends Cmd {
   override def toString = Printer.push()
 }
 
-case object Pop extends SmtCmd {
+case object Pop extends Cmd {
   override def toString = Printer.pop()
 }
 
-case object GetAssertions extends SmtCmd {
+case object GetAssertions extends Cmd {
   override def toString = Printer.assertions()
 }
 
-case object CheckSat extends SmtCmd {
+case object CheckSat extends Cmd {
   override def toString = Printer.check()
 }
 
-case class Assert(expr: Expr) extends SmtCmd {
+case class Assert(expr: Expr) extends Cmd {
   override def toString = Printer.assert(expr)
 }
 
-object CounterExample extends ((Expr, Prog, Expr) => SmtCmd) {
-  def apply(pre: Expr, prog: Prog, post: Expr): SmtCmd = prog match {
+object CounterExample extends ((Expr, Prog, Expr) => Cmd) {
+  def apply(pre: Expr, prog: Prog, post: Expr): Cmd = prog match {
     case While(test, body, after, term, phi, psi) =>
       val _pre = if (phi == True) pre else phi
       val _post = if (psi == True) post else psi
@@ -84,7 +74,7 @@ case class DeclareSort(sort: Sort, arity: Int) extends Decl {
   override def toString = Printer.declare(sort, arity)
 }
 
-case class DefineSort(sort: Sort, args: List[Sort], body: Type) extends SmtDef {
+case class DefineSort(sort: Sort, args: List[Sort], body: Type) extends Def {
   override def toString = Printer.define(sort, args, body)
 }
 
@@ -92,11 +82,11 @@ case class DeclareFun(id: Id, args: List[Type], res: Type) extends Decl {
   override def toString = Printer.declare(id, args, res)
 }
 
-case class DefineFun(id: Id, formals: List[Formal], res: Type, body: Expr) extends SmtDef {
+case class DefineFun(id: Id, formals: List[Formal], res: Type, body: Expr) extends Def {
   override def toString = Printer.define(id, formals, res, body, false)
 }
 
-case class DefineFunRec(id: Id, formals: List[Formal], res: Type, body: Expr) extends SmtDef {
+case class DefineFunRec(id: Id, formals: List[Formal], res: Type, body: Expr) extends Def {
   override def toString = Printer.define(id, formals, res, body, true)
 }
 
@@ -116,7 +106,7 @@ case class Arity(sort: Sort, arity: Int) {
   override def toString = Printer.arity(sort, arity)
 }
 
-case class DeclareDatatypes(arities: List[Arity], decls: List[Datatype]) extends SmtDef {
+case class DeclareDatatypes(arities: List[Arity], decls: List[Datatype]) extends Def {
   override def toString = Printer.declare(arities, decls)
 }
 
@@ -168,7 +158,7 @@ object IsSat extends Parseable(Parser.is_sat)
 object Ack extends Parseable(Parser.ack)
 
 object Assertions extends Parseable(Parser.assertions) with (List[Expr] => Assertions)
-object Model extends Parseable(Parser.model) with (List[SmtDef] => Model)
+object Model extends Parseable(Parser.model) with (List[Def] => Model)
 
 case object Success extends Ack {
   override def toString = "success"
@@ -208,6 +198,6 @@ case class Assertions(exprs: List[Expr]) extends Res {
   override def toString = Printer.assertions(exprs)
 }
 
-case class Model(defs: List[SmtDef]) extends Res {
+case class Model(defs: List[Def]) extends Res {
   override def toString = Printer.model()
 }

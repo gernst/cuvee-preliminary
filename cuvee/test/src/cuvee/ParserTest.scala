@@ -60,10 +60,10 @@ object ParserTest extends TestSuite {
   }
 
   private def parseCmd(str: String): Cmd = {
-    VerifyTest.runUnwrappingErrors(new Parseable(Parser.extCmd).from(str))
+    VerifyTest.runUnwrappingErrors(new Parseable(Parser.cmd).from(str))
   }
 
   private def parseCmds(str: String): List[Cmd] = {
-    VerifyTest.runUnwrappingErrors(new Parseable(Parser.extCmd*).from(str))
+    VerifyTest.runUnwrappingErrors(new Parseable(Parser.cmd.*).from(str))
   }
 }

@@ -6,8 +6,8 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintStream
 
-trait Source[+C >: SmtCmd <: Cmd] {
-  def run(solver: Solver[C], report: Report)
+trait Source {
+  def run(solver: Solver, report: Report)
 }
 
 trait Report extends (Res => Unit) {
@@ -15,7 +15,7 @@ trait Report extends (Res => Unit) {
 }
 
 object Source {
-  def safe[C >: SmtCmd <: Cmd](cmd: C, solver: Solver[C], report: Report) {
+  def safe(cmd: Cmd, solver: Solver, report: Report) {
     try {
       solver.exec(cmd) match {
         case None =>
@@ -32,26 +32,26 @@ object Source {
     }
   }
 
-  case class stdin[C >: SmtCmd <: Cmd](parser: Parseable[C]) extends Source[C] {
+  case object stdin extends Source {
     val reader = new BufferedReader(new InputStreamReader(System.in))
 
     def readLine() = {
       reader.readLine()
     }
 
-    def run(solver: Solver[C], report: Report) {
+    def run(solver: Solver, report: Report) {
       var line: String = null
       do {
         line = readLine()
         if (line != null) {
-          val cmd = parser.from(line)
+          val cmd = Cmd.from(line)
           safe(cmd, solver, report)
         }
       } while (line != null)
     }
   }
 
-  case class file[C >: SmtCmd <: Cmd](in: File, parser: Parseable[List[C]]) extends Source[C] {
+  case class file(in: File) extends Source {
     def read() = {
       val length = in.length
       val buf = new Array[Byte](length.toInt)
@@ -63,10 +63,10 @@ object Source {
     }
 
     def cmds = {
-      parser.from(read())
+      Script.from(read())
     }
 
-    def run(solver: Solver[C], report: Report) {
+    def run(solver: Solver, report: Report) {
       for (cmd <- cmds) {
         safe(cmd, solver, report)
       }

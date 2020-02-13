@@ -5,7 +5,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.File
 
-sealed trait Solver[-C >: SmtCmd <: Cmd] {
+trait Solver {
   var rlog: List[Cmd] = Nil // can't use generic C here
   def log = rlog.reverse
 
@@ -52,6 +52,9 @@ sealed trait Solver[-C >: SmtCmd <: Cmd] {
 
   def declare(arities: List[Arity], decls: List[Datatype]): Ack
 
+  def define(id: Id, proc: Proc): Ack
+  def define(sort: Sort, obj: Obj): Ack
+
   def assert(expr: Expr): Ack
 
   def setOption(args: String*): Ack = {
@@ -59,10 +62,10 @@ sealed trait Solver[-C >: SmtCmd <: Cmd] {
   }
 
   def exec(line: String): Option[Res] = {
-    exec(SmtCmd.from(line))
+    exec(Cmd.from(line))
   }
 
-  def exec(cmd: C): Option[Res] = {
+  def exec(cmd: Cmd): Option[Res] = {
     rlog = cmd :: rlog
 
     cmd match {
@@ -104,28 +107,13 @@ sealed trait Solver[-C >: SmtCmd <: Cmd] {
       case Assert(expr) =>
         Some(assert(expr))
 
+      case DefineProc(id, proc) =>
+        Some(define(id, proc))
+      case DefineClass(sort, obj) =>
+        Some(define(sort, obj))
+
       case _ => Some(Error("not supported"))
     }
-  }
-}
-
-trait SmtSolver extends Solver[SmtCmd] {
-
-}
-
-/**
- * A solver extended with non-SMT-LIB functionality, e.g. procedure and class declarations.
- */
-trait ExtSolver extends SmtSolver with Solver[Cmd] {
-  def define(id: Id, proc: Proc): Ack
-  def define(sort: Sort, obj: Obj): Ack
-
-  override def exec(ext: Cmd): Option[Res] = ext match {
-    case smt: SmtCmd => super.exec(smt)
-    case DefineProc(id, proc) => Some(define(id, proc))
-    case DefineClass(sort, obj) => Some(define(sort, obj))
-
-    case _ => Some(Error("not supported"))
   }
 }
 
@@ -137,7 +125,7 @@ object Solver {
 
   var traffic = false
 
-  case class process(args: String*) extends SmtSolver {
+  case class process(args: String*) extends Solver {
     val pb = new ProcessBuilder(args: _*)
     val pr = pb.start()
     val pid = pr.pid
@@ -223,6 +211,16 @@ object Solver {
       Ack.from(read())
     }
 
+    def define(id: Id, proc: Proc) = {
+      write(Printer.define(id, proc))
+      Ack.from(read())
+    }
+
+    def define(sort: Sort, obj: Obj) = {
+      write(Printer.define(sort, obj))
+      Ack.from(read())
+    }
+
     def write(line: String) {
       if (traffic) println(pid + " < " + line)
       stdin.println(line)
@@ -243,7 +241,7 @@ object Solver {
 
   val stdout = print(System.out)
 
-  case class print(stream: PrintStream) extends ExtSolver {
+  case class print(stream: PrintStream) extends Solver {
     var sat: IsSat = Unknown
 
     def setLogic(logic: String) = {
@@ -337,11 +335,6 @@ object Solver {
       stream.println(line)
       stream.flush()
     }
-  }
-
-  def test() = {
-    var ext: Solver[Cmd] = null;
-    var smt: Solver[SmtCmd] = ext;
   }
 }
 

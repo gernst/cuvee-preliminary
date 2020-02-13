@@ -9,7 +9,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.InputStream
 
-case class Cuvee(prover: Solver[SmtCmd], backend: Solver[SmtCmd]) extends ExtSolver {
+case class Cuvee(prover: Solver, backend: Solver) extends Solver {
   var states: List[State] = List(State.default)
 
   var printSuccess = false
@@ -138,40 +138,38 @@ case class Cuvee(prover: Solver[SmtCmd], backend: Solver[SmtCmd]) extends ExtSol
 
   def declare(sort: Sort, arity: Int) = {
     map(_ declare (sort, arity))
+    prover.declare(sort, arity)
     backend.declare(sort, arity)
   }
 
   def define(sort: Sort, args: List[Sort], body: Type) = {
     map(_ define (sort, args, body))
+    prover.define(sort, args, body)
     backend.define(sort, args, body)
   }
 
   def declare(id: Id, args: List[Type], res: Type) = {
     map(_ declare (id, args, res))
+    prover.declare(id, args, res)
     backend.declare(id, args, res)
   }
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
     map(_ define (id, formals, res, body))
+    prover.define(id, formals, res, body, rec)
     backend.define(id, formals, res, body, rec)
   }
 
   def define(id: Id, proc: Proc): Ack = {
     map(_ define (id, proc))
-    backend match {
-      case solver: ExtSolver =>
-        solver.define(id, proc)
-      case _ => Success
-    }
+    prover.define(id, proc)
+    backend.define(id, proc)
   }
 
   def define(sort: Sort, obj: Obj): Ack = {
     map(_ define (sort, obj))
-    backend match {
-      case solver: ExtSolver =>
-        solver.define(sort, obj)
-      case _ => Success
-    }
+    prover.define(sort, obj)
+    backend.define(sort, obj)
   }
 
   /* def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
@@ -185,6 +183,7 @@ case class Cuvee(prover: Solver[SmtCmd], backend: Solver[SmtCmd]) extends ExtSol
 
   def declare(arities: List[Arity], decls: List[Datatype]) = {
     map(_ declare (arities, decls))
+    prover.declare(arities, decls)
     backend.declare(arities, decls)
   }
 }
@@ -192,16 +191,16 @@ case class Cuvee(prover: Solver[SmtCmd], backend: Solver[SmtCmd]) extends ExtSol
 object Cuvee {
   var simplify = true
 
-  def run[C >: SmtCmd <: Cmd](source: Source[Cmd], prover: Solver[C], backend: Solver[C], report: Report) {
+  def run(source: Source, prover: Solver, backend: Solver, report: Report) {
     val solver = Cuvee(prover, backend)
     source.run(solver, report)
   }
 
-  def run[C >: SmtCmd <: Cmd](source: Source[Cmd], backend: Solver[C], report: Report) {
+  def run(source: Source, backend: Solver, report: Report) {
     run(source, backend, backend, report)
   }
 
-  def runWithArgs[C >: SmtCmd <: Cmd](args: List[String], source: Source[Cmd], prover: Solver[C], backend: Solver[C], report: Report): Unit = args match {
+  def runWithArgs(args: List[String], source: Source, prover: Solver, backend: Solver, report: Report): Unit = args match {
     case Nil =>
       run(source, ???, backend, report)
 
@@ -240,14 +239,14 @@ object Cuvee {
       runWithArgs(rest, source, prover, backend, _report)
 
     case path :: rest =>
-      ensure(source == Source.stdin(Cmd), "input can be given only once")
+      ensure(source == Source.stdin, "input can be given only once")
       val in = new File(path)
-      val _source = Source.file(in, ExtScript)
+      val _source = Source.file(in)
       runWithArgs(rest, _source, prover, backend, report)
   }
 
   def run(args: List[String]) {
-    runWithArgs(args, Source.stdin(Cmd), Solver.default, Solver.stdout, Report.stdout)
+    runWithArgs(args, Source.stdin, Solver.default, Solver.stdout, Report.stdout)
   }
 
   def main(args: Array[String]) {

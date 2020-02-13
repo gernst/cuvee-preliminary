@@ -1,6 +1,6 @@
 package cuvee
 
-case class Simplify(backend: Solver[SmtCmd]) {
+case class Simplify(backend: Solver) {
   case object Unsat extends Exception
 
   def simplify(exprs: List[Expr], pos: Boolean = true): List[Expr] = {
