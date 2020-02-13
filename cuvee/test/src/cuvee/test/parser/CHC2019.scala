@@ -2,6 +2,7 @@ package cuvee.test.parser
 
 import java.io.File
 
+import cuvee.Script
 import cuvee.Source
 import cuvee.time
 import minitest.SimpleTestSuite
@@ -16,7 +17,7 @@ object CHC2019 extends SimpleTestSuite {
     for (file <- dir.list.sorted if file endsWith ".smt2") {
       val benchmark = new File(path + "/" + cat + "/" + file)
       test(file) {
-        val source = Source.file(benchmark)
+        val source = Source.file(benchmark, Script)
         val (ms, cmds) = time(source.cmds)
         println("parsed: " + file + " (" + ms + "ms)")
       }

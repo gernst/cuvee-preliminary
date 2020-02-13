@@ -100,12 +100,12 @@ object Parser {
   val post = P(":postcondition" ~ expr)
   val while_ = P(While("while" ~ expr ~ prog ~ prog.? ~ term.? ~ pre.? ~ post.?))
 
-  val cmd_ : Parser[Cmd] = P(set_logic_ | set_option_ | set_info_  | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
+  val cmd_ : Parser[SmtCmd] = P(set_logic_ | set_option_ | set_info_  | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
     declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_)
 
-  val cmd: Parser[Cmd] = P(parens(cmd_))
+  val cmd: Parser[SmtCmd] = P(parens(cmd_))
 
-  val extCmd: Parser[ExtCmd] = P(parens(cmd_ | define_proc_ | define_class_ | define_refinement_))
+  val extCmd: Parser[Cmd] = P(parens(cmd_ | define_proc_ | define_class_ | define_refinement_))
 
   val set_logic_ = P(SetLogic("set-logic" ~ name))
   val set_option_ = P(SetOption("set-option" ~ (attr :: name.*)))

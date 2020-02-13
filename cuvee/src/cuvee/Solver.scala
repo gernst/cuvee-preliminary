@@ -5,8 +5,8 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.File
 
-sealed trait Solver[-C >: Cmd <: ExtCmd] {
-  var rlog: List[ExtCmd] = Nil // can't use generic C here
+sealed trait Solver[-C >: SmtCmd <: Cmd] {
+  var rlog: List[Cmd] = Nil // can't use generic C here
   def log = rlog.reverse
 
   def setLogic(logic: String): Ack
@@ -59,7 +59,7 @@ sealed trait Solver[-C >: Cmd <: ExtCmd] {
   }
 
   def exec(line: String): Option[Res] = {
-    exec(Cmd.from(line))
+    exec(SmtCmd.from(line))
   }
 
   def exec(cmd: C): Option[Res] = {
@@ -109,19 +109,19 @@ sealed trait Solver[-C >: Cmd <: ExtCmd] {
   }
 }
 
-trait SmtSolver extends Solver[Cmd] {
+trait SmtSolver extends Solver[SmtCmd] {
 
 }
 
 /**
  * A solver extended with non-SMT-LIB functionality, e.g. procedure and class declarations.
  */
-trait ExtSolver extends SmtSolver with Solver[ExtCmd] {
+trait ExtSolver extends SmtSolver with Solver[Cmd] {
   def define(id: Id, proc: Proc): Ack
   def define(sort: Sort, obj: Obj): Ack
 
-  override def exec(ext: ExtCmd): Option[Res] = ext match {
-    case smt: Cmd => super.exec(smt)
+  override def exec(ext: Cmd): Option[Res] = ext match {
+    case smt: SmtCmd => super.exec(smt)
     case DefineProc(id, proc) => Some(define(id, proc))
     case DefineClass(sort, obj) => Some(define(sort, obj))
 
@@ -339,8 +339,8 @@ object Solver {
   }
 
   def test() = {
-    var ext: Solver[ExtCmd] = null;
-    var smt: Solver[Cmd] = ext;
+    var ext: Solver[Cmd] = null;
+    var smt: Solver[SmtCmd] = ext;
   }
 }
 

@@ -6,7 +6,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintStream
 
-trait Source[+C >: Cmd <: ExtCmd] {
+trait Source[+C >: SmtCmd <: Cmd] {
   def run(solver: Solver[C], report: Report)
 }
 
@@ -15,7 +15,7 @@ trait Report extends (Res => Unit) {
 }
 
 object Source {
-  def safe[C >: Cmd <: ExtCmd](cmd: C, solver: Solver[C], report: Report) {
+  def safe[C >: SmtCmd <: Cmd](cmd: C, solver: Solver[C], report: Report) {
     try {
       solver.exec(cmd) match {
         case None =>
@@ -32,7 +32,7 @@ object Source {
     }
   }
 
-  case class stdin[C >: Cmd <: ExtCmd](parser: Parseable[C]) extends Source[C] {
+  case class stdin[C >: SmtCmd <: Cmd](parser: Parseable[C]) extends Source[C] {
     val reader = new BufferedReader(new InputStreamReader(System.in))
 
     def readLine() = {
@@ -51,7 +51,7 @@ object Source {
     }
   }
 
-  case class file[C >: Cmd <: ExtCmd](in: File, parser: Parseable[List[C]]) extends Source[C] {
+  case class file[C >: SmtCmd <: Cmd](in: File, parser: Parseable[List[C]]) extends Source[C] {
     def read() = {
       val length = in.length
       val buf = new Array[Byte](length.toInt)

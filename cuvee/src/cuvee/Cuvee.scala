@@ -9,7 +9,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.InputStream
 
-case class Cuvee(backend: Solver[Cmd]) extends ExtSolver {
+case class Cuvee(backend: Solver[SmtCmd]) extends ExtSolver {
   var states: List[State] = List(State.default)
 
   var printSuccess = false
@@ -43,7 +43,7 @@ case class Cuvee(backend: Solver[Cmd]) extends ExtSolver {
     case _ => res
   }
 
-  override def exec(cmd: ExtCmd): Option[Res] = {
+  override def exec(cmd: Cmd): Option[Res] = {
     report(super.exec(cmd))
   }
 
@@ -192,12 +192,12 @@ case class Cuvee(backend: Solver[Cmd]) extends ExtSolver {
 object Cuvee {
   var simplify = true
 
-  def run[C >: Cmd <: ExtCmd](source: Source[ExtCmd], backend: Solver[C], report: Report) {
+  def run[C >: SmtCmd <: Cmd](source: Source[Cmd], backend: Solver[C], report: Report) {
     val solver = Cuvee(backend)
     source.run(solver, report)
   }
 
-  def runWithArgs[C >: Cmd <: ExtCmd](args: List[String], source: Source[ExtCmd], solver: Solver[C], report: Report): Unit = args match {
+  def runWithArgs[C >: SmtCmd <: Cmd](args: List[String], source: Source[Cmd], solver: Solver[C], report: Report): Unit = args match {
     case Nil =>
       run(source, solver, report)
 
@@ -233,14 +233,14 @@ object Cuvee {
       runWithArgs(rest, source, solver, _report)
 
     case path :: rest =>
-      ensure(source == Source.stdin(ExtCmd), "input can be given only once")
+      ensure(source == Source.stdin(Cmd), "input can be given only once")
       val in = new File(path)
       val _source = Source.file(in, ExtScript)
       runWithArgs(rest, _source, solver, report)
   }
 
   def run(args: List[String]) {
-    runWithArgs(args, Source.stdin(ExtCmd), Solver.stdout, Report.stdout)
+    runWithArgs(args, Source.stdin(Cmd), Solver.stdout, Report.stdout)
   }
 
   def main(args: Array[String]) {

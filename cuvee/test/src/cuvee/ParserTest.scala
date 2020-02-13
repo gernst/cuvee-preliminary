@@ -59,11 +59,11 @@ object ParserTest extends TestSuite {
     assertEquals(parseCmds("; foo\n; bar"), List())
   }
 
-  private def parseCmd(str: String): ExtCmd = {
+  private def parseCmd(str: String): Cmd = {
     VerifyTest.runUnwrappingErrors(new Parseable(Parser.extCmd).from(str))
   }
 
-  private def parseCmds(str: String): List[ExtCmd] = {
+  private def parseCmds(str: String): List[Cmd] = {
     VerifyTest.runUnwrappingErrors(new Parseable(Parser.extCmd*).from(str))
   }
 }

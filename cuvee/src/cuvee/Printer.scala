@@ -78,7 +78,7 @@ object Printer {
     sexpr(exprs)
   }
 
-  def model(defs: List[Def]) = {
+  def model(defs: List[SmtDef]) = {
     sexpr("model", sexpr(defs))
   }
 
