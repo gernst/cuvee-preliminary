@@ -192,39 +192,48 @@ case class Cuvee(backend: Solver) extends Solver {
 
 object Cuvee {
   var simplify = true
+  var timeout = 1000
 
   def run(source: Source, backend: Solver, report: Report) {
     val solver = Cuvee(backend)
     source.run(solver, report)
   }
 
-  def runWithArgs(args: List[String], source: Source, backend: Solver): Unit = args match {
+  def runWithArgs(args: List[String], source: Source): Unit = args match {
     case Nil =>
-      run(source, backend, Report.none)
+      run(source, Solver.stdout, Report.none)
+      
+    case "-timeout" :: arg :: rest =>
+      timeout = arg.toInt
+      runWithArgs(rest, source)
 
     case "-simplify" :: rest =>
       simplify = true
-      runWithArgs(rest, source, backend)
+      runWithArgs(rest, source)
 
     case "-no-simplify" :: rest =>
       simplify = false
-      runWithArgs(rest, source, backend)
+      runWithArgs(rest, source)
+
+    case "-debug-simplify" :: rest =>
+      Simplify.debug = true
+      runWithArgs(rest, source)
 
     case "-debug-solver" :: rest =>
       Solver.traffic = true
-      runWithArgs(rest, source, backend)
+      runWithArgs(rest, source)
 
     case "-z3" :: rest =>
       ensure(rest.isEmpty, "-z3 must be the last argument")
-      run(source, Solver.z3(), Report.stdout)
+      run(source, Solver.z3(timeout), Report.stdout)
 
     case "-cvc4" :: rest =>
       ensure(rest.isEmpty, "-cvc4 must be the last argument")
-      run(source, Solver.cvc4(), Report.stdout)
+      run(source, Solver.cvc4(timeout), Report.stdout)
 
     case "-princess" :: rest =>
       ensure(rest.isEmpty, "-princess must be the last argument")
-      run(source, Solver.princess(), Report.stdout)
+      run(source, Solver.princess(timeout), Report.stdout)
 
     case "--" :: args =>
       ensure(args.length >= 1, "-- needs an SMT solver as argument")
@@ -239,16 +248,17 @@ object Cuvee {
 
     case "-o" :: _ =>
       error("-o needs an output file as argument")
-
+      
     case path :: rest =>
+      ensure(!path.startsWith("-"), "not an option", path)
       ensure(source == Source.stdin, "input can be given only once")
       val in = new File(path)
       val _source = Source.file(in)
-      runWithArgs(rest, _source, backend)
+      runWithArgs(rest, _source)
   }
 
   def run(args: List[String]) {
-    runWithArgs(args, Source.stdin, Solver.stdout)
+    runWithArgs(args, Source.stdin)
   }
 
   def main(args: Array[String]) {

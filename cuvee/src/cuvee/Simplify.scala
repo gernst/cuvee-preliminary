@@ -1,5 +1,9 @@
 package cuvee
 
+object Simplify {
+  var debug = false
+}
+
 case class Simplify(backend: Solver) {
   case object Unsat extends Exception
 
@@ -27,11 +31,14 @@ case class Simplify(backend: Solver) {
   }
 
   def simplify(phi: Expr, eqs: Map[Id, Expr], pos: Boolean): Expr = {
-    val _phi = _simplify(phi, eqs, pos)
-    //    println("simplify: ")
-    //    println("     " + phi)
-    //    println("  ~> " + _phi)
-    //    println()
+    val (ms, _phi) = time(_simplify(phi, eqs, pos))
+    if (Simplify.debug) {
+      println(s"simplify (${ms}ms)")
+      println("     " + phi)
+      println("  ~> " + _phi)
+      println()
+
+    }
     _phi
   }
 
