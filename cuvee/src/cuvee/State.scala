@@ -5,7 +5,7 @@ case class State(
   sortdefs: Map[Sort, (List[Sort], Type)],
 
   funs: Map[Id, (List[Type], Type)],
-  fundefs: Map[Id, (List[Id], Expr)],
+  fundefs: Map[Id, (List[Formal], Expr)],
 
   procs: Map[Id, (List[Type], List[Type])],
   procdefs: Map[Id, Proc],
@@ -57,11 +57,9 @@ case class State(
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr): State = {
     ensure(!(funs contains id), "const already defined", id)
-    val args = formals map (_.typ)
-    val ids = formals map (_.id)
     copy(
-      funs = funs + (id -> (args, res)),
-      fundefs = fundefs + (id -> (ids, body)))
+      funs = funs + (id -> (formals, res)),
+      fundefs = fundefs + (id -> (formals, body)))
   }
 
   def define(id: Id, proc: Proc) = {
@@ -119,6 +117,20 @@ case class State(
   def clearModel = {
     copy(
       model = None)
+  }
+  
+  def replay(solver: Solver) {
+    for((sort, arity) <- sorts)
+      solver.declare(sort, arity)
+
+    for((id, (args, res)) <- funs)
+      solver.declare(id, args, res)
+
+    for(phi <- asserts)
+      solver.assert(phi)
+      
+    // This should be fixed in the future to include fundefs, and optionally all other stuff 
+    println("WARNING: not using fundefs, procs, objs in replay (see State.replay)")
   }
 }
 

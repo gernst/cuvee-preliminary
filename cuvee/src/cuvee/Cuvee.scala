@@ -17,9 +17,6 @@ case class Cuvee(backend: Solver) extends Solver {
 
   override def toString = log.mkString("\n")
 
-  val prover = Solver.default
-  val simplify = Simplify(prover)
-
   def top = states.head
 
   def setLogic(logic: String) = {
@@ -57,11 +54,11 @@ case class Cuvee(backend: Solver) extends Solver {
   def exit() = {
     val ack = backend.exit()
     System.exit(0)
-    ack
+    ack // ignored
   }
 
   def _pop() = {
-    ensure(!states.isEmpty, "empty stack")
+    ensure(!states.isEmpty, "empty solver stack")
     val st :: rest = states
     states = rest
     st
@@ -95,15 +92,13 @@ case class Cuvee(backend: Solver) extends Solver {
   def eval(expr: Expr): Expr = {
     val env = top.env
     val old = Nil
-    val _expr = Eval.eval(expr, env, old, top)
-    if (Cuvee.simplify) {
-      simplify(_expr)
-    } else {
-      _expr
-    }
+    Eval.eval(expr, env, old, top)
   }
 
   def check() = backend.scoped {
+    // val prover = Solver.default
+    // val simplify = Simplify(prover)
+
     val _asserts = top.asserts map eval
 
     for (expr <- _asserts) {
@@ -125,12 +120,7 @@ case class Cuvee(backend: Solver) extends Solver {
   }
 
   def model() = {
-    top.model match {
-      case None =>
-        throw Error("no model available")
-      case Some(model) =>
-        model
-    }
+    unwrap(top.model, "no model available")
   }
 
   def assert(expr: Expr) = {
@@ -140,37 +130,31 @@ case class Cuvee(backend: Solver) extends Solver {
 
   def declare(sort: Sort, arity: Int) = {
     map(_ declare (sort, arity))
-    prover.declare(sort, arity)
     backend.declare(sort, arity)
   }
 
   def define(sort: Sort, args: List[Sort], body: Type) = {
     map(_ define (sort, args, body))
-    prover.define(sort, args, body)
     backend.define(sort, args, body)
   }
 
   def declare(id: Id, args: List[Type], res: Type) = {
     map(_ declare (id, args, res))
-    prover.declare(id, args, res)
     backend.declare(id, args, res)
   }
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
     map(_ define (id, formals, res, body))
-    prover.define(id, formals, res, body, rec)
     backend.define(id, formals, res, body, rec)
   }
 
   def define(id: Id, proc: Proc): Ack = {
     map(_ define (id, proc))
-    prover.define(id, proc)
     backend.define(id, proc)
   }
 
   def define(sort: Sort, obj: Obj): Ack = {
     map(_ define (sort, obj))
-    prover.define(sort, obj)
     backend.define(sort, obj)
   }
 
@@ -185,7 +169,6 @@ case class Cuvee(backend: Solver) extends Solver {
 
   def declare(arities: List[Arity], decls: List[Datatype]) = {
     map(_ declare (arities, decls))
-    prover.declare(arities, decls)
     backend.declare(arities, decls)
   }
 }
@@ -202,7 +185,7 @@ object Cuvee {
   def runWithArgs(args: List[String], source: Source): Unit = args match {
     case Nil =>
       run(source, Solver.stdout, Report.none)
-      
+
     case "-timeout" :: arg :: rest =>
       timeout = arg.toInt
       runWithArgs(rest, source)
@@ -248,7 +231,7 @@ object Cuvee {
 
     case "-o" :: _ =>
       error("-o needs an output file as argument")
-      
+
     case path :: rest =>
       ensure(!path.startsWith("-"), "not an option", path)
       ensure(source == Source.stdin, "input can be given only once")

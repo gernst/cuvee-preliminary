@@ -47,9 +47,8 @@ object Infer {
           Pair(a, values select (index - 1)))))))
 
   def main(args: Array[String]) {
-    val solver = Solver.z3(1000)
-    val simp = new Simplify(solver)
     var st = State.default
+    val simp = new Simplify(st)
     st = st declare (list, 0, data)
     val infer = new Infer(ListStack, ArrayStack, R, st)
     val Eq(_R, rhs) = infer.induct(list, data, 0)

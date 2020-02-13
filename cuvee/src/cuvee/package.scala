@@ -17,6 +17,11 @@ package object cuvee {
     if (!test)
       error(info)
   }
+  
+  def unwrap[A](option: Option[A], info: Any*): A = option match {
+    case None => error(info: _*)
+    case Some(a) => a
+  }
 
   val True = Id("true")
   val False = Id("false")

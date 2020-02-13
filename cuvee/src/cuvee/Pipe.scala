@@ -23,12 +23,14 @@ object Source {
           report(res)
       }
     } catch {
+      // Note: Report should only catch responses from the underlying solver.
+      //       Bugs/errors in Cuvee should be caught elsewhere (e.g. top-level)!
       case e: Error =>
         report(e)
-      case t: Throwable =>
+      /* case t: Throwable =>
         t.printStackTrace
         val e = Error(t.toString)
-        report(e)
+        report(e) */
     }
   }
 
