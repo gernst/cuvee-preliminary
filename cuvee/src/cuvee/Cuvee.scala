@@ -198,53 +198,57 @@ object Cuvee {
     source.run(solver, report)
   }
 
-  def runWithArgs(args: List[String], source: Source, backend: Solver, report: Report): Unit = args match {
+  def runWithArgs(args: List[String], source: Source, backend: Solver): Unit = args match {
     case Nil =>
-      run(source, backend, report)
+      run(source, backend, Report.none)
 
     case "-simplify" :: rest =>
       simplify = true
-      runWithArgs(rest, source, backend, report)
+      runWithArgs(rest, source, backend)
 
     case "-no-simplify" :: rest =>
       simplify = false
-      runWithArgs(rest, source, backend, report)
+      runWithArgs(rest, source, backend)
 
     case "-debug-solver" :: rest =>
       Solver.traffic = true
-      runWithArgs(rest, source, backend, report)
+      runWithArgs(rest, source, backend)
 
     case "-z3" :: rest =>
       ensure(rest.isEmpty, "-z3 must be the last argument")
-      run(source, Solver.z3(), report)
+      run(source, Solver.z3(), Report.stdout)
 
     case "-cvc4" :: rest =>
       ensure(rest.isEmpty, "-cvc4 must be the last argument")
-      run(source, Solver.cvc4(), report)
+      run(source, Solver.cvc4(), Report.stdout)
 
     case "-princess" :: rest =>
       ensure(rest.isEmpty, "-princess must be the last argument")
-      run(source, Solver.princess(), report)
+      run(source, Solver.princess(), Report.stdout)
 
     case "--" :: args =>
       ensure(args.length >= 1, "-- needs an SMT solver as argument")
       val _solver = Solver.process(args: _*)
-      run(source, _solver, report)
+      run(source, _solver, Report.stdout)
 
     case "-o" :: path :: rest =>
+      ensure(rest.isEmpty, "-o <file> must be the last argument")
       val out = new File(path)
-      val _report = Report.file(out)
-      runWithArgs(rest, source, backend, _report)
+      val _solver = Solver.file(out)
+      run(source, _solver, Report.stdout)
+
+    case "-o" :: _ =>
+      error("-o needs an output file as argument")
 
     case path :: rest =>
       ensure(source == Source.stdin, "input can be given only once")
       val in = new File(path)
       val _source = Source.file(in)
-      runWithArgs(rest, _source, backend, report)
+      runWithArgs(rest, _source, backend)
   }
 
   def run(args: List[String]) {
-    runWithArgs(args, Source.stdin, Solver.stdout, Report.stdout)
+    runWithArgs(args, Source.stdin, Solver.stdout)
   }
 
   def main(args: Array[String]) {

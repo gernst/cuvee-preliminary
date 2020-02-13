@@ -10,12 +10,12 @@ package object cuvee {
 
   def ensure(test: Boolean, info: Any*) = {
     if (!test)
-      throw Error(info)
+      error(info: _*)
   }
 
   def ensure(test: Boolean, info: => String): Unit = {
     if (!test)
-      throw Error(info)
+      error(info)
   }
 
   val True = Id("true")
@@ -79,9 +79,9 @@ package object cuvee {
     if (name exists needsEscape) "|" + (name __ index) + "|"
     else name __ index
   }
-  
+
   def sexpr2(ab: (Any, Any)): String = {
-    val (a,b) = ab
+    val (a, b) = ab
     "(" + a + " " + b + ")"
   }
 
@@ -110,7 +110,7 @@ package object cuvee {
     def prime = formals map (_.prime)
     def priming = formals map (_.id) map (id => id -> id.prime) toMap
   }
-  
+
   def time[A](f: => A) = {
     val start = System.currentTimeMillis
     val a = f

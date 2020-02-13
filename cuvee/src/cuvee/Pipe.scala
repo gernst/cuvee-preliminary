@@ -75,6 +75,11 @@ object Source {
 }
 
 object Report {
+  case object none extends Report {
+    def apply(res: Res) {
+    }
+  }
+
   case object stdout extends Report {
     def apply(res: Res) {
       System.out.println(res)
