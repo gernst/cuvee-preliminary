@@ -28,4 +28,5 @@ jobs:
             - "lib"
             - "~/.ivy2"
             - "out/mill"
+            - "out/cuvee"
             - "~/.cache/coursier/v1"
