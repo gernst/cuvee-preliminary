@@ -25,7 +25,7 @@ object Check {
     case App(id, _) =>
       error("unknown function", id, expr, ty, st)
 
-    case Bind(quant, formals, body) =>
+    case Bind(_, formals, body) =>
       val ts: List[(Id, Type)] = formals
       val tr = infer(body, ty ++ ts, st)
       ensure(tr == Sort.bool, "body of bind must be boolean", body, tr)
@@ -62,7 +62,7 @@ object Check {
     case Store(array, index, value) => ???
   }
 
-  def inferWpLike(prog: Prog, post: Expr, ty: Map[Id, Type], st: State): Type = {
+  private def inferWpLike(prog: Prog, post: Expr, ty: Map[Id, Type], st: State): Type = {
     ensure(infer(post, ty, st) == Sort.bool, "post-condition must be boolean", post)
     checkProg(prog, ty, st, false)
     Sort.bool
@@ -87,9 +87,9 @@ object Check {
       }
 
     case Spec(xs, pre, post) =>
-      val vars: Map[Id, Type] = (xs map (id => id -> infer(id, ty, st))).toMap
-      ensure(infer(pre, ty ++ vars, st) == Sort.bool, "pre-condition must be boolean", pre)
-      ensure(infer(post, ty ++ vars, st) == Sort.bool, "post-condition must be boolean", pre)
+      xs.foreach(infer(_, ty, st)) // just check if defined
+      ensure(infer(pre, ty, st) == Sort.bool, "pre-condition must be boolean", pre)
+      ensure(infer(post, ty, st) == Sort.bool, "post-condition must be boolean", pre)
 
     case If(test, left, right) =>
       ensure(infer(test, ty, st) == Sort.bool, "test of if-then-else statement must be boolean", test)
