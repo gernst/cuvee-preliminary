@@ -53,7 +53,10 @@ object Check {
     case Box(prog, post) => inferWpLike(prog, post, ty, st)
     case Dia(prog, post) => inferWpLike(prog, post, ty, st)
 
-    case Let(pairs) => ???
+    case Let(pairs, body) =>
+      val vars = pairs.map(pair => pair.x -> infer(pair.e, ty, st)).toMap
+      infer(body, ty ++ vars, st)
+
     case Match(expr, cases) => ???
     case Select(array, index) => ???
     case Store(array, index, value) => ???
@@ -61,17 +64,20 @@ object Check {
 
   def inferWpLike(prog: Prog, post: Expr, ty: Map[Id, Type], st: State): Type = {
     ensure(infer(post, ty, st) == Sort.bool, "post-condition must be boolean", post)
-    checkProg(prog, ty, st)
+    checkProg(prog, ty, st, false)
     Sort.bool
   }
 
-  def checkProg(prog: Prog, ty: Map[Id, Type], st: State): Unit = prog match {
+  /**
+   * @param loop true if this program is in a loop. This allows the break statement.
+   */
+  def checkProg(prog: Prog, ty: Map[Id, Type], st: State, loop: Boolean): Unit = prog match {
     case Block(progs, withOld) =>
       for (prog <- progs)
-        checkProg(prog, ty, st)
+        checkProg(prog, ty, st, loop)
 
     case Break =>
-    // nothing to check
+      ensure(loop, "break most only occur in while")
 
     case Assign(pairs) =>
       for (Pair(id, value) <- pairs) {
@@ -87,23 +93,23 @@ object Check {
 
     case If(test, left, right) =>
       ensure(infer(test, ty, st) == Sort.bool, "test of if-then-else statement must be boolean", test)
-      checkProg(left, ty, st)
-      checkProg(right, ty, st)
+      checkProg(left, ty, st, loop)
+      checkProg(right, ty, st, loop)
 
     case While(test, body, after, term, pre, post) =>
       ensure(infer(test, ty, st) == Sort.bool, "test of while statement must be boolean", test)
-      checkProg(body, ty, st)
-      checkProg(after, ty, st)
+      checkProg(body, ty, st, true)
+      checkProg(after, ty, st, loop)
       ensure(infer(term, ty, st) == Sort.int, "termination expression must be integral", term)
       ensure(infer(pre, ty, st) == Sort.bool, "pre-condition must be boolean", pre)
       ensure(infer(post, ty, st) == Sort.bool, "post-condition must be boolean", pre)
 
     case Call(name, in, out) if st.procs contains name =>
-      val proc = st.procs(name)
+      val (xs, ys) = st.procs(name)
       val args = in map (infer(_, ty, st))
       val ass = out map (infer(_, ty, st))
-      ensure(proc._1 == args, "procedure call arguments do not math function signature", args, proc._1)
-      ensure(proc._2 == ass, "procedure return values do not math function signature", args, proc._2)
+      ensure(xs == args, "procedure call arguments do not math function signature", args, xs)
+      ensure(ys == ass, "procedure return values do not math function signature", args, ys)
 
     case Call(name, _, _) =>
       error("call to undefined procedure", name)

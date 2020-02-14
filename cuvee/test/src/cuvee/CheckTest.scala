@@ -9,41 +9,50 @@ object CheckTest extends TestSuite {
   val int: Type = "Int"
 
   test("Standard constants") {
-    assertEquals(Check.infer("true", Map.empty, State.default), bool)
-    assertEquals(Check.infer("false", Map.empty, State.default), bool)
-    assertEquals(Check.infer(0, Map.empty, State.default), int)
+    assertEquals(Check.infer(e"true", Map.empty, State.default), bool)
+    assertEquals(Check.infer(e"false", Map.empty, State.default), bool)
+    assertEquals(Check.infer(e"0", Map.empty, State.default), int)
 
-    assertError(() => Check.infer("whatever", Map.empty, State.default), "unknown identifier")
+    assertError(() => Check.infer(e"whatever", Map.empty, State.default), "unknown identifier")
   }
 
   test("Function applications") {
-    assertEquals(Check.infer(Num(1) + 1, Map.empty, State.default), int)
-    assertEquals(Check.infer(Id("true") && "false", Map.empty, State.default), bool)
-    assertEquals(Check.infer((Id("true") && "false") || "true", Map.empty, State.default), bool)
+    assertEquals(Check.infer(e"(+ 1 1)", Map.empty, State.default), int)
+    assertEquals(Check.infer(e"(and true false)", Map.empty, State.default), bool)
+    assertEquals(Check.infer(e"(or (and true false) true)", Map.empty, State.default), bool)
 
-    assertError(() => Check.infer(App("whatever", 1, "true"), Map.empty, State.default), "unknown function")
-    assertError(() => Check.infer(Id("true") && 1, Map.empty, State.default), "signature")
-    assertError(() => Check.infer((Id("true") && 1) || "true", Map.empty, State.default), "signature")
-    assertError(() => Check.infer((Id("true") && "false") || 1, Map.empty, State.default), "signature")
+    assertError(() => Check.infer(e"(whatever 1 true)", Map.empty, State.default), "unknown function")
+    assertError(() => Check.infer(e"(and true 1)", Map.empty, State.default), "signature")
+    assertError(() => Check.infer(e"(or (and true 1) true)", Map.empty, State.default), "signature")
+    assertError(() => Check.infer(e"(or (and true false) 1)", Map.empty, State.default), "signature")
   }
 
   test("Weakest precondition in bind with procedure call") {
     val st = State.default.define("int-bool-proc", Proc(List(Formal("in", int)), List(Formal("out", bool)), True, True, "out" := True))
 
-    val expr = Forall(List(("x", "Int"), ("y", "Bool")), WP(Call("int-bool-proc", List("x"), List("y")), Id("y") === True))
-    assertEquals(Check.infer(expr, Map.empty, st), Sort.bool)
+    assertEquals(Check.infer(e"(forall ((x Int) (y Bool)) (wp (call int-bool-proc (x) (y)) (= y true)))", Map.empty, st), Sort.bool)
 
-    val unknownZ = Forall(List(("x", "Int"), ("y", "Bool")), WP(Call("int-bool-proc", List("x"), List("z")), Id("y") === True))
-    assertError(() => Check.infer(unknownZ, Map.empty, st), "unknown identifier")
+    assertError(() => Check.infer(e"(forall ((x Int) (y Bool)) (wp (call int-bool-proc (x) (z)) (= y true)))", Map.empty, st), "unknown identifier")
 
-    val wrongOutputType = Forall(List(("x", "Int"), ("y", "Bool")), WP(Call("int-bool-proc", List("x"), List("x")), Id("y") === True))
-    assertError(() => Check.infer(wrongOutputType, Map.empty, st), "signature")
+    assertError(() => Check.infer(e"(forall ((x Int) (y Bool)) (wp (call int-bool-proc (x) (x)) (= y true)))", Map.empty, st), "signature")
 
-    val wrongInputType = Forall(List(("x", "Int"), ("y", "Bool")), WP(Call("int-bool-proc", List("y"), List("y")), Id("y") === True))
-    assertError(() => Check.infer(wrongInputType, Map.empty, st), "signature")
+    assertError(() => Check.infer(e"(forall ((x Int) (y Bool)) (wp (call int-bool-proc (y) (y)) (= y true)))", Map.empty, st), "signature")
 
-    val postConditionIsNotBoolean = Forall(List(("x", "Int"), ("y", "Bool")), WP(Call("int-bool-proc", List("x"), List("y")), Id("x")))
-    assertError(() => Check.infer(postConditionIsNotBoolean, Map.empty, st), "post-condition")
+    assertError(() => Check.infer(e"(forall ((x Int) (y Bool)) (wp (call int-bool-proc (x) (y)) x))", Map.empty, st), "post-condition")
+  }
+
+  test("Break") {
+    assertError(() => Check.checkProg(p"(block (break))", Map.empty, State.default, false), "break");
+
+    Check.checkProg(p"(while true (break))", Map.empty, State.default, false);
+  }
+
+  test("Let") {
+    assertEquals(Check.infer(e"(let ((x true)) (x))", Map.empty, State.default), bool)
+
+    assertEquals(Check.infer(e"(let ((x y)) (x))", Map(Id("y") -> bool), State.default), bool)
+
+    assertError(() => Check.infer(e"(let ((x y)) (x))", Map.empty, State.default), "unknown identifier")
   }
 
   private def assertError[T](fn: () => T, message: String)(implicit pos: SourceLocation): Unit = {

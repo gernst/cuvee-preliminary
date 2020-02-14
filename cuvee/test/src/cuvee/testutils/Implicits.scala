@@ -1,6 +1,6 @@
 package cuvee.testutils
 
-import cuvee.{Formal, Id, Sort}
+import cuvee.{Expr, Formal, Id, Parseable, Parser, Prog, Sort, VerifyTest}
 
 /**
  * Little helpers to swiftly write formal expressions and cuvee programs in tests:
@@ -28,6 +28,11 @@ object Implicits {
     implicit def sort(s: String): Sort = {
         val (base, index) = splitIndex(s)
         Sort(base, index)
+    }
+
+    implicit class StringParsers(sc: StringContext) {
+        def e(): Expr = VerifyTest.runUnwrappingErrors(new Parseable(Parser.expr).from(sc.s()))
+        def p(): Prog = VerifyTest.runUnwrappingErrors(new Parseable(Parser.prog).from(sc.s()))
     }
 
     implicit def formal(f: (String, String)): Formal = Formal(id(f._1), sort(f._2))
