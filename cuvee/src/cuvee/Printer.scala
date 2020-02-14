@@ -39,6 +39,15 @@ object Printer {
     else sexpr("define-fun-rec", id, sexpr(formals), res, body)
   }
 
+  def proc(in: List[Formal], out: List[Formal], pre: Expr, post: Expr, body: Prog) = {
+    sexpr(sexpr(in), sexpr(out), ":precondition", pre, ":postcondition", post, body)
+  }
+
+  def op(descr: (Id, Proc)) = {
+    val (id, Proc(in, out, pre, post, body)) = descr
+    sexpr(id, sexpr(in), sexpr(out), ":precondition", pre, ":postcondition", post, body)
+  }
+  
   def define(id: Id, proc: Proc) = {
     val Proc(in, out, pre, post, body) = proc
     sexpr("define-proc", id, sexpr(in), sexpr(out), body, ":precondition", pre, ":postcondition", post)
@@ -46,7 +55,7 @@ object Printer {
 
   def define(sort: Sort, obj: Obj) = {
     val Obj(state, init, ops) = obj
-    sexpr("define-class", sort :: sexpr(state) :: sexpr("init", init) :: (ops map sexpr2): _*)
+    sexpr("define-class", sort :: sexpr(state) :: op(Id.init, init) :: (ops map op): _*)
   }
 
   def sel(id: Id, typ: Type) = {

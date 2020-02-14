@@ -111,7 +111,7 @@ case class DeclareDatatypes(arities: List[Arity], decls: List[Datatype]) extends
 }
 
 case class DefineClass(sort: Sort, obj: Obj) extends Def {
-
+  override def toString = Printer.define(sort, obj)
 }
 
 /**

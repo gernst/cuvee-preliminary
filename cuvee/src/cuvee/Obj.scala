@@ -14,6 +14,8 @@ case class Proc(in: List[Formal], out: List[Formal], pre: Expr, post: Expr, body
     val re = Expr.subst(formals, args)
     (pre rename re, post rename re, body replace re)
   }
+  
+  override def toString = Printer.proc(in, out, pre, post, body)
 }
 
 object Proc extends ((List[Formal], List[Formal], Prog, Option[Expr], Option[Expr]) => Proc) {

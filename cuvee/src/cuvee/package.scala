@@ -85,11 +85,6 @@ package object cuvee {
     else name __ index
   }
 
-  def sexpr2(ab: (Any, Any)): String = {
-    val (a, b) = ab
-    "(" + a + " " + b + ")"
-  }
-
   def sexpr(arg0: Any, args: Any*): String = {
     if (args.isEmpty) s"($arg0)"
     else s"($arg0 ${args.mkString(" ")})"
