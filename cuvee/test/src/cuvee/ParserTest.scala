@@ -39,7 +39,7 @@ object ParserTest extends TestSuite {
 
   test("parse class") {
     val proc = parseCmd("(define-class counter-thing ((counter Int)) " +
-      "(define-proc init () () (assign (counter 0)) :postcondition (= counter 0))" + ")")
+      "(init () () (assign (counter 0)) :postcondition (= counter 0))" + ")")
     assertEquals(
       proc,
       DefineClass(

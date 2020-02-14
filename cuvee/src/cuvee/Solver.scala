@@ -212,13 +212,11 @@ object Solver {
     }
 
     def define(id: Id, proc: Proc) = {
-      write(Printer.define(id, proc))
-      Ack.from(read())
+      Success
     }
 
     def define(sort: Sort, obj: Obj) = {
-      write(Printer.define(sort, obj))
-      Ack.from(read())
+      Success
     }
 
     def write(line: String) {
