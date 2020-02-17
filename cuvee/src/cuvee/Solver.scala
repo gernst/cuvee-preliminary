@@ -119,11 +119,21 @@ trait Solver {
 
 object Solver {
   def default = z3()
-  def z3(timeout: Int = 1000) = process("z3", "-t:" + timeout, "-in")
-  def cvc4(timeout: Int = 1000) = process("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--incremental", "--increment-triggers")
-  def princess(timeout: Int = 1000) = process("princess", "+stdin", "+quiet", "-timeoutPer=" + timeout, "+incremental")
+  def z3(timeout: Int = 1000) = smt("z3", "-t:" + timeout, "-in")
+  def cvc4(timeout: Int = 1000) = smt("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--incremental", "--increment-triggers")
+  def princess(timeout: Int = 1000) = smt("princess", "+stdin", "+quiet", "-timeoutPer=" + timeout, "+incremental")
 
   var traffic = false
+
+  def smt(args: String*) = new process(args: _*) {
+    override def define(id: Id, proc: Proc) = {
+      Success
+    }
+
+    override def define(sort: Sort, obj: Obj) = {
+      Success
+    }
+  }
 
   case class process(args: String*) extends Solver {
     val pb = new ProcessBuilder(args: _*)

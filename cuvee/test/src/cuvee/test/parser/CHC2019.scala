@@ -12,7 +12,7 @@ object CHC2019 extends SimpleTestSuite {
   val categories = List(
     "lia-lin", "lia-lin-arr", "lia-nonlin", "lra-ts")
 
-  for (cat <- categories) {
+  /* for (cat <- categories) {
     val dir = new File(path + "/" + cat)
     for (file <- dir.list.sorted if file endsWith ".smt2") {
       val benchmark = new File(path + "/" + cat + "/" + file)
@@ -22,7 +22,7 @@ object CHC2019 extends SimpleTestSuite {
         println("parsed: " + file + " (" + ms + "ms)")
       }
     }
-  }
+  } */
 
   def main(args: Array[String]) {
 
