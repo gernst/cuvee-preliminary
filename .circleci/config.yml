@@ -1,0 +1,32 @@
+version: 2.1
+# Regarding caching:
+# We use a cache key which combines hashes of the CI config, mill script and mill configuration.
+# This is a tradeoff between simplicity, speed, and safety.
+# Simplicity: it's only a single cache.
+# Speed: it's not as fast as using multiple caches.
+# Safety: as soon as anything except actual source code is changed, the cache is invalidated.
+#   This avoids any cache-related bugs. The only (usual) cases where we're running without cache is when
+#   the CI config is changed or when we change dependencies.
+
+jobs:
+  build:
+    machine:
+      image: ubuntu-1604:201903-01
+    steps:
+      - checkout
+      - run: mkdir -p lib
+      - restore_cache:
+            keys:
+              - all-{{ checksum ".circleci/config.yml" }}-{{ checksum "mill" }}-{{ checksum "build.sc" }}
+      - run: "if [ ! -f lib/cvc4 ]; then wget https://github.com/CVC4/CVC4/releases/download/1.7/cvc4-1.7-x86_64-linux-opt && cp cvc4-1.7-x86_64-linux-opt lib/cvc4 && chmod u+x lib/cvc4; fi"
+      - run: "if [ ! -f lib/z3 ]; then wget https://github.com/Z3Prover/z3/releases/download/z3-4.8.7/z3-4.8.7-x64-ubuntu-16.04.zip && unzip z3-4.8.7-x64-ubuntu-16.04.zip && cp z3-4.8.7-x64-ubuntu-16.04/bin/z3 lib && chmod u+x lib/z3; fi"
+      - run: PATH="$PWD/lib:$PATH" ./mill cuvee.test
+      - save_cache:
+          key: all-{{ checksum ".circleci/config.yml" }}-{{ checksum "mill" }}-{{ checksum "build.sc" }}
+          paths:
+            - "~/.mill"
+            - "lib"
+            - "~/.ivy2"
+            - "out/mill"
+            - "out/cuvee"
+            - "~/.cache/coursier/v1"
