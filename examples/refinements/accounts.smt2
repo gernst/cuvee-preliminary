@@ -3,27 +3,27 @@
 ; this is an example where the relation just drops out of the proof
 
 (define-class simple-account ((balance Int))
-    (define-proc init () () (assign (balance 0)))
-    (define-proc deposit ((amount Int)) ((new-balance Int)) (block
+    (init () () (assign (balance 0)))
+    (deposit ((amount Int)) ((new-balance Int)) (block
             (assign (balance (+ balance amount)))
             (assign (new-balance balance)))
         :precondition (> amount 0))
-    (define-proc withdraw ((amount Int)) ((new-balance Int)) (block
+    (withdraw ((amount Int)) ((new-balance Int)) (block
             (assign (balance (- balance amount)))
             (assign (new-balance balance)))
         :precondition (and (> amount 0) (<= amount balance))))
 
 (define-class double-account ((debit Int) (credit Int) (overdraft-limit Int))
-    (define-proc init ((od-lim Int)) () (assign
+    (init ((od-lim Int)) () (assign
             (overdraft-limit od-lim)
             (credit 0)
             (debit 0))
         :precondition (>= od-lim 0))
-    (define-proc deposit ((amount Int)) ((new-balance Int)) (block
+    (deposit ((amount Int)) ((new-balance Int)) (block
             (assign (credit (+ credit amount)))
             (assign (new-balance (- credit debit))))
         :precondition (> amount 0))
-    (define-proc withdraw ((amount Int)) ((new-balance Int)) (block
+    (withdraw ((amount Int)) ((new-balance Int)) (block
             (assign (debit (+ debit amount)))
             (assign (new-balance (- credit debit))))
         :precondition (and (> amount 0) (<= amount (+ (- credit debit) overdraft-limit)))))

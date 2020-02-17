@@ -46,14 +46,14 @@ object Verify {
     val inVars: List[Id] = in
     val duplicateInputDeclarations = inVars.groupBy(identity).filter(_._2.size > 1)
     if (duplicateInputDeclarations.nonEmpty) {
-      throw Error(s"The method $id declares duplicate input parameters ${duplicateInputDeclarations.keys.mkString(", ")}")
+      Error(s"The method $id declares duplicate input parameters ${duplicateInputDeclarations.keys.mkString(", ")}")
     }
 
     // the outputs may have the same variable name in multiple places if the type is equal.
     // outputs may overlap with inputs but, again, the type must be equal
     val nonUniqueAgruments = (in ++ out).groupBy(_.id).filter(_._2.map(_.typ).distinct.size > 1)
     if (nonUniqueAgruments.nonEmpty) {
-      throw Error(s"The method $id declares non-unique type for argument ${nonUniqueAgruments.keys.mkString(", ")}")
+      Error(s"The method $id declares non-unique type for argument ${nonUniqueAgruments.keys.mkString(", ")}")
     }
 
     // procedure must at most modify its output variables
@@ -61,14 +61,14 @@ object Verify {
     val modifiedVariables = body.mod
     val illegallyModifiedVariables = modifiedVariables.filter(!modifiableVariables.contains(_))
     if (illegallyModifiedVariables.nonEmpty) {
-      throw Error(s"The method $id modifies undeclared output parameters ${illegallyModifiedVariables.mkString(", ")}")
+      Error(s"The method $id modifies undeclared output parameters ${illegallyModifiedVariables.mkString(", ")}")
     }
 
     // procedure must at least modify output variables that are not input variables
     val outputsThatMustBeSet = out.map(_.id).filter(!inVars.contains(_))
     val unsetOutputs = outputsThatMustBeSet.filter(!modifiedVariables.contains(_))
     if (unsetOutputs.nonEmpty) {
-      throw Error(s"The method $id does not modify its output parameters ${unsetOutputs.mkString(", ")}")
+      Error(s"The method $id does not modify its output parameters ${unsetOutputs.mkString(", ")}")
     }
   }
 
