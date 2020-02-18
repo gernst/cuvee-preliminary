@@ -94,10 +94,9 @@ case class Cuvee(backend: Solver) extends Solver {
     val old = Nil
     Eval.eval(expr, env, old, top)
   }
-
+  
   def check() = backend.scoped {
-    // val prover = Solver.default
-    // val simplify = Simplify(prover)
+    val simplify = Simplify(top)
 
     val _asserts = top.asserts map eval
 

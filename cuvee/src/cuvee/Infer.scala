@@ -48,13 +48,11 @@ object Infer {
 
   def main(args: Array[String]) {
     var st = State.default
-    val simp = new Simplify(st)
     st = st declare (list, 0, data)
     val infer = new Infer(ListStack, ArrayStack, R, st)
     val Eq(_R, rhs) = infer.induct(list, data, 0)
-    val _rhs = simp(rhs)
     println(_R)
-    println(_rhs)
+    println(rhs)
   }
 }
 
