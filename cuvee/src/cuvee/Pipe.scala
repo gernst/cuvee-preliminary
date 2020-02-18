@@ -89,6 +89,13 @@ object Report {
     }
   }
 
+  case object stderr extends Report {
+    def apply(res: Res) {
+      System.err.println(res)
+      System.err.flush()
+    }
+  }
+
   case class file(out: File) extends Report {
     val stream = new PrintStream(out)
 

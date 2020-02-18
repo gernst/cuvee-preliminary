@@ -15,7 +15,25 @@ case class State(
   rasserts: List[Expr],
   model: Option[Model]) {
   
-  def asserts = rasserts.reverse
+  def asserts = {
+    rasserts.reverse
+  }
+  
+  def withoutAsserts = {
+    copy(
+      rasserts = Nil, 
+      model = None)
+  }
+  
+  def withModel(model: Model) = {
+    copy(
+      model = Some(model))
+  }
+  
+  def clearModel = {
+    copy(
+      model = None)
+  }
   
   def env = {
     val su = funs collect {
@@ -109,21 +127,13 @@ case class State(
       rasserts = expr :: rasserts)
   }
   
-  def withModel(model: Model) = {
-    copy(
-      model = Some(model))
-  }
-  
-  def clearModel = {
-    copy(
-      model = None)
-  }
-  
   def replay(solver: Solver) {
-    for((sort, arity) <- sorts)
+    import State.default
+    
+    for((sort, arity) <- sorts if !(default.sorts contains sort))
       solver.declare(sort, arity)
 
-    for((id, (args, res)) <- funs)
+    for((id, (args, res)) <- funs if !(default.funs contains id))
       solver.declare(id, args, res)
 
     for(phi <- asserts)

@@ -37,7 +37,7 @@ case class Simplify(state: State) {
         for (ctx <- rest) _assert(ctx, neg)
         for (ctx <- rdone) _assert(ctx, neg)
         val _phi = simplify(phi)
-        nary(rest, _phi :: rdone, neg, _phi != phi)
+        nary(rest, _phi :: rdone, neg, _phi != phi || changed)
       }
   }
 

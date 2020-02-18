@@ -94,11 +94,14 @@ case class Cuvee(backend: Solver) extends Solver {
     val old = Nil
     Eval.eval(expr, env, old, top)
   }
-  
-  def check() = backend.scoped {
-    val simplify = Simplify(top)
 
-    val _asserts = top.asserts map eval
+  def check() = backend.scoped {
+    var _asserts = top.asserts map eval
+
+    if (Cuvee.simplify) {
+      val simplify = Simplify(top.withoutAsserts)
+      _asserts = simplify(_asserts)
+    }
 
     for (expr <- _asserts) {
       backend.assert(expr)
@@ -183,7 +186,7 @@ object Cuvee {
 
   def runWithArgs(args: List[String], source: Source): Unit = args match {
     case Nil =>
-      run(source, Solver.stdout, Report.none)
+      run(source, Solver.stdout, Report.stderr)
 
     case "-timeout" :: arg :: rest =>
       timeout = arg.toInt
