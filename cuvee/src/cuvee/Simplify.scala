@@ -81,12 +81,6 @@ case class Simplify(state: State) {
       val _phi = simplify(phi, eqs, !pos)
       val _psi = assuming(_phi, eqs, simplify(psi, _, pos))
       imp(_phi, _psi)
-    // HACK
-    case Distinct(List(xs, Id.nil)) =>
-      val x = Id("x")
-      val xs0 = Id("xs0")
-      val xs_ = Expr.fresh(xs0)
-      Exists(List(Formal(x, Sort("Elem")), Formal(xs_, Sort("Lst"))), xs === x :: xs_)
     /* case Forall(formals, And.nary(args)) =>
       val _args = args map (Forall(formals, _))
       simplify(And(_args), eqs, pos)
@@ -106,17 +100,18 @@ case class Simplify(state: State) {
       val bind_ = Exists(formals, And.nary(keep))
       val bind__ = __simplify(bind_, eqs, pos)
       val rest = assuming(bind__, eqs, con(move, _, pos))
-      And(bind__ :: rest) */
+      And(bind__ :: rest)
     case Match(arg, cases) =>
       val _arg = rewrite(arg, eqs)
       val _cases = cases map {
         case Case(pat, body) =>
           val eq = pat.toExpr === arg
+          error("not capturing bound variables of pattern (unsupported)")
           Case(pat, assuming(eq, eqs, simplify(body, _, pos)))
       }
       Match(_arg, _cases)
     case bind: Bind =>
-      __simplify(bind, eqs, pos)
+      __simplify(bind, eqs, pos) */
     case _ =>
       rewrite(phi, eqs)
   }

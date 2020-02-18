@@ -1,5 +1,7 @@
 (set-logic ALL)
 
+; compute the maximum
+
 (declare-const x Int)
 (declare-const y Int)
 
