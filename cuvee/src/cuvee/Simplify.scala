@@ -8,8 +8,6 @@ case class Simplify(state: State) {
   val backend = Solver.default
   state replay backend
 
-  case object Unsat extends Exception
-
   def simplify(exprs: List[Expr], pos: Boolean = true): List[Expr] = {
     simplify(exprs, eqs = Map(), pos)
   }
@@ -169,8 +167,7 @@ case class Simplify(state: State) {
 
   def binding[A](formals: List[Formal], a: => A): A = {
     backend.scoped {
-      for (Formal(id, typ) <- formals)
-        backend.declare(id, List(), typ)
+      backend.bind(formals)
       a
     }
   }

@@ -38,6 +38,12 @@ trait Solver {
     sat == Unsat
   }
 
+  def bind(formals: List[Formal]) = {
+    for (Formal(id, typ) <- formals) {
+      declare(id, typ)
+    }
+  }
+
   def check(): IsSat
   def assertions(): Assertions
   def model(): Model
