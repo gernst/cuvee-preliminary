@@ -129,7 +129,7 @@ object Solver {
   def cvc4(timeout: Int = 1000) = smt("cvc4", "--tlimit=" + timeout, "--lang=smt2", "--incremental", "--increment-triggers")
   def princess(timeout: Int = 1000) = smt("princess", "+stdin", "+quiet", "-timeoutPer=" + timeout, "+incremental")
 
-  var traffic = false
+  var debug = false
 
   def smt(args: String*) = new process(args: _*) {
     override def define(id: Id, proc: Proc) = {
@@ -148,7 +148,7 @@ object Solver {
     val stdout = new BufferedReader(new InputStreamReader(pr.getInputStream))
     val stdin = new PrintStream(pr.getOutputStream)
 
-    if (traffic) println(args.mkString("$ ", " ", "") + " # " + pid)
+    if (debug) println(args.mkString("$ ", " ", "") + " # " + pid)
 
     ensure(setOption(":print-success", "true") == Success)
 
@@ -238,14 +238,14 @@ object Solver {
     }
 
     def write(line: String) {
-      if (traffic) println(pid + " < " + line)
+      if (debug) println(pid + " < " + line)
       stdin.println(line)
       stdin.flush()
     }
 
     def read() = {
       val line = stdout.readLine()
-      if (traffic) println(pid + " > " + line)
+      if (debug) println(pid + " > " + line)
       line
     }
   }

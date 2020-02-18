@@ -176,6 +176,7 @@ case class Cuvee(backend: Solver) extends Solver {
 }
 
 object Cuvee {
+  var verify = false
   var simplify = false
   var timeout = 1000
 
@@ -200,12 +201,20 @@ object Cuvee {
       simplify = false
       runWithArgs(rest, source)
 
+    case "-verify" :: rest =>
+      verify = true
+      runWithArgs(rest, source)
+
+    case "-no-verify" :: rest =>
+      verify = false
+      runWithArgs(rest, source)
+
     case "-debug-simplify" :: rest =>
       Simplify.debug = true
       runWithArgs(rest, source)
 
     case "-debug-solver" :: rest =>
-      Solver.traffic = true
+      Solver.debug = true
       runWithArgs(rest, source)
 
     case "-z3" :: rest =>

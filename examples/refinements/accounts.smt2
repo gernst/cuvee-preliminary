@@ -34,3 +34,10 @@
 (refinement (as simple-account) (cs double-account) (and
         (= as_balance (- cs_credit cs_debit))
         (>= cs_overdraft-limit 0)))
+
+; (declare-fun R ((balance Int) (debit Int) (credit Int) (overdraft-limit Int)))
+; (refine simple-account double-account R)
+
+; (refine (simple-account balance)
+;         (double-account debit credit overdraft-limit)
+;       <formula>)

@@ -140,7 +140,7 @@ case class State(
       solver.assert(phi)
       
     // This should be fixed in the future to include fundefs, and optionally all other stuff 
-    println("WARNING: not using fundefs, procs, objs in replay (see State.replay)")
+    // println("WARNING: not using fundefs, procs, objs in replay (see State.replay)")
   }
 }
 
