@@ -87,7 +87,7 @@ object Expr extends Parseable[Expr](Parser.expr) with Alpha[Expr, Id] {
     case Not(Not(phi)) =>
       nnf(phi)
     case Not(Imp(phi, psi)) =>
-      nnf(phi) && !nnf(phi)
+      nnf(phi) && !nnf(psi)
     case Not(And.nary(args)) =>
       Or(nnf(Not(args)))
     case Not(Or.nary(args)) =>

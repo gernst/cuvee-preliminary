@@ -8,7 +8,14 @@ case class Simplify(state: State) {
 
   def apply(phis: List[Expr]): List[Expr] = {
     val _phis = Expr.nnf(phis)
-    top(_phis)
+
+    if (Simplify.debug) {
+      println("simplify at top-level:")
+      for (phi <- _phis)
+        println(s"  $phi")
+    }
+    val _res = top(_phis)
+    And.flatten(_res)
   }
 
   def top(args: List[Expr]): List[Expr] = {
@@ -69,10 +76,10 @@ case class Simplify(state: State) {
       True
     case And.nary(args) =>
       val _args = con(args)
-      And(_args)
+      and(_args)
     case Or.nary(args) =>
       val _args = dis(args)
-      Or(_args)
+      or(_args)
     case _ =>
       phi
   }
@@ -128,12 +135,14 @@ object Simplify {
   }
 
   def and(args: List[Expr]) = {
-    if (args contains False) False
-    else And(args filter (_ != True))
+    val _args = And.flatten(args)
+    if (_args contains False) False
+    else And(_args filter (_ != True))
   }
 
   def or(args: List[Expr]) = {
-    if (args contains True) True
-    else Or(args filter (_ != False))
+    val _args = Or.flatten(args)
+    if (_args contains True) True
+    else Or(_args filter (_ != False))
   }
 }
