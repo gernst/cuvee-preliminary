@@ -97,6 +97,11 @@ case class Cuvee(backend: Solver) extends Solver {
 
   def check() = backend.scoped {
     var _asserts = top.asserts map eval
+    
+    if(Cuvee.goals) {
+      val goal = Goal(_asserts)
+      goal.debug("")
+    }
 
     if (Cuvee.simplify) {
       val simplify = Simplify(top.withoutAsserts)
@@ -177,6 +182,7 @@ case class Cuvee(backend: Solver) extends Solver {
 
 object Cuvee {
   var simplify = false
+  var goals = false
   var timeout = 1000
 
   def run(source: Source, backend: Solver, report: Report) {
@@ -190,6 +196,10 @@ object Cuvee {
 
     case "-timeout" :: arg :: rest =>
       timeout = arg.toInt
+      runWithArgs(rest, source)
+
+    case "-debug-goals" :: rest =>
+      goals = true
       runWithArgs(rest, source)
 
     case "-simplify" :: rest =>
