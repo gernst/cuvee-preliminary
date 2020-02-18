@@ -1,6 +1,6 @@
 # Cuvée: Blending SMT-LIB with Programs and Weakest Preconditions
 
-[![CircleCI](https://circleci.com/gh/gernst/cuvee-private/tree/master.svg?style=svg)](https://circleci.com/gh/gernst/cuvee-private/tree/master)
+[![CircleCI](https://circleci.com/gh/gernst/cuvee-private.svg?style=svg&circle-token=742b126568dda405eb09b4b69767514c3febbaa0)](https://circleci.com/gh/gernst/cuvee-private)
 
 ## Installation
 
