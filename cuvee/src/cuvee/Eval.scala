@@ -94,6 +94,10 @@ object Eval {
           eval(inner, env, old, st)
       }
 
+    case Note(expr, attrs) =>
+      val _expr = eval(expr, env, old, st)
+      Note(_expr, attrs)
+
     case Eq(left, right) =>
       Eq(eval(left, env, old, st), eval(right, env, old, st))
 

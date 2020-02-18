@@ -16,6 +16,9 @@ object Check {
     case _: Id =>
       error("unknown identifier", expr, ty)
 
+    case Note(expr, _) =>
+      infer(expr, ty, st)
+
     case App(id, args) if (st.funs contains id) =>
       val ts1 = args map (infer(_, ty, st))
       val (ts2, tr) = st funs id
@@ -31,7 +34,8 @@ object Check {
       ensure(tr == Sort.bool, "body of bind must be boolean", body, tr)
       tr
 
-    case Old(expr) => infer(expr, ty, st)
+    case Old(expr) =>
+      infer(expr, ty, st)
 
     case Eq(left, right) =>
       ensure(infer(left, ty, st) == infer(right, ty, st), "types of sides of equals must match")
