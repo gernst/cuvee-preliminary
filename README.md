@@ -1,5 +1,7 @@
 # Cuvée: Blending SMT-LIB with Programs and Weakest Preconditions
 
+[![CircleCI](https://circleci.com/gh/gernst/cuvee-private/tree/master.svg?style=svg)](https://circleci.com/gh/gernst/cuvee-private/tree/master)
+
 ## Installation
 
 - Install Java 8
