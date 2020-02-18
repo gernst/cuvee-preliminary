@@ -8,15 +8,19 @@ case class Simplify(state: State) {
 
   def apply(phis: List[Expr]): List[Expr] = {
     val _phis = Expr.nnf(phis)
-    con(_phis)
+    top(_phis)
+  }
+
+  def top(args: List[Expr]): List[Expr] = {
+    nary(todo = args, rdone = Nil, neg = false, top = true)
   }
 
   def con(args: List[Expr]): List[Expr] = {
-    nary(todo = args, rdone = Nil, neg = false)
+    nary(todo = args, rdone = Nil, neg = false, top = false)
   }
 
   def dis(args: List[Expr]): List[Expr] = {
-    nary(todo = args, rdone = Nil, neg = true)
+    nary(todo = args, rdone = Nil, neg = true, top = false)
   }
 
   def _assert(phi: Expr, neg: Boolean) = {
@@ -26,11 +30,16 @@ case class Simplify(state: State) {
       backend.assert(phi)
   }
 
-  def nary(todo: List[Expr], rdone: List[Expr], neg: Boolean, changed: Boolean = false): List[Expr] = todo match {
+  def nary(todo: List[Expr], rdone: List[Expr], neg: Boolean, top: Boolean, changed: Boolean = false): List[Expr] = todo match {
     case Nil =>
       val done = rdone.reverse
-      if (changed) nary(done, Nil, neg)
+      if (changed) nary(done, Nil, neg, top)
       else done
+
+    // don't simplify top-level axioms (rarely useful)
+    case (phi @ Forall(_, _)) :: rest if top =>
+      assert(!neg)
+      nary(rest, phi :: rdone, neg, top, changed)
 
     case phi :: rest =>
       val _phi = backend.scoped {
@@ -39,7 +48,7 @@ case class Simplify(state: State) {
         simplify(phi)
       }
 
-      nary(rest, _phi :: rdone, neg, _phi != phi || changed)
+      nary(rest, _phi :: rdone, neg, top, _phi != phi || changed)
   }
 
   def simplify(phi: Expr): Expr = {

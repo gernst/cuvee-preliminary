@@ -176,7 +176,7 @@ case class Cuvee(backend: Solver) extends Solver {
 }
 
 object Cuvee {
-  var simplify = true
+  var simplify = false
   var timeout = 1000
 
   def run(source: Source, backend: Solver, report: Report) {
