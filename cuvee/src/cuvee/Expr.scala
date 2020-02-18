@@ -103,6 +103,8 @@ object Expr extends Parseable[Expr](Parser.expr) with Alpha[Expr, Id] {
     case Or.nary(args) =>
       val _args = Or.flatten(nnf(args))
       Or(_args)
+    case Bind(quant, formals, body) =>
+      Bind(quant, formals, nnf(body))
 
     case _ =>
       phi

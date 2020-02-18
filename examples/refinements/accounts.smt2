@@ -36,8 +36,11 @@
         (>= cs_overdraft-limit 0)))
 
 ; (declare-fun R ((balance Int) (debit Int) (credit Int) (overdraft-limit Int)))
-; (refine simple-account double-account R)
+; (verify-refinement
+;    simple-account double-account R))
+; unsat if correct
 
-; (refine (simple-account balance)
-;         (double-account debit credit overdraft-limit)
+; (verify-refinement
+;   (simple-account balance)
+;   (double-account debit credit overdraft-limit)
 ;       <formula>)

@@ -33,12 +33,13 @@ case class Simplify(state: State) {
       else done
 
     case phi :: rest =>
-      backend.scoped {
+      val _phi = backend.scoped {
         for (ctx <- rest) _assert(ctx, neg)
         for (ctx <- rdone) _assert(ctx, neg)
-        val _phi = simplify(phi)
-        nary(rest, _phi :: rdone, neg, _phi != phi || changed)
+        simplify(phi)
       }
+
+      nary(rest, _phi :: rdone, neg, _phi != phi || changed)
   }
 
   def simplify(phi: Expr): Expr = {
@@ -48,7 +49,6 @@ case class Simplify(state: State) {
       println("     " + phi)
       println("  ~> " + _phi)
       println()
-
     }
     _phi
   }

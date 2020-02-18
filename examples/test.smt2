@@ -1,23 +1,12 @@
 (set-logic ALL)
-(set-option :produce-models true)
-(declare-const x Int)
-(declare-const y Int)
 
-(push)
-(assert
-  (not
-    (=> (and (<= 0 x) (<= 0 y))
-        (wp (assign (x (+ x y)))
-            (>= x y)))))
-(check-sat)
-(pop)
+(declare-const m Int)
+(declare-const n Int)
 
-(push)
-(assert
-  (not
-    (=> (and (<= 0 x) (<= 0 y))
-        (wp (assign (x (+ x y)))
-            (< x y)))))
+(declare-fun gcd (Int Int) Int)
+
+(assert (forall ((m Int)) (= (gcd m m) m)))
+(assert (forall ((m Int) (n Int)) (=> (< m n) (= (gcd m n) (gcd m (- n m))))))
+(assert (forall ((m Int) (n Int)) (=> (> m n) (= (gcd m n) (gcd (- m n) n)))))
+
 (check-sat)
-(get-model)
-(pop)
