@@ -33,9 +33,13 @@ object Sugar {
       App(fun, List(arg1, arg2))
     }
 
+    def flatten(exprs: List[Expr]): List[Expr] = {
+      exprs flatMap flatten
+    }
+
     def flatten(expr: Expr): List[Expr] = expr match {
       case App(`fun`, args) =>
-        args flatMap flatten
+        flatten(args)
       case _ =>
         List(expr)
     }

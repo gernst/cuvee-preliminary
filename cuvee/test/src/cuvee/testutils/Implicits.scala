@@ -31,8 +31,8 @@ object Implicits {
     }
 
     implicit class StringParsers(sc: StringContext) {
-        def e(): Expr = VerifyTest.runUnwrappingErrors(new Parseable(Parser.expr).from(sc.s()))
-        def p(): Prog = VerifyTest.runUnwrappingErrors(new Parseable(Parser.prog).from(sc.s()))
+        def e(): Expr = VerifyTest.runUnwrappingErrors(Expr.from(sc.s()))
+        def p(): Prog = VerifyTest.runUnwrappingErrors(Prog.from(sc.s()))
     }
 
     implicit def formal(f: (String, String)): Formal = Formal(id(f._1), sort(f._2))

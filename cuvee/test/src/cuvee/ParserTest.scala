@@ -10,12 +10,12 @@ object ParserTest extends TestSuite {
     If(App(Id("<"), Id("x"), Num(0)), Assign(List(Pair(Id("y"), App(Id("-"), Num(0), Id("x"))))), Assign(List(Pair(Id("y"), Id("x")))))))
 
   test("parse number") {
-    val number = new Parseable(Parser.expr).from("2")
+    val number = Expr.from("2")
     assertEquals(number, Num(2))
   }
 
   test("parse assignment") {
-    val assign = new Parseable(Parser.prog).from("(assign (x 2))")
+    val assign = Prog.from("(assign (x 2))")
     assertEquals(assign, Assign(List(Pair(Id("x"), 2))))
   }
 
@@ -60,10 +60,10 @@ object ParserTest extends TestSuite {
   }
 
   private def parseCmd(str: String): Cmd = {
-    VerifyTest.runUnwrappingErrors(new Parseable(Parser.cmd).from(str))
+    VerifyTest.runUnwrappingErrors(Cmd.from(str))
   }
 
   private def parseCmds(str: String): List[Cmd] = {
-    VerifyTest.runUnwrappingErrors(new Parseable(Parser.cmd.*).from(str))
+    VerifyTest.runUnwrappingErrors(Script.from(str))
   }
 }

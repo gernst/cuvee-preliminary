@@ -6,16 +6,16 @@ import arse.implicits._
 class Parseable[+A](p: Parser[A]) {
   def from(text: String): A = {
     import Parser.whitespace
-    if (text == null)
-      ???
-    val withoutComments = text split raw"[\r\n]+" filter (!_.startsWith(";")) mkString "\n"
-    p.parseAll(withoutComments)
+    ensure(text != null, "cannot parse the null string")
+    // val withoutComments = text split raw"[\r\n]+" filter (!_.startsWith(";")) mkString "\n"
+    // p.parseAll(withoutComments)
+    p.parseAll(text)
   }
 }
 
 object Parser {
   implicit val whitespace: Whitespace = {
-    new Whitespace("(\\s|(;.*\\n))*")
+    new Whitespace("(\\s|(\\s*;.*(\\n|$)))*")
   }
 
   def parens[A](p: Parser[A]) = {

@@ -78,8 +78,7 @@ sealed trait Expr extends Expr.term {
   def store(index: Expr, arg: Expr) = Store(this, index, arg)
 }
 
-object Expr extends Alpha[Expr, Id] {
-
+object Expr extends Parseable[Expr](Parser.expr) with Alpha[Expr, Id] {
 }
 
 case class Id(name: String, index: Option[Int]) extends Expr with Pat with Expr.x {
@@ -171,7 +170,11 @@ case class Distinct(exprs: List[Expr]) extends Expr {
   override def toString = sexpr("distinct", exprs: _*)
 }
 
-object Not extends Sugar.unary(Id.not)
+object Not extends Sugar.unary(Id.not) {
+  def apply(args: List[Expr]) = {
+    args map this
+  }
+}
 
 object Imp extends Sugar.binary(Id.imp)
 
@@ -364,6 +367,9 @@ sealed trait Prog {
   def read: Set[Id]
   def replace(re: Map[Id, Id]): Prog
 }
+
+
+object Prog extends Parseable(Parser.prog)
 
 case class Block(progs: List[Prog], withOld: Boolean) extends Prog {
   def mod = Set(progs flatMap (_.mod): _*)
