@@ -97,15 +97,20 @@ case class Cuvee(backend: Solver) extends Solver {
 
   def check() = backend.scoped {
     var _asserts = top.asserts map eval
-    
-    if(Cuvee.goals) {
-      val goal = Goal(_asserts)
+    var goal = Goal(_asserts)
+
+    if (Cuvee.goals) {
       goal.debug("")
     }
 
     if (Cuvee.simplify) {
       val simplify = Simplify(top.withoutAsserts)
-      _asserts = simplify(_asserts)
+      // _asserts = simplify(_asserts)
+
+      if (Cuvee.goals) {
+        goal = simplify(goal)
+      goal.debug("")
+      }
     }
 
     for (expr <- _asserts) {
