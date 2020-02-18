@@ -10,8 +10,8 @@ object Printer {
   }
 
   def reset() = sexpr("reset")
-  def push() = sexpr("push", 1)
-  def pop() = sexpr("pop", 1)
+  def push(depth: Int) = sexpr("push", depth)
+  def pop(depth: Int) = sexpr("pop", depth)
   def exit() = sexpr("exit")
 
   def check() = sexpr("check-sat")

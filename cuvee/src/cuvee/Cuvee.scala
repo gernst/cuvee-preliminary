@@ -9,11 +9,8 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.InputStream
 
-case class Cuvee(backend: Solver) extends Solver {
+case class Cuvee(backend: Solver, settings: CuveeSettings) extends Solver {
   var states: List[State] = List(State.default)
-
-  var printSuccess = false
-  var produceModels = false
 
   override def toString = log.mkString("\n")
 
@@ -25,11 +22,11 @@ case class Cuvee(backend: Solver) extends Solver {
 
   def setOption(args: List[String]) = args match {
     case List(":produce-models", flag) =>
-      produceModels = flag.toBoolean
+      settings.produceModels = flag.toBoolean
       backend.setOption(args)
 
     case List(":print-success", flag) =>
-      printSuccess = flag.toBoolean
+      settings.printSuccess = flag.toBoolean
       Success
 
     case _ =>
@@ -38,7 +35,7 @@ case class Cuvee(backend: Solver) extends Solver {
 
   def report(res: Option[Res]): Option[Res] = res match {
     case None => None
-    case Some(Success) if !printSuccess => None
+    case Some(Success) if !settings.printSuccess => None
     case _ => res
   }
 
@@ -68,14 +65,14 @@ case class Cuvee(backend: Solver) extends Solver {
     states = st :: states
   }
 
-  def pop() = {
+  def pop(depth: Int) = {
     _pop()
-    backend.pop()
+    backend.pop(depth)
   }
 
-  def push() = {
+  def push(depth: Int) = {
     _push(top)
-    backend.push()
+    backend.push(depth)
   }
 
   def map(action: State => State) {
@@ -98,7 +95,7 @@ case class Cuvee(backend: Solver) extends Solver {
   def check() = backend.scoped {
     var _asserts = top.asserts map eval
 
-    if (Cuvee.simplify) {
+    if (settings.simplify) {
       val simplify = Simplify(top.withoutAsserts)
       _asserts = simplify(_asserts)
     }
@@ -109,7 +106,7 @@ case class Cuvee(backend: Solver) extends Solver {
 
     val res = backend.check()
 
-    if (produceModels) {
+    if (settings.produceModels) {
       val model = backend.model()
       map(_ withModel model)
     }
@@ -175,61 +172,68 @@ case class Cuvee(backend: Solver) extends Solver {
   }
 }
 
-object Cuvee {
+class CuveeSettings {
   var simplify = false
+  var printSuccess = false
+  var produceModels = false
+}
+
+class CuveeBuilder {
+  var settings = new CuveeSettings
   var timeout = 1000
+  var source: Source = Source.stdin
+  var solver: Solver = Solver.stdout
+  var report: Report = Report.stderr
 
-  def run(source: Source, backend: Solver, report: Report) {
-    val solver = Cuvee(backend)
-    source.run(solver, report)
-  }
-
-  def runWithArgs(args: List[String], source: Source): Unit = args match {
+  def configure(args: List[String]): CuveeBuilder = args match {
     case Nil =>
-      run(source, Solver.stdout, Report.stderr)
+      this
 
     case "-timeout" :: arg :: rest =>
       timeout = arg.toInt
-      runWithArgs(rest, source)
+      configure(rest)
 
     case "-simplify" :: rest =>
-      simplify = true
-      runWithArgs(rest, source)
+      settings.simplify = true
+      configure(rest)
 
     case "-no-simplify" :: rest =>
-      simplify = false
-      runWithArgs(rest, source)
+      settings.simplify = false
+      configure(rest)
 
     case "-debug-simplify" :: rest =>
       Simplify.debug = true
-      runWithArgs(rest, source)
+      configure(rest)
 
     case "-debug-solver" :: rest =>
       Solver.debug = true
-      runWithArgs(rest, source)
+      configure(rest)
 
     case "-z3" :: rest =>
       ensure(rest.isEmpty, "-z3 must be the last argument")
-      run(source, Solver.z3(timeout), Report.stdout)
+      solver = Solver.z3(timeout)
+      this
 
     case "-cvc4" :: rest =>
       ensure(rest.isEmpty, "-cvc4 must be the last argument")
-      run(source, Solver.cvc4(timeout), Report.stdout)
+      solver = Solver.cvc4(timeout)
+      this
 
     case "-princess" :: rest =>
       ensure(rest.isEmpty, "-princess must be the last argument")
-      run(source, Solver.princess(timeout), Report.stdout)
+      solver = Solver.princess(timeout)
+      this
 
     case "--" :: args =>
       ensure(args.length >= 1, "-- needs an SMT solver as argument")
-      val _solver = Solver.process(args: _*)
-      run(source, _solver, Report.stdout)
+      solver = Solver.process(args: _*)
+      this
 
     case "-o" :: path :: rest =>
       ensure(rest.isEmpty, "-o <file> must be the last argument")
       val out = new File(path)
-      val _solver = Solver.file(out)
-      run(source, _solver, Report.stdout)
+      solver = Solver.file(out)
+      this
 
     case "-o" :: _ =>
       error("-o needs an output file as argument")
@@ -238,12 +242,23 @@ object Cuvee {
       ensure(!path.startsWith("-"), "not an option", path)
       ensure(source == Source.stdin, "input can be given only once")
       val in = new File(path)
-      val _source = Source.file(in)
-      runWithArgs(rest, _source)
+      source = Source.file(in)
+      configure(rest)
   }
 
-  def run(args: List[String]) {
-    runWithArgs(args, Source.stdin)
+  def build: Cuvee = Cuvee(solver, settings)
+}
+
+object Cuvee {
+  def run(source: Source, backend: Solver, report: Report) {
+    val solver = Cuvee(backend, new CuveeSettings)
+    source.run(solver, report)
+  }
+
+  def run(args: List[String]): Unit = {
+    val builder = new CuveeBuilder
+    builder.configure(args)
+    builder.source.run(builder.build, builder.report)
   }
 
   def main(args: Array[String]) {

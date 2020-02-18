@@ -114,10 +114,10 @@ object Parser {
   val get_model_ = P(GetModel("get-model"))
   val exit_ = P(Exit("exit"))
   val reset_ = P(Reset("reset"))
-  val push_ = P(Push("push"))
-  val pop_ = P(Pop("pop"))
+  val push_ = P(Push("push" ~ int.?))
+  val pop_ = P(Pop("pop" ~ int.?))
 
-  val check_sat_ = P(CheckSat("check-sat"))
+  val check_sat_ : Parser[CheckSat] = P(CheckSat("check-sat" ~ (":expect" ~ is_sat).?))
 
   val assert_ = P(Assert("assert" ~ expr))
   val verify_ = P(CounterExample("assert-counterexample" ~ expr ~ prog ~ expr))

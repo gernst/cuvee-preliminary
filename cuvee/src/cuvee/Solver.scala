@@ -13,14 +13,14 @@ trait Solver {
   def setOption(args: List[String]): Ack
 
   def reset(): Ack
-  def push(): Ack
-  def pop(): Ack
+  def push(depth: Int): Ack
+  def pop(depth: Int): Ack
   def exit(): Ack
 
   def scoped[A](f: => A) = {
-    push()
+    push(1)
     try { f }
-    finally { pop() }
+    finally { pop(1) }
   }
 
   def check(phi: Expr): IsSat = scoped {
@@ -82,14 +82,14 @@ trait Solver {
 
       case Reset =>
         reset(); None
-      case Push =>
-        push(); None
-      case Pop =>
-        pop(); None
+      case Push(depth) =>
+        push(depth.getOrElse(1)); None
+      case Pop(depth) =>
+        pop(depth.getOrElse(1)); None
       case Exit =>
         exit(); None
 
-      case CheckSat =>
+      case CheckSat(_) =>
         Some(check())
       case GetAssertions =>
         Some(assertions())
@@ -167,13 +167,13 @@ object Solver {
       Ack.from(read())
     }
 
-    def push() = {
-      write(Printer.push())
+    def push(depth: Int) = {
+      write(Printer.push(depth))
       Ack.from(read())
     }
 
-    def pop() = {
-      write(Printer.pop())
+    def pop(depth: Int) = {
+      write(Printer.pop(depth))
       Ack.from(read())
     }
 
@@ -275,14 +275,14 @@ object Solver {
       Success
     }
 
-    def push() = {
-      write(Printer.push())
+    def push(depth: Int) = {
+      write(Printer.push(depth))
       Success
     }
 
-    def pop() = {
+    def pop(depth: Int) = {
       sat = Unknown
-      write(Printer.pop())
+      write(Printer.pop(depth))
       Success
     }
 
@@ -350,6 +350,99 @@ object Solver {
     def write(line: String) {
       stream.println(line)
       stream.flush()
+    }
+  }
+
+  /**
+   * Wraps around two solvers passing commands to both.
+   *
+   * @param a the result of this solver will be returned
+   * @param b each command will be passed to this solver first. The result is ignored. Exceptions are not caught, however.
+   */
+  case class TeeSolver(a: Solver, b: Solver) extends Solver {
+    override def setLogic(logic: String): Ack = {
+      b.setLogic(logic)
+      a.setLogic(logic)
+    }
+
+    override def setOption(args: List[String]): Ack = {
+      b.setOption(args)
+      a.setOption(args)
+    }
+
+    override def reset(): Ack = {
+      b.reset()
+      a.reset()
+    }
+
+    override def push(depth: Int): Ack = {
+      b.push(depth)
+      a.push(depth)
+    }
+
+    override def pop(depth: Int): Ack = {
+      b.pop(depth)
+      a.pop(depth)
+    }
+
+    override def exit(): Ack = {
+      b.exit()
+      a.exit()
+    }
+
+    override def check(): IsSat = {
+      b.check()
+      a.check()
+    }
+
+    override def assertions(): Assertions = {
+      b.assertions()
+      a.assertions()
+    }
+
+    override def model(): Model = {
+      b.model()
+      a.model()
+    }
+
+    override def declare(sort: Sort, arity: Int): Ack = {
+      b.declare(sort, arity)
+      a.declare(sort, arity)
+    }
+
+    override def define(sort: Sort, args: List[Sort], body: Type): Ack = {
+      b.define(sort, args, body)
+      a.define(sort, args, body)
+    }
+
+    override def declare(id: Id, args: List[Type], res: Type): Ack = {
+      b.declare(id, args, res)
+      a.declare(id, args, res)
+    }
+
+    override def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean): Ack = {
+      b.define(id, formals, res, body, rec)
+      a.define(id, formals, res, body, rec)
+    }
+
+    override def declare(arities: List[Arity], decls: List[Datatype]): Ack = {
+      b.declare(arities, decls)
+      a.declare(arities, decls)
+    }
+
+    override def define(id: Id, proc: Proc): Ack = {
+      b.define(id, proc)
+      a.define(id, proc)
+    }
+
+    override def define(sort: Sort, obj: Obj): Ack = {
+      b.define(sort, obj)
+      a.define(sort, obj)
+    }
+
+    override def assert(expr: Expr): Ack = {
+      b.assert(expr)
+      a.assert(expr)
     }
   }
 }
