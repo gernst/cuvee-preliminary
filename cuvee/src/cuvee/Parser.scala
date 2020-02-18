@@ -31,7 +31,7 @@ object Parser {
 
 
   val name = simple | quoted
-  val attr = S(":[A-Za-z_][A-Za-z0-9_!|$:\\-]*")
+  val kw = S(":[0-9a-zA-Z_~!@$%^&*+=<>.?/\\-]+")
   val op = L("-") | L("+") | L("<=") | L("<") | L(">=") | L(">")
 
   val typ: Parser[Type] = P(sort | parens(array_ | list_))
@@ -50,6 +50,8 @@ object Parser {
   val pair = P(Pair(parens(id ~ expr)))
   val pairs = P(pair.*)
 
+  val attr_ = P(Attr(kw ~ name.?))
+  val note_ = P(Note(expr ~ attr_.+))
   
   val as_ = P(As("as" ~ id ~ sort))
   val old_ = P(Old("old" ~ expr))
@@ -107,8 +109,8 @@ object Parser {
   val cmd: Parser[Cmd] = P(parens(cmd_))
 
   val set_logic_ = P(SetLogic("set-logic" ~ name))
-  val set_option_ = P(SetOption("set-option" ~ (attr :: name.*)))
-  val set_info_ = P(SetInfo("set-info" ~ attr ~ (string | name).?))
+  val set_option_ = P(SetOption("set-option" ~ (kw :: name.*)))
+  val set_info_ = P(SetInfo("set-info" ~ kw ~ (string | name).?))
   val get_model_ = P(GetModel("get-model"))
   val exit_ = P(Exit("exit"))
   val reset_ = P(Reset("reset"))

@@ -175,6 +175,20 @@ case class Num(value: BigInt) extends Expr {
   override def toString = value.toString
 }
 
+case class Attr(name: String, arg: Option[String]) {
+  def flat = arg match {
+    case None => List(name)
+    case Some(arg) => List(name, arg)
+  }
+}
+
+case class Note(expr: Expr, attrs: List[Attr]) extends Expr {
+  def free = expr.free
+  def rename(re: Map[Id, Id]) = Note(expr rename re, attrs)
+  def subst(su: Map[Id, Expr]) = Note(expr subst su, attrs)
+  override def toString = sexpr("!", expr :: (attrs flatMap (_.flat)))
+}
+
 case class Eq(left: Expr, right: Expr) extends Expr {
   def free = left.free ++ right.free
   def rename(re: Map[Id, Id]) = Eq(left rename re, right rename re)
