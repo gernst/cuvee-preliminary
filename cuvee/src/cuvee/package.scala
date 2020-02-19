@@ -1,5 +1,7 @@
 import scala.io.StdIn
 import java.lang.UNIXProcess
+import java.io.File
+import java.io.FileInputStream
 
 package object cuvee {
   import scala.language.implicitConversions
@@ -17,7 +19,7 @@ package object cuvee {
     if (!test)
       error(info)
   }
-  
+
   def unwrap[A](option: Option[A], info: Any*): A = option match {
     case None => error(info: _*)
     case Some(a) => a
@@ -32,6 +34,14 @@ package object cuvee {
   implicit def toIds(formals: List[Formal]) = formals map (_.id)
   implicit def toTypes(formals: List[Formal]) = formals map (_.typ)
   implicit def toTyping(formals: List[Formal]) = formals map (f => (f.id, f.typ))
+
+  implicit class IntOps(self: Int) {
+    def times(f: => Unit) = {
+      for (i <- 0 until self) {
+        f
+      }
+    }
+  }
 
   implicit class StringOps(self: String) {
     def __(index: Option[Int]): String = index match {
@@ -66,6 +76,18 @@ package object cuvee {
 
     def duplicates(eq: (A, A) => Boolean) = {
       classes(eq).flatten
+    }
+  }
+
+  implicit class FileOps(file: File) {
+    def text() = {
+      val length = file.length
+      val buf = new Array[Byte](length.toInt)
+      val stream = new FileInputStream(file)
+      val read = stream.read(buf)
+      ensure(read == length, "short read", file)
+      stream.close()
+      new String(buf, "UTF-8")
     }
   }
 

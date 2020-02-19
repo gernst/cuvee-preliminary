@@ -4,6 +4,7 @@ import java.io.PrintStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.File
+import java.io.ByteArrayOutputStream
 
 trait Solver {
   var rlog: List[Cmd] = Nil // can't use generic C here
@@ -13,14 +14,14 @@ trait Solver {
   def setOption(args: List[String]): Ack
 
   def reset(): Ack
-  def push(): Ack
-  def pop(): Ack
+  def push(depth: Int): Ack
+  def pop(depth: Int): Ack
   def exit(): Ack
 
   def scoped[A](f: => A) = {
-    push()
+    push(1)
     try { f }
-    finally { pop() }
+    finally { pop(1) }
   }
 
   def check(phi: Expr): IsSat = scoped {
@@ -45,6 +46,11 @@ trait Solver {
   }
 
   def check(): IsSat
+
+  def check(expected: IsSat): IsSat = {
+    check()
+  }
+
   def assertions(): Assertions
   def model(): Model
 
@@ -82,15 +88,17 @@ trait Solver {
 
       case Reset =>
         reset(); None
-      case Push =>
-        push(); None
-      case Pop =>
-        pop(); None
+      case Push(depth) =>
+        push(depth); None
+      case Pop(depth) =>
+        pop(depth); None
       case Exit =>
         exit(); None
 
-      case CheckSat =>
+      case CheckSat(None) =>
         Some(check())
+      case CheckSat(Some(expected)) =>
+        Some(check(expected))
       case GetAssertions =>
         Some(assertions())
       case GetModel =>
@@ -167,13 +175,13 @@ object Solver {
       Ack.from(read())
     }
 
-    def push() = {
-      write(Printer.push())
+    def push(depth: Int) = {
+      write(Printer.push(depth))
       Ack.from(read())
     }
 
-    def pop() = {
-      write(Printer.pop())
+    def pop(depth: Int) = {
+      write(Printer.pop(depth))
       Ack.from(read())
     }
 
@@ -250,14 +258,27 @@ object Solver {
     }
   }
 
-  def file(out: File) = {
+  case class file(out: File) extends print {
     val stream = new PrintStream(out)
-    print(stream)
   }
 
-  val stdout = print(System.out)
+  object stdout extends print {
+    def stream = System.out
+  }
 
-  case class print(stream: PrintStream) extends Solver {
+  object stderr extends print {
+    def stream = System.err
+  }
+
+  class capture extends print {
+    val buffer = new ByteArrayOutputStream
+    val stream = new PrintStream(buffer)
+    override def toString = buffer.toString
+  }
+
+  abstract class print extends Solver {
+    def stream: PrintStream
+
     var sat: IsSat = Unknown
 
     def setLogic(logic: String) = {
@@ -275,14 +296,14 @@ object Solver {
       Success
     }
 
-    def push() = {
-      write(Printer.push())
+    def push(depth: Int) = {
+      write(Printer.push(depth))
       Success
     }
 
-    def pop() = {
+    def pop(depth: Int) = {
       sat = Unknown
-      write(Printer.pop())
+      write(Printer.pop(depth))
       Success
     }
 
@@ -350,6 +371,99 @@ object Solver {
     def write(line: String) {
       stream.println(line)
       stream.flush()
+    }
+  }
+
+  /**
+   * Wraps around two solvers passing commands to both.
+   *
+   * @param a the result of this solver will be returned
+   * @param b each command will be passed to this solver first. The result is ignored. Exceptions are not caught, however.
+   */
+  case class tee(primary: Solver, others: Solver*) extends Solver {
+    def setLogic(logic: String): Ack = {
+      for (solver <- others) solver.setLogic(logic)
+      primary.setLogic(logic)
+    }
+
+    def setOption(args: List[String]): Ack = {
+      for (solver <- others) solver.setOption(args)
+      primary.setOption(args)
+    }
+
+    def reset(): Ack = {
+      for (solver <- others) solver.reset()
+      primary.reset()
+    }
+
+    def push(depth: Int): Ack = {
+      for (solver <- others) solver.push(depth)
+      primary.push(depth)
+    }
+
+    def pop(depth: Int): Ack = {
+      for (solver <- others) solver.pop(depth)
+      primary.pop(depth)
+    }
+
+    def exit(): Ack = {
+      for (solver <- others) solver.exit()
+      primary.exit()
+    }
+
+    def check(): IsSat = {
+      for (solver <- others) solver.check()
+      primary.check()
+    }
+
+    def assertions(): Assertions = {
+      for (solver <- others) solver.assertions()
+      primary.assertions()
+    }
+
+    def model(): Model = {
+      for (solver <- others) solver.model()
+      primary.model()
+    }
+
+    def declare(sort: Sort, arity: Int): Ack = {
+      for (solver <- others) solver.declare(sort, arity)
+      primary.declare(sort, arity)
+    }
+
+    def define(sort: Sort, args: List[Sort], body: Type): Ack = {
+      for (solver <- others) solver.define(sort, args, body)
+      primary.define(sort, args, body)
+    }
+
+    def declare(id: Id, args: List[Type], res: Type): Ack = {
+      for (solver <- others) solver.declare(id, args, res)
+      primary.declare(id, args, res)
+    }
+
+    def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean): Ack = {
+      for (solver <- others) solver.define(id, formals, res, body, rec)
+      primary.define(id, formals, res, body, rec)
+    }
+
+    def declare(arities: List[Arity], decls: List[Datatype]): Ack = {
+      for (solver <- others) solver.declare(arities, decls)
+      primary.declare(arities, decls)
+    }
+
+    def define(id: Id, proc: Proc): Ack = {
+      for (solver <- others) solver.define(id, proc)
+      primary.define(id, proc)
+    }
+
+    def define(sort: Sort, obj: Obj): Ack = {
+      for (solver <- others) solver.define(sort, obj)
+      primary.define(sort, obj)
+    }
+
+    def assert(expr: Expr): Ack = {
+      for (solver <- others) solver.assert(expr)
+      primary.assert(expr)
     }
   }
 }

@@ -59,6 +59,16 @@ object ParserTest extends TestSuite {
     assertEquals(parseCmds("; foo\n; bar"), List())
   }
 
+  test("parse expectation of check-sat") {
+    val parseable = new Parseable[CheckSat](Parser.check_sat_)
+    val parse: String => CheckSat = str => VerifyTest.runUnwrappingErrors(parseable.from(str))
+
+    assertEquals(parse("check-sat"), CheckSat())
+    assertEquals(parse("check-sat :expect sat"), CheckSat(Some(Sat)))
+    assertEquals(parse("check-sat :expect unsat"), CheckSat(Some(Unsat)))
+    assertEquals(parse("check-sat :expect unknown"), CheckSat(Some(Unknown)))
+  }
+
   private def parseCmd(str: String): Cmd = {
     VerifyTest.runUnwrappingErrors(Cmd.from(str))
   }
