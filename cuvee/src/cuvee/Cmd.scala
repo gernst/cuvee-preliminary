@@ -31,19 +31,19 @@ case object Reset extends Cmd {
   override def toString = Printer.reset()
 }
 
-case object Push extends Cmd {
-  override def toString = Printer.push()
+case class Push(depth: Int) extends Cmd {
+  override def toString = Printer.push(depth)
 }
 
-case object Pop extends Cmd {
-  override def toString = Printer.pop()
+case class Pop(depth: Int) extends Cmd {
+  override def toString = Printer.pop(depth)
 }
 
 case object GetAssertions extends Cmd {
   override def toString = Printer.assertions()
 }
 
-case object CheckSat extends Cmd {
+case class CheckSat(expected: Option[IsSat] = None) extends Cmd {
   override def toString = Printer.check()
 }
 

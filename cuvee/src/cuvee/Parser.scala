@@ -2,6 +2,7 @@ package cuvee
 
 import arse._
 import arse.implicits._
+import java.io.File
 
 class Parseable[+A](p: Parser[A]) {
   def from(text: String): A = {
@@ -10,6 +11,14 @@ class Parseable[+A](p: Parser[A]) {
     // val withoutComments = text split raw"[\r\n]+" filter (!_.startsWith(";")) mkString "\n"
     // p.parseAll(withoutComments)
     p.parseAll(text)
+  }
+
+  def fromFile(path: String): A = {
+    from(new File(path))
+  }
+
+  def from(file: File): A = {
+    from(file.text)
   }
 }
 
@@ -28,7 +37,6 @@ object Parser {
   val quoted = S("\\|[0-9a-zA-Z_~!@$%^&*+=<>.?/\"'(),:;{}#`\\[\\] \t\r\n\\-]*\\|") map {
     str => str.substring(1, str.length - 1)
   }
-
 
   val name = simple | quoted
   val kw = S(":[0-9a-zA-Z_~!@$%^&*+=<>.?/\\-]+")
@@ -52,7 +60,7 @@ object Parser {
 
   val attr_ = P(Attr(kw ~ name.?))
   val note_ = P(Note(expr ~ attr_.+))
-  
+
   val as_ = P(As("as" ~ id ~ sort))
   val old_ = P(Old("old" ~ expr))
   val imp_ = P(Imp("=>" ~ expr ~ expr)) // singled out to avoid clash with "="
@@ -102,7 +110,7 @@ object Parser {
   val post = P(":postcondition" ~ expr)
   val while_ = P(While("while" ~ expr ~ prog ~ prog.? ~ term.? ~ pre.? ~ post.?))
 
-  val cmd_ : Parser[Cmd] = P(set_logic_ | set_option_ | set_info_  | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
+  val cmd_ : Parser[Cmd] = P(set_logic_ | set_option_ | set_info_ | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
     declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_ |
     define_proc_ | define_class_ | define_refinement_)
 
@@ -114,17 +122,33 @@ object Parser {
   val get_model_ = P(GetModel("get-model"))
   val exit_ = P(Exit("exit"))
   val reset_ = P(Reset("reset"))
-  val push_ = P(Push("push"))
-  val pop_ = P(Pop("pop"))
 
-  val check_sat_ = P(CheckSat("check-sat"))
+  val success = P(Success("success"))
+  val unsupported = P(Unsupported("unsupported"))
+  val sat = P(Sat("sat"))
+  val unsat = P(Unsat("unsat"))
+  val unknown = P(Unknown("unknown"))
+  val error = P(Error("error" ~ ret("unknown")))
+  val error_ = P(Error("error" ~ string))
+
+  val ack = P(success | unsupported | error | parens(error_))
+  val is_sat: Parser[IsSat] = P(sat | unsat | unknown)
+  val res: Parser[Res] = P(ack | is_sat)
+
+  val int_0 = int | ret(0)
+  val int_1 = int | ret(1)
+
+  val push_ = P(Push("push" ~ int_1))
+  val pop_ = P(Pop("pop" ~ int_1))
+
+  val expect_is_sat = ":expect" ~ is_sat
+  val check_sat_ = P(CheckSat("check-sat" ~ expect_is_sat.?))
 
   val assert_ = P(Assert("assert" ~ expr))
   val verify_ = P(CounterExample("assert-counterexample" ~ expr ~ prog ~ expr))
 
   val get_assertions_ = P(GetAssertions("get-assertions"))
 
-  val int_0 = int | ret(0)
   val declare_sort_ = P(DeclareSort("declare-sort" ~ sort ~ int_0))
   val declare_const_ = P(DeclareFun("declare-const" ~ id ~ ret(Nil) ~ typ))
   val declare_fun_ = P(DeclareFun("declare-fun" ~ id ~ parens(types) ~ typ))
@@ -148,21 +172,8 @@ object Parser {
   val arity = P(Arity(parens(sort ~ int)))
   val declare_dts_ = P(DeclareDatatypes("declare-datatypes" ~ parens(arity.*) ~ parens(datatype.*)))
 
-  val res: Parser[Res] = P(ack | is_sat)
-
   val dfn_ = P(define_fun_ | define_fun_rec_)
   val dfn = parens(dfn_)
-
-  val success = P(Success("success"))
-  val unsupported = P(Unsupported("unsupported"))
-  val sat = P(Sat("sat"))
-  val unsat = P(Unsat("unsat"))
-  val unknown = P(Unknown("unknown"))
-  val error = P(Error("error" ~ ret("unknown")))
-  val error_ = P(Error("error" ~ string))
-
-  val ack: Parser[Ack] = P(success | unsupported | error | parens(error_))
-  val is_sat: Parser[IsSat] = P(sat | unsat | unknown)
 
   val assertions_ = P(Assertions(expr.*))
   val assertions: Parser[Assertions] = parens(assertions_)

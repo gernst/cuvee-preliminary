@@ -53,22 +53,15 @@ object Source {
     }
   }
 
+  object file {
+    def apply(path: String) = {
+      new file(new File(path))
+    }
+  }
+
   case class file(in: File) extends Source {
-    def read() = {
-      val length = in.length
-      val buf = new Array[Byte](length.toInt)
-      val stream = new FileInputStream(in)
-      val read = stream.read(buf)
-      ensure(read == length, "short read", in)
-      stream.close()
-      new String(buf, "UTF-8")
-    }
-
-    def cmds = {
-      Script.from(read())
-    }
-
     def run(solver: Solver, report: Report) {
+      val cmds = Script.from(in)
       for (cmd <- cmds) {
         safe(cmd, solver, report)
       }
@@ -77,19 +70,19 @@ object Source {
 }
 
 object Report {
-  case object none extends Report {
+  object none extends Report {
     def apply(res: Res) {
     }
   }
 
-  case object stdout extends Report {
+  object stdout extends Report {
     def apply(res: Res) {
       System.out.println(res)
       System.out.flush()
     }
   }
 
-  case object stderr extends Report {
+  object stderr extends Report {
     def apply(res: Res) {
       System.err.println(res)
       System.err.flush()
