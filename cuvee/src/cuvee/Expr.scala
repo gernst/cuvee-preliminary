@@ -209,6 +209,16 @@ object Or extends Sugar.binary(Id.or) {
   }
 }
 
+object Plus extends Sugar.binary(Id.plus)
+object Minus extends Sugar.binary(Id.minus)
+object Times extends Sugar.binary(Id.times)
+object DivBy extends Sugar.binary(Id.divBy)
+
+object Lt extends Sugar.binary(Id.lt)
+object Le extends Sugar.binary(Id.le)
+object Gt extends Sugar.binary(Id.gt)
+object Ge extends Sugar.binary(Id.ge)
+
 case class Ite(test: Expr, left: Expr, right: Expr) extends Expr {
   def free = test.free ++ left.free ++ right.free
   def rename(re: Map[Id, Id]) = Ite(test rename re, left rename re, right rename re)
@@ -382,7 +392,6 @@ sealed trait Prog {
   def read: Set[Id]
   def replace(re: Map[Id, Id]): Prog
 }
-
 
 object Prog extends Parseable(Parser.prog)
 

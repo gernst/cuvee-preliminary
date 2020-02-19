@@ -7,7 +7,7 @@ case class Simplify(state: State) {
   import Simplify._
 
   def apply(phis: List[Expr]): List[Expr] = {
-    val _phis = nnf(phis)
+    val _phis = norm(phis)
 
     if (Simplify.debug) {
       println("input formulas:")
@@ -120,36 +120,47 @@ object Simplify {
     else Or(_args.distinct filter (_ != False))
   }
 
-  def nnf(phi: Expr): Expr = phi match {
+  def norm(expr: Expr): Expr = expr match {
     case Not(True) =>
       False
     case Not(False) =>
       True
     case Not(Not(phi)) =>
-      nnf(phi)
+      norm(phi)
     case Not(Imp(phi, psi)) =>
-      nnf(phi && !psi)
+      norm(phi && !psi)
     case Not(And.nary(args)) =>
-      or(nnf(Not(args)))
+      or(norm(Not(args)))
     case Not(Or.nary(args)) =>
-      and(nnf(Not(args)))
+      and(norm(Not(args)))
     case Not(Bind(quant, formals, body)) =>
-      Bind(!quant, formals, nnf(!body))
+      Bind(!quant, formals, norm(!body))
 
     case Imp(phi, psi) =>
-      nnf(!phi || psi)
+      norm(!phi || psi)
     case And.nary(args) =>
-      and(nnf(args))
+      and(norm(args))
     case Or.nary(args) =>
-      or(nnf(args))
+      or(norm(args))
     case Bind(quant, formals, body) =>
-      Bind(quant, formals, nnf(body))
+      Bind(quant, formals, norm(body))
+
+    case Not(Lt(a, b)) => Le(b, a)
+    case Not(Le(a, b)) => Lt(b, a)
+    case Not(Gt(a, b)) => Le(a, b)
+    case Not(Ge(a, b)) => Lt(a, b)
+
+    case Gt(a, b) => Lt(b, a)
+    case Ge(a, b) => Le(b, a)
+
+    case App(fun, args) =>
+      App(fun, norm(args))
 
     case _ =>
-      phi
+      expr
   }
 
-  def nnf(phis: List[Expr]): List[Expr] = {
-    phis map nnf
+  def norm(exprs: List[Expr]): List[Expr] = {
+    exprs map norm
   }
 }

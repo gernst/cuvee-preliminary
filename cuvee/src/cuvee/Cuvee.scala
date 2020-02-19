@@ -243,7 +243,7 @@ class Task extends Runnable { /* because why not */
     case "-debug-solver" :: rest =>
       Solver.debug = true
       configure(rest)
-      
+
     case "-format" :: rest =>
       Printer.format = true
       configure(rest)
