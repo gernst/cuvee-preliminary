@@ -4,6 +4,7 @@ import java.io.PrintStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.File
+import java.io.ByteArrayOutputStream
 
 trait Solver {
   var rlog: List[Cmd] = Nil // can't use generic C here
@@ -45,6 +46,11 @@ trait Solver {
   }
 
   def check(): IsSat
+
+  def check(expected: IsSat): IsSat = {
+    check()
+  }
+
   def assertions(): Assertions
   def model(): Model
 
@@ -89,8 +95,10 @@ trait Solver {
       case Exit =>
         exit(); None
 
-      case CheckSat(_) =>
+      case CheckSat(None) =>
         Some(check())
+      case CheckSat(Some(expected)) =>
+        Some(check(expected))
       case GetAssertions =>
         Some(assertions())
       case GetModel =>
@@ -250,14 +258,27 @@ object Solver {
     }
   }
 
-  def file(out: File) = {
+  case class file(out: File) extends print {
     val stream = new PrintStream(out)
-    print(stream)
   }
 
-  val stdout = print(System.out)
+  object stdout extends print {
+    def stream = System.out
+  }
 
-  case class print(stream: PrintStream) extends Solver {
+  object stderr extends print {
+    def stream = System.err
+  }
+
+  class capture extends print {
+    val buffer = new ByteArrayOutputStream
+    val stream = new PrintStream(buffer)
+    override def toString = buffer.toString
+  }
+
+  abstract class print extends Solver {
+    def stream: PrintStream
+
     var sat: IsSat = Unknown
 
     def setLogic(logic: String) = {
@@ -359,89 +380,89 @@ object Solver {
    * @param a the result of this solver will be returned
    * @param b each command will be passed to this solver first. The result is ignored. Exceptions are not caught, however.
    */
-  case class TeeSolver(primary: Solver, others: Solver*) extends Solver {
-    override def setLogic(logic: String): Ack = {
-      for(solver <- others) solver.setLogic(logic)
+  case class tee(primary: Solver, others: Solver*) extends Solver {
+    def setLogic(logic: String): Ack = {
+      for (solver <- others) solver.setLogic(logic)
       primary.setLogic(logic)
     }
 
-    override def setOption(args: List[String]): Ack = {
-      for(solver <- others) solver.setOption(args)
+    def setOption(args: List[String]): Ack = {
+      for (solver <- others) solver.setOption(args)
       primary.setOption(args)
     }
 
-    override def reset(): Ack = {
-      for(solver <- others) solver.reset()
+    def reset(): Ack = {
+      for (solver <- others) solver.reset()
       primary.reset()
     }
 
-    override def push(depth: Int): Ack = {
-      for(solver <- others) solver.push(depth)
+    def push(depth: Int): Ack = {
+      for (solver <- others) solver.push(depth)
       primary.push(depth)
     }
 
-    override def pop(depth: Int): Ack = {
-      for(solver <- others) solver.pop(depth)
+    def pop(depth: Int): Ack = {
+      for (solver <- others) solver.pop(depth)
       primary.pop(depth)
     }
 
-    override def exit(): Ack = {
-      for(solver <- others) solver.exit()
+    def exit(): Ack = {
+      for (solver <- others) solver.exit()
       primary.exit()
     }
 
-    override def check(): IsSat = {
-      for(solver <- others) solver.check()
+    def check(): IsSat = {
+      for (solver <- others) solver.check()
       primary.check()
     }
 
-    override def assertions(): Assertions = {
-      for(solver <- others) solver.assertions()
+    def assertions(): Assertions = {
+      for (solver <- others) solver.assertions()
       primary.assertions()
     }
 
-    override def model(): Model = {
-      for(solver <- others) solver.model()
+    def model(): Model = {
+      for (solver <- others) solver.model()
       primary.model()
     }
 
-    override def declare(sort: Sort, arity: Int): Ack = {
-      for(solver <- others) solver.declare(sort, arity)
+    def declare(sort: Sort, arity: Int): Ack = {
+      for (solver <- others) solver.declare(sort, arity)
       primary.declare(sort, arity)
     }
 
-    override def define(sort: Sort, args: List[Sort], body: Type): Ack = {
-      for(solver <- others) solver.define(sort, args, body)
+    def define(sort: Sort, args: List[Sort], body: Type): Ack = {
+      for (solver <- others) solver.define(sort, args, body)
       primary.define(sort, args, body)
     }
 
-    override def declare(id: Id, args: List[Type], res: Type): Ack = {
-      for(solver <- others) solver.declare(id, args, res)
+    def declare(id: Id, args: List[Type], res: Type): Ack = {
+      for (solver <- others) solver.declare(id, args, res)
       primary.declare(id, args, res)
     }
 
-    override def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean): Ack = {
-      for(solver <- others) solver.define(id, formals, res, body, rec)
+    def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean): Ack = {
+      for (solver <- others) solver.define(id, formals, res, body, rec)
       primary.define(id, formals, res, body, rec)
     }
 
-    override def declare(arities: List[Arity], decls: List[Datatype]): Ack = {
-      for(solver <- others) solver.declare(arities, decls)
+    def declare(arities: List[Arity], decls: List[Datatype]): Ack = {
+      for (solver <- others) solver.declare(arities, decls)
       primary.declare(arities, decls)
     }
 
-    override def define(id: Id, proc: Proc): Ack = {
-      for(solver <- others) solver.define(id, proc)
+    def define(id: Id, proc: Proc): Ack = {
+      for (solver <- others) solver.define(id, proc)
       primary.define(id, proc)
     }
 
-    override def define(sort: Sort, obj: Obj): Ack = {
-      for(solver <- others) solver.define(sort, obj)
+    def define(sort: Sort, obj: Obj): Ack = {
+      for (solver <- others) solver.define(sort, obj)
       primary.define(sort, obj)
     }
 
-    override def assert(expr: Expr): Ack = {
-      for(solver <- others) solver.assert(expr)
+    def assert(expr: Expr): Ack = {
+      for (solver <- others) solver.assert(expr)
       primary.assert(expr)
     }
   }

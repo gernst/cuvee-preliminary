@@ -1,4 +1,4 @@
-; -z3
+;! Cuvee -z3
 
 (set-logic ALL)
 

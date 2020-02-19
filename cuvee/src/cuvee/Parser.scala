@@ -2,6 +2,7 @@ package cuvee
 
 import arse._
 import arse.implicits._
+import java.io.File
 
 class Parseable[+A](p: Parser[A]) {
   def from(text: String): A = {
@@ -10,6 +11,14 @@ class Parseable[+A](p: Parser[A]) {
     // val withoutComments = text split raw"[\r\n]+" filter (!_.startsWith(";")) mkString "\n"
     // p.parseAll(withoutComments)
     p.parseAll(text)
+  }
+
+  def fromFile(path: String): A = {
+    from(new File(path))
+  }
+
+  def from(file: File): A = {
+    from(file.text)
   }
 }
 

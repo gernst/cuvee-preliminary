@@ -1,5 +1,7 @@
 import scala.io.StdIn
 import java.lang.UNIXProcess
+import java.io.File
+import java.io.FileInputStream
 
 package object cuvee {
   import scala.language.implicitConversions
@@ -74,6 +76,18 @@ package object cuvee {
 
     def duplicates(eq: (A, A) => Boolean) = {
       classes(eq).flatten
+    }
+  }
+
+  implicit class FileOps(file: File) {
+    def text() = {
+      val length = file.length
+      val buf = new Array[Byte](length.toInt)
+      val stream = new FileInputStream(file)
+      val read = stream.read(buf)
+      ensure(read == length, "short read", file)
+      stream.close()
+      new String(buf, "UTF-8")
     }
   }
 

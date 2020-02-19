@@ -92,6 +92,13 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
     Eval.eval(expr, env, old, top)
   }
 
+  override def check(expected: IsSat) = {
+    val actual = check()
+    if (config.test)
+      ensure(expected == actual, "check-sat command returned unexpected result", actual, expected)
+    actual
+  }
+
   def check() = backend.scoped {
     var _asserts = top.asserts map eval
 
@@ -174,31 +181,59 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
 
 class Config {
   var simplify = false
+  var test = false
   var printSuccess = false
   var produceModels = false
 }
 
-class CuveeBuilder {
-  var settings = new Config
+object Task {
+  def apply(): Task = {
+    new Task
+  }
+
+  def apply(source: Source, solver: Solver, report: Report): Task = {
+    val task = new Task
+    task.configure(source, solver, report)
+    task
+  }
+
+  def apply(args: List[String]): Task = {
+    val task = new Task
+    task.configure(args)
+    task
+  }
+}
+
+class Task extends Runnable { /* because why not */
+  var config = new Config
   var timeout = 1000
   var source: Source = Source.stdin
   var solver: Solver = Solver.stdout
   var report: Report = Report.stderr
 
-  def configure(args: List[String]): CuveeBuilder = args match {
+  def configure(_source: Source, _solver: Solver, _report: Report) = {
+    source = _source
+    solver = _solver
+    report = _report
+  }
+
+  def configure(args: List[String]): Unit = args match {
     case Nil =>
-      this
 
     case "-timeout" :: arg :: rest =>
       timeout = arg.toInt
       configure(rest)
 
+    case "-test" :: rest =>
+      config.test = true
+      configure(rest)
+
     case "-simplify" :: rest =>
-      settings.simplify = true
+      config.simplify = true
       configure(rest)
 
     case "-no-simplify" :: rest =>
-      settings.simplify = false
+      config.simplify = false
       configure(rest)
 
     case "-debug-simplify" :: rest =>
@@ -212,28 +247,28 @@ class CuveeBuilder {
     case "-z3" :: rest =>
       ensure(rest.isEmpty, "-z3 must be the last argument")
       solver = Solver.z3(timeout)
-      this
+      report = Report.stdout
 
     case "-cvc4" :: rest =>
       ensure(rest.isEmpty, "-cvc4 must be the last argument")
       solver = Solver.cvc4(timeout)
-      this
+      report = Report.stdout
 
     case "-princess" :: rest =>
       ensure(rest.isEmpty, "-princess must be the last argument")
       solver = Solver.princess(timeout)
-      this
+      report = Report.stdout
 
     case "--" :: args =>
       ensure(args.length >= 1, "-- needs an SMT solver as argument")
       solver = Solver.process(args: _*)
-      this
+      report = Report.stdout
 
     case "-o" :: path :: rest =>
       ensure(rest.isEmpty, "-o <file> must be the last argument")
       val out = new File(path)
       solver = Solver.file(out)
-      this
+      report = Report.stdout
 
     case "-o" :: _ =>
       error("-o needs an output file as argument")
@@ -246,19 +281,21 @@ class CuveeBuilder {
       configure(rest)
   }
 
-  def build: Cuvee = Cuvee(solver, settings)
+  def run() = {
+    val cuvee = Cuvee(solver, config)
+    source.run(cuvee, report)
+  }
 }
 
 object Cuvee {
   def run(source: Source, backend: Solver, report: Report) {
-    val solver = Cuvee(backend, new Config)
-    source.run(solver, report)
+    val task = Task(source, backend, report)
+    task.run()
   }
 
   def run(args: List[String]): Unit = {
-    val builder = new CuveeBuilder
-    builder.configure(args)
-    builder.source.run(builder.build, builder.report)
+    val task = Task(args)
+    task.run()
   }
 
   def main(args: Array[String]) {
