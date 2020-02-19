@@ -55,7 +55,7 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
   }
 
   def _pop() = {
-    ensure(!states.isEmpty, "empty solver stack")
+    ensure(states.nonEmpty, "cannot pop from empty solver stack")
     val st :: rest = states
     states = rest
     st
@@ -66,13 +66,12 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
   }
 
   def pop(depth: Int) = {
-    _pop()
+    depth times { _pop() }
     backend.pop(depth)
   }
 
   def push(depth: Int) = {
-    for(i <- 0 until depth)
-      _push(top)
+    depth times { _push(top) }
     backend.push(depth)
   }
 

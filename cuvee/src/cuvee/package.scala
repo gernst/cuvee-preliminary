@@ -17,7 +17,7 @@ package object cuvee {
     if (!test)
       error(info)
   }
-  
+
   def unwrap[A](option: Option[A], info: Any*): A = option match {
     case None => error(info: _*)
     case Some(a) => a
@@ -32,6 +32,14 @@ package object cuvee {
   implicit def toIds(formals: List[Formal]) = formals map (_.id)
   implicit def toTypes(formals: List[Formal]) = formals map (_.typ)
   implicit def toTyping(formals: List[Formal]) = formals map (f => (f.id, f.typ))
+
+  implicit class IntOps(self: Int) {
+    def times(f: => Unit) = {
+      for (i <- 0 until self) {
+        f
+      }
+    }
+  }
 
   implicit class StringOps(self: String) {
     def __(index: Option[Int]): String = index match {

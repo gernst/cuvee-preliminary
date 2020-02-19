@@ -114,12 +114,26 @@ object Parser {
   val exit_ = P(Exit("exit"))
   val reset_ = P(Reset("reset"))
 
+  val success = P(Success("success"))
+  val unsupported = P(Unsupported("unsupported"))
+  val sat = P(Sat("sat"))
+  val unsat = P(Unsat("unsat"))
+  val unknown = P(Unknown("unknown"))
+  val error = P(Error("error" ~ ret("unknown")))
+  val error_ = P(Error("error" ~ string))
+
+  val ack = P(success | unsupported | error | parens(error_))
+  val is_sat: Parser[IsSat] = P(sat | unsat | unknown)
+  val res: Parser[Res] = P(ack | is_sat)
+
   val int_0 = int | ret(0)
+  val int_1 = int | ret(1)
 
-  val push_ = P(Push("push" ~ int_0))
-  val pop_ = P(Pop("pop" ~ int_0))
+  val push_ = P(Push("push" ~ int_1))
+  val pop_ = P(Pop("pop" ~ int_1))
 
-  val check_sat_ = P(CheckSat("check-sat" ~ (":expect" ~ is_sat).?))
+  val expect_is_sat = ":expect" ~ is_sat
+  val check_sat_ = P(CheckSat("check-sat" ~ expect_is_sat.?))
 
   val assert_ = P(Assert("assert" ~ expr))
   val verify_ = P(CounterExample("assert-counterexample" ~ expr ~ prog ~ expr))
@@ -149,21 +163,8 @@ object Parser {
   val arity = P(Arity(parens(sort ~ int)))
   val declare_dts_ = P(DeclareDatatypes("declare-datatypes" ~ parens(arity.*) ~ parens(datatype.*)))
 
-  val res: Parser[Res] = P(ack | is_sat)
-
   val dfn_ = P(define_fun_ | define_fun_rec_)
   val dfn = parens(dfn_)
-
-  val success = P(Success("success"))
-  val unsupported = P(Unsupported("unsupported"))
-  val sat = P(Sat("sat"))
-  val unsat = P(Unsat("unsat"))
-  val unknown = P(Unknown("unknown"))
-  val error = P(Error("error" ~ ret("unknown")))
-  val error_ = P(Error("error" ~ string))
-
-  val ack: Parser[Ack] = P(success | unsupported | error | parens(error_))
-  val is_sat: Parser[IsSat] = P(sat | unsat | unknown)
 
   val assertions_ = P(Assertions(expr.*))
   val assertions: Parser[Assertions] = parens(assertions_)
