@@ -14,7 +14,6 @@ case class Goal(bound: List[Formal], asserts: List[Expr], concls: List[Expr], go
   }
 
   def debug(indent: String) {
-
     if (bound.nonEmpty)
       println(indent + "fix")
     for (Formal(id, typ) <- bound) {
@@ -52,8 +51,8 @@ case class Goal(bound: List[Formal], asserts: List[Expr], concls: List[Expr], go
   }
 
   def assume(phi: Expr): Goal = phi match {
-//    case Not(arg) =>
-//      assert(arg)
+    //    case Not(arg) =>
+    //      assert(arg)
     case And.nary(args) =>
       assume(args)
     case Or.nary(args) =>
@@ -74,8 +73,8 @@ case class Goal(bound: List[Formal], asserts: List[Expr], concls: List[Expr], go
   }
 
   def assert(phi: Expr): Goal = phi match {
-//    case Not(arg) =>
-//      assume(arg)
+    //    case Not(arg) =>
+    //      assume(arg)
     case And.nary(args) =>
       /* val extra = args map Goal.empty.assert
       copy(goals = extra ++ goals) */

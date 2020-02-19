@@ -79,40 +79,7 @@ sealed trait Expr extends Expr.term {
 }
 
 object Expr extends Parseable[Expr](Parser.expr) with Alpha[Expr, Id] {
-  def nnf(phi: Expr): Expr = phi match {
-    case Not(True) =>
-      False
-    case Not(False) =>
-      True
-    case Not(Not(phi)) =>
-      nnf(phi)
-    case Not(Imp(phi, psi)) =>
-      nnf(phi) && !nnf(psi)
-    case Not(And.nary(args)) =>
-      Or(nnf(Not(args)))
-    case Not(Or.nary(args)) =>
-      And(nnf(Not(args)))
-    case Not(Bind(quant, formals, body)) =>
-      Bind(!quant, formals, nnf(!phi))
 
-    case Imp(phi, psi) =>
-      !nnf(phi) || nnf(psi)
-    case And.nary(args) =>
-      val _args = And.flatten(nnf(args))
-      And(_args)
-    case Or.nary(args) =>
-      val _args = Or.flatten(nnf(args))
-      Or(_args)
-    case Bind(quant, formals, body) =>
-      Bind(quant, formals, nnf(body))
-
-    case _ =>
-      phi
-  }
-
-  def nnf(phis: List[Expr]): List[Expr] = {
-    phis map nnf
-  }
 }
 
 case class Id(name: String, index: Option[Int]) extends Expr with Pat with Expr.x {

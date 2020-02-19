@@ -1,6 +1,8 @@
 package cuvee
 
 object Printer {
+  var format = false
+
   def setLogic(logic: String) = sexpr("set-logic", logic)
   def setOption(args: List[String]) = sexpr("set-option", args: _*)
 
@@ -18,7 +20,12 @@ object Printer {
   def assertions() = sexpr("get-assertions")
   def model() = sexpr("get-model")
 
-  def assert(expr: Expr) = sexpr("assert", expr)
+  def assert(expr: Expr) = {
+    if (format)
+      "(assert\n" + format(expr, "  ") + ")"
+    else
+      sexpr("assert", expr)
+  }
 
   def id(id: Id) = mangle(id)
 
@@ -47,7 +54,7 @@ object Printer {
     val (id, Proc(in, out, pre, post, body)) = descr
     sexpr(id, sexpr(in), sexpr(out), ":precondition", pre, ":postcondition", post, body)
   }
-  
+
   def define(id: Id, proc: Proc) = {
     val Proc(in, out, pre, post, body) = proc
     sexpr("define-proc", id, sexpr(in), sexpr(out), body, ":precondition", pre, ":postcondition", post)
@@ -93,6 +100,26 @@ object Printer {
 
   def error(info: Seq[Any]) = {
     info.mkString("(error \"", ", ", "\")")
+  }
+
+  def format(exprs: List[Expr], indent: String): String = {
+    val lines = exprs map (format(_, indent))
+    lines.mkString("\n")
+  }
+
+  def format(expr: Expr, indent: String): String = expr match {
+    case Not(phi) =>
+      indent + "(not\n" + format(phi, indent + "  ") + ")"
+    case Imp(phi, psi) =>
+      indent + "(=>\n" + format(phi, indent + "  ") + "\n" + format(psi, indent + "  ") + ")"
+    case And.nary(args) =>
+      indent + "(and\n" + format(args, indent + "  ") + ")"
+    case Or.nary(args) =>
+      indent + "(or\n" + format(args, indent + "  ") + ")"
+    case Bind(quant, formals, body) =>
+      indent + "(" + quant + "\n" + indent + "  " + sexpr(formals) + "\n" + format(body, indent + "  ") + ")"
+    case _ =>
+      indent + expr
   }
 }
 

@@ -22,7 +22,7 @@ case class Simplify(state: State) {
       val _goals = goals flatMap {
         goal =>
           val _goal = apply(goal)
-          if(_goal.isClosed) None
+          if (_goal.isClosed) None
           else Some(_goal)
       }
 
@@ -31,12 +31,15 @@ case class Simplify(state: State) {
   }
 
   def apply(phis: List[Expr]): List[Expr] = {
-    val _phis = Expr.nnf(phis)
+    val _phis = nnf(phis)
 
     if (Simplify.debug) {
-      println("simplify at top-level:")
+      println("input formulas:")
+      for (phi <- phis)
+        println(Printer.format(phi, "  "))
+      println("negation normal form:")
       for (phi <- _phis)
-        println(s"  $phi")
+        println(Printer.format(phi, "  "))
     }
     val _res = top(_phis)
     And.flatten(_res)
@@ -122,51 +125,55 @@ case class Simplify(state: State) {
 object Simplify {
   var debug = false
 
-  def eq(left: Expr, right: Expr): Expr = {
-    if (left == right) True
-    else Eq(left, right)
-  }
-
-  def not(phi: Expr) = phi match {
-    case False => True
+  def not(phi: Expr): Expr = phi match {
     case True => False
-    case App(Id.not, List(phi)) => phi
-    case _ => !phi
+    case False => True
+    case Not(psi) => psi
+    case _ => Not(phi)
   }
 
-  def imp(phi: Expr, psi: Expr) = (phi, psi) match {
-    case (False, _) => True
-    case (True, _) => psi
-    case (_, False) => not(phi)
-    case (_, True) => True
-    case _ => phi ==> psi
-  }
-
-  def and(phi: Expr, psi: Expr) = (phi, psi) match {
-    case (False, _) => False
-    case (True, _) => psi
-    case (_, False) => False
-    case (_, True) => phi
-    case _ => phi && psi
-  }
-
-  def or(phi: Expr, psi: Expr) = (phi, psi) match {
-    case (False, _) => psi
-    case (True, _) => True
-    case (_, False) => phi
-    case (_, True) => True
-    case _ => phi || psi
-  }
-
-  def and(args: List[Expr]) = {
+  def and(args: List[Expr]): Expr = {
     val _args = And.flatten(args)
     if (_args contains False) False
-    else And(_args filter (_ != True))
+    else And(_args.distinct filter (_ != True))
   }
 
-  def or(args: List[Expr]) = {
+  def or(args: List[Expr]): Expr = {
     val _args = Or.flatten(args)
     if (_args contains True) True
-    else Or(_args filter (_ != False))
+    else Or(_args.distinct filter (_ != False))
+  }
+
+  def nnf(phi: Expr): Expr = phi match {
+    case Not(True) =>
+      False
+    case Not(False) =>
+      True
+    case Not(Not(phi)) =>
+      nnf(phi)
+    case Not(Imp(phi, psi)) =>
+      nnf(phi && !psi)
+    case Not(And.nary(args)) =>
+      or(nnf(Not(args)))
+    case Not(Or.nary(args)) =>
+      and(nnf(Not(args)))
+    case Not(Bind(quant, formals, body)) =>
+      Bind(!quant, formals, nnf(!body))
+
+    case Imp(phi, psi) =>
+      nnf(!phi || psi)
+    case And.nary(args) =>
+      and(nnf(args))
+    case Or.nary(args) =>
+      or(nnf(args))
+    case Bind(quant, formals, body) =>
+      Bind(quant, formals, nnf(body))
+
+    case _ =>
+      phi
+  }
+
+  def nnf(phis: List[Expr]): List[Expr] = {
+    phis map nnf
   }
 }

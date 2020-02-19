@@ -109,7 +109,7 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
 
     if (config.simplify) {
       val simplify = Simplify(top.withoutAsserts)
-      // _asserts = simplify(_asserts)
+      _asserts = simplify(_asserts)
 
       if (config.goals) {
         goal = simplify(goal)
@@ -257,6 +257,10 @@ class Task extends Runnable { /* because why not */
 
     case "-debug-solver" :: rest =>
       Solver.debug = true
+      configure(rest)
+      
+    case "-format" :: rest =>
+      Printer.format = true
       configure(rest)
 
     case "-z3" :: rest =>
