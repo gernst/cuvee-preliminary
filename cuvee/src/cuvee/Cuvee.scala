@@ -9,7 +9,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.InputStream
 
-case class Cuvee(backend: Solver, settings: CuveeSettings) extends Solver {
+case class Cuvee(backend: Solver, config: Config) extends Solver {
   var states: List[State] = List(State.default)
 
   override def toString = log.mkString("\n")
@@ -22,11 +22,11 @@ case class Cuvee(backend: Solver, settings: CuveeSettings) extends Solver {
 
   def setOption(args: List[String]) = args match {
     case List(":produce-models", flag) =>
-      settings.produceModels = flag.toBoolean
+      config.produceModels = flag.toBoolean
       backend.setOption(args)
 
     case List(":print-success", flag) =>
-      settings.printSuccess = flag.toBoolean
+      config.printSuccess = flag.toBoolean
       Success
 
     case _ =>
@@ -35,7 +35,7 @@ case class Cuvee(backend: Solver, settings: CuveeSettings) extends Solver {
 
   def report(res: Option[Res]): Option[Res] = res match {
     case None => None
-    case Some(Success) if !settings.printSuccess => None
+    case Some(Success) if !config.printSuccess => None
     case _ => res
   }
 
@@ -71,7 +71,8 @@ case class Cuvee(backend: Solver, settings: CuveeSettings) extends Solver {
   }
 
   def push(depth: Int) = {
-    _push(top)
+    for(i <- 0 until depth)
+      _push(top)
     backend.push(depth)
   }
 
@@ -95,7 +96,7 @@ case class Cuvee(backend: Solver, settings: CuveeSettings) extends Solver {
   def check() = backend.scoped {
     var _asserts = top.asserts map eval
 
-    if (settings.simplify) {
+    if (config.simplify) {
       val simplify = Simplify(top.withoutAsserts)
       _asserts = simplify(_asserts)
     }
@@ -106,7 +107,7 @@ case class Cuvee(backend: Solver, settings: CuveeSettings) extends Solver {
 
     val res = backend.check()
 
-    if (settings.produceModels) {
+    if (config.produceModels) {
       val model = backend.model()
       map(_ withModel model)
     }
@@ -172,14 +173,14 @@ case class Cuvee(backend: Solver, settings: CuveeSettings) extends Solver {
   }
 }
 
-class CuveeSettings {
+class Config {
   var simplify = false
   var printSuccess = false
   var produceModels = false
 }
 
 class CuveeBuilder {
-  var settings = new CuveeSettings
+  var settings = new Config
   var timeout = 1000
   var source: Source = Source.stdin
   var solver: Solver = Solver.stdout
@@ -251,7 +252,7 @@ class CuveeBuilder {
 
 object Cuvee {
   def run(source: Source, backend: Solver, report: Report) {
-    val solver = Cuvee(backend, new CuveeSettings)
+    val solver = Cuvee(backend, new Config)
     source.run(solver, report)
   }
 

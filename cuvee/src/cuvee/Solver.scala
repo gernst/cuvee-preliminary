@@ -83,9 +83,9 @@ trait Solver {
       case Reset =>
         reset(); None
       case Push(depth) =>
-        push(depth.getOrElse(1)); None
+        push(depth); None
       case Pop(depth) =>
-        pop(depth.getOrElse(1)); None
+        pop(depth); None
       case Exit =>
         exit(); None
 

@@ -29,7 +29,6 @@ object Parser {
     str => str.substring(1, str.length - 1)
   }
 
-
   val name = simple | quoted
   val kw = S(":[0-9a-zA-Z_~!@$%^&*+=<>.?/\\-]+")
   val op = L("-") | L("+") | L("<=") | L("<") | L(">=") | L(">")
@@ -52,7 +51,7 @@ object Parser {
 
   val attr_ = P(Attr(kw ~ name.?))
   val note_ = P(Note(expr ~ attr_.+))
-  
+
   val as_ = P(As("as" ~ id ~ sort))
   val old_ = P(Old("old" ~ expr))
   val imp_ = P(Imp("=>" ~ expr ~ expr)) // singled out to avoid clash with "="
@@ -102,7 +101,7 @@ object Parser {
   val post = P(":postcondition" ~ expr)
   val while_ = P(While("while" ~ expr ~ prog ~ prog.? ~ term.? ~ pre.? ~ post.?))
 
-  val cmd_ : Parser[Cmd] = P(set_logic_ | set_option_ | set_info_  | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
+  val cmd_ : Parser[Cmd] = P(set_logic_ | set_option_ | set_info_ | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
     declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_ |
     define_proc_ | define_class_ | define_refinement_)
 
@@ -114,17 +113,19 @@ object Parser {
   val get_model_ = P(GetModel("get-model"))
   val exit_ = P(Exit("exit"))
   val reset_ = P(Reset("reset"))
-  val push_ = P(Push("push" ~ int.?))
-  val pop_ = P(Pop("pop" ~ int.?))
 
-  val check_sat_ : Parser[CheckSat] = P(CheckSat("check-sat" ~ (":expect" ~ is_sat).?))
+  val int_0 = int | ret(0)
+
+  val push_ = P(Push("push" ~ int_0))
+  val pop_ = P(Pop("pop" ~ int_0))
+
+  val check_sat_ = P(CheckSat("check-sat" ~ (":expect" ~ is_sat).?))
 
   val assert_ = P(Assert("assert" ~ expr))
   val verify_ = P(CounterExample("assert-counterexample" ~ expr ~ prog ~ expr))
 
   val get_assertions_ = P(GetAssertions("get-assertions"))
 
-  val int_0 = int | ret(0)
   val declare_sort_ = P(DeclareSort("declare-sort" ~ sort ~ int_0))
   val declare_const_ = P(DeclareFun("declare-const" ~ id ~ ret(Nil) ~ typ))
   val declare_fun_ = P(DeclareFun("declare-fun" ~ id ~ parens(types) ~ typ))

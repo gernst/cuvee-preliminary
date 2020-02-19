@@ -31,12 +31,12 @@ case object Reset extends Cmd {
   override def toString = Printer.reset()
 }
 
-case class Push(depth: Option[Int]) extends Cmd {
-  override def toString = Printer.push(depth.getOrElse(1))
+case class Push(depth: Int) extends Cmd {
+  override def toString = Printer.push(depth)
 }
 
-case class Pop(depth: Option[Int]) extends Cmd {
-  override def toString = Printer.pop(depth.getOrElse(1))
+case class Pop(depth: Int) extends Cmd {
+  override def toString = Printer.pop(depth)
 }
 
 case object GetAssertions extends Cmd {
