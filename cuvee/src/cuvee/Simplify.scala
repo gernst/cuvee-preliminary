@@ -6,30 +6,6 @@ case class Simplify(state: State) {
 
   import Simplify._
 
-  def apply(goal: Goal): Goal = {
-    val Goal(bound, asserts, concls, goals) = goal
-    backend.scoped {
-      backend.bind(bound)
-      for (ctx <- asserts)
-        backend.assert(ctx)
-
-      val _concls = concls flatMap {
-        case concl if isTrue(concl) => None
-        case concl if isFalse(concl) => Some(False)
-        case concl => Some(concl)
-      }
-
-      val _goals = goals flatMap {
-        goal =>
-          val _goal = apply(goal)
-          if (_goal.isClosed) None
-          else Some(_goal)
-      }
-
-      Goal(bound, asserts, _concls, _goals)
-    }
-  }
-
   def apply(phis: List[Expr]): List[Expr] = {
     val _phis = nnf(phis)
 

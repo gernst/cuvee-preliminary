@@ -101,20 +101,10 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
 
   def check() = backend.scoped {
     var _asserts = top.asserts map eval
-    var goal = Goal(_asserts)
-
-    if (config.goals) {
-      goal.debug("")
-    }
 
     if (config.simplify) {
       val simplify = Simplify(top.withoutAsserts)
       _asserts = simplify(_asserts)
-
-      if (config.goals) {
-        goal = simplify(goal)
-        goal.debug("")
-      }
     }
 
     for (expr <- _asserts) {
@@ -191,7 +181,6 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
 
 class Config {
   var simplify = false
-  var goals = false
   var test = false
   var printSuccess = false
   var produceModels = false
@@ -237,10 +226,6 @@ class Task extends Runnable { /* because why not */
 
     case "-test" :: rest =>
       config.test = true
-      configure(rest)
-
-    case "-debug-goals" :: rest =>
-      config.goals = true
       configure(rest)
 
     case "-simplify" :: rest =>
