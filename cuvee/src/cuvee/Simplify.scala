@@ -6,6 +6,10 @@ case class Simplify(state: State) {
 
   import Simplify._
 
+  def apply(phi: Expr): Expr = {
+    and(apply(List(phi)))
+  }
+  
   def apply(phis: List[Expr]): List[Expr] = {
     val _phis = norm(phis)
 

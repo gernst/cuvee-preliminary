@@ -1,8 +1,8 @@
 package cuvee
 
 case class Verify(state: State) {
-  val backend = Solver.default
-  state replay backend
+  val simplify = Simplify(state)
+  import simplify.backend
 
   def R(A: Obj, C: Obj, sim: Sim) = sim match {
     case Sim.byFun(fun) =>
@@ -19,8 +19,17 @@ case class Verify(state: State) {
     val (as, cs, phi) = R(A, C, sim)
     val (init, conds) = refine(A, as, C, cs, phi)
     println(s"verification conditions for refinement $spec to $impl")
-    for(cond <- (init :: conds)) {
-      println(Printer.format(cond, "  "))
+    for ((op, cond) <- (init :: conds)) {
+      val env = state.env
+      val old = Nil
+      val _cond = Eval.eval(cond, env, old, state)
+      println(s"$op (verification condition)")
+      println(Printer.format(_cond, "  "))
+      val __cond = simplify(_cond)
+      val res = backend.check(!__cond)
+      println(s"$op ($res)")
+      if (res != Unsat)
+        println(Printer.format(__cond, "  "))
     }
   }
 
@@ -43,24 +52,31 @@ case class Verify(state: State) {
   def diagram(
     as: List[Formal], aproc: (Id, Proc),
     cs: List[Formal], cproc: (Id, Proc),
-    R0: Expr, R1: Expr): Expr = {
+    R0: Expr, R1: Expr): (Id, Expr) = {
 
     val (aop, ap) = aproc
     val (cop, cp) = cproc
 
-    val Proc(ai, ao, apre, apost, abody) = ap
-    val Proc(ci, co, cpre, cpost, cbody) = cp
+    ensure(aop == cop, "mismatching operation", aop, cop)
+
+    val Proc(ai, ao, _, _, _) = ap
+    val Proc(ci, co, _, _, _) = cp
 
     val co_ = co map (_.prime)
 
     val in = Eq(ai, ci)
     val out = Eq(ao, co_)
+    
+    val (apre, apost, abody) = ap.call(as, as, ai, ao)
+    val (cpre, cpost, cbody) = cp.call(as, as, ci, co_)
 
-    Forall(
+    val phi = Forall(
       as ++ ai ++ ao ++ cs ++ ci ++ co_,
       in ==>
         (apre && R0) ==>
         (cpre && WP(cbody, Dia(abody, out && R1))))
+
+    (aop, phi)
   }
 
   /* def run(solver: Cuvee, report: Report): Unit = {
