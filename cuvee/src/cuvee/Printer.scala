@@ -86,6 +86,13 @@ object Printer {
     sexpr("declare-datatypes", sexpr(arities), sexpr(decls))
   }
 
+  def verify(spec: Sort, impl: Sort, sim: Sim) = sim match {
+    case Sim.byFun(fun) =>
+      sexpr("verify-refinement", spec, impl, fun)
+    case Sim.byExpr(as, cs, phi) =>
+      sexpr("verify-refinement", sexpr(spec, as: _*), sexpr(impl, cs: _*), phi)
+  }
+
   def sat() = "sat"
   def unsat() = "unsat"
   def unknown() = "unknown"

@@ -12,6 +12,7 @@ trait Solver {
 
   def setLogic(logic: String): Ack
   def setOption(args: List[String]): Ack
+  def setInfo(attr: String, arg: Option[Any]): Ack
 
   def reset(): Ack
   def push(depth: Int): Ack
@@ -62,6 +63,8 @@ trait Solver {
   def declare(id: Id, args: List[Type], res: Type): Ack
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean): Ack
 
+  def verify(spec: Sort, impl: Sort, sim: Sim): Ack
+
   def declare(arities: List[Arity], decls: List[Datatype]): Ack
 
   def define(id: Id, proc: Proc): Ack
@@ -85,6 +88,8 @@ trait Solver {
         Some(setLogic(logic))
       case SetOption(args) =>
         Some(setOption(args))
+      case SetInfo(attr, arg) =>
+        Some(setInfo(attr, arg))
 
       case Reset =>
         reset(); None
@@ -126,7 +131,11 @@ trait Solver {
       case DefineClass(sort, obj) =>
         Some(define(sort, obj))
 
-      case _ => Some(Error("not supported"))
+      case VerifyRefinement(spec, impl, sim) =>
+        Some(verify(spec, impl, sim))
+
+      /* case _ =>
+        Some(Error("not supported")) */
     }
   }
 }
@@ -167,6 +176,11 @@ object Solver {
 
     def setOption(args: List[String]) = {
       write(Printer.setOption(args))
+      Ack.from(read())
+    }
+
+    def setInfo(attr: String, arg: Option[Any]): Ack = {
+      write(Printer.setInfo(attr, arg))
       Ack.from(read())
     }
 
@@ -245,6 +259,11 @@ object Solver {
       Ack.from(read())
     }
 
+    def verify(spec: Sort, impl: Sort, sim: Sim) = {
+      write(Printer.verify(spec, impl, sim))
+      Ack.from(read())
+    }
+
     def write(line: String) {
       if (debug) println(pid + " < " + line)
       stdin.println(line)
@@ -288,6 +307,11 @@ object Solver {
 
     def setOption(args: List[String]) = {
       write(Printer.setOption(args))
+      Success
+    }
+
+    def setInfo(attr: String, arg: Option[Any]) = {
+      write(Printer.setInfo(attr, arg))
       Success
     }
 
@@ -368,6 +392,11 @@ object Solver {
       Success
     }
 
+    def verify(spec: Sort, impl: Sort, sim: Sim) = {
+      write(Printer.verify(spec, impl, sim))
+      Success
+    }
+
     def write(line: String) {
       stream.println(line)
       stream.flush()
@@ -389,6 +418,11 @@ object Solver {
     def setOption(args: List[String]): Ack = {
       for (solver <- others) solver.setOption(args)
       primary.setOption(args)
+    }
+
+    def setInfo(attr: String, arg: Option[Any]): Ack = {
+      for (solver <- others) solver.setInfo(attr, arg)
+      primary.setInfo(attr, arg)
     }
 
     def reset(): Ack = {
@@ -459,6 +493,12 @@ object Solver {
     def define(sort: Sort, obj: Obj): Ack = {
       for (solver <- others) solver.define(sort, obj)
       primary.define(sort, obj)
+    }
+    
+    
+    def verify(spec: Sort, impl: Sort, sim: Sim): Ack = {
+      for (solver <- others) solver.verify(spec, impl, sim)
+      primary.verify(spec, impl, sim)
     }
 
     def assert(expr: Expr): Ack = {

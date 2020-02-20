@@ -33,6 +33,10 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
       backend.setOption(args)
   }
 
+  def setInfo(attr: String, arg: Option[Any]): Ack = {
+    backend.setInfo(attr, arg)
+  }
+
   def report(res: Option[Res]): Option[Res] = res match {
     case None => None
     case Some(Success) if !config.printSuccess => None
@@ -172,6 +176,10 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
     map(_ assert axiom)
     backend.declare(id, args, res)
   } */
+
+  def verify(spec: Sort, impl: Sort, sim: Sim): Ack = {
+    ???
+  }
 
   def declare(arities: List[Arity], decls: List[Datatype]) = {
     map(_ declare (arities, decls))
