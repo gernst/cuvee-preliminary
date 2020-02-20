@@ -82,7 +82,7 @@ case class State(
 
   def define(id: Id, proc: Proc) = {
     ensure(!(procs contains id), "procedure already defined", id)
-    Verify.checkProc(id, proc)
+    Check.checkProc(id, proc)
     val ins: List[Type] = proc.in
     val outs: List[Type] = proc.out
     copy(
@@ -91,10 +91,8 @@ case class State(
   }
 
   def define(sort: Sort, obj: Obj): State = {
-    val Obj(state, init, ops) = obj
     ensure(!(objects contains sort), "object already defined", sort)
-    Verify.checkProc(Id.init, init, state)
-    ops.foreach(proc => Verify.checkProc(proc._1, proc._2, state))
+    Check.checkObj(sort, obj)
     copy(
       objects = objects + (sort -> obj))
   }

@@ -178,7 +178,9 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
   } */
 
   def verify(spec: Sort, impl: Sort, sim: Sim): Ack = {
-    ???
+    val verify = Verify(top)
+    verify(spec, impl, sim)
+    Success
   }
 
   def declare(arities: List[Arity], decls: List[Datatype]) = {

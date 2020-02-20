@@ -1,12 +1,69 @@
 package cuvee
 
-case class Verify(commands: Iterable[Cmd]) extends Source {
-  def run(solver: Solver, report: Report): Unit = solver match {
-    case cuvee: Cuvee => run(cuvee, report)
-    case _ => ???
+case class Verify(state: State) {
+  val backend = Solver.default
+  state replay backend
+
+  def R(A: Obj, C: Obj, sim: Sim) = sim match {
+    case Sim.byFun(fun) =>
+      val as = A.state
+      val cs = C.state
+      (as, cs, App(fun, as ++ cs))
+    case Sim.byExpr(as, cs, phi) =>
+      (as, cs, phi)
   }
 
-  def run(solver: Cuvee, report: Report): Unit = {
+  def apply(spec: Sort, impl: Sort, sim: Sim) = {
+    val A = state objects spec
+    val C = state objects impl
+    val (as, cs, phi) = R(A, C, sim)
+    val (init, conds) = refine(A, as, C, cs, phi)
+    println(s"verification conditions for refinement $spec to $impl")
+    for(cond <- (init :: conds)) {
+      println(Printer.format(cond, "  "))
+    }
+  }
+
+  def refine(A: Obj, as: List[Formal], C: Obj, cs: List[Formal], R: Expr) = {
+    val init = diagram(
+      as, Id("init") -> A.init,
+      cs, Id("init") -> C.init,
+      True, R)
+
+    val ops = for ((aproc, cproc) <- (A.ops zip C.ops)) yield {
+      diagram(
+        as, aproc,
+        cs, cproc,
+        R, R)
+    }
+
+    (init, ops.toList)
+  }
+
+  def diagram(
+    as: List[Formal], aproc: (Id, Proc),
+    cs: List[Formal], cproc: (Id, Proc),
+    R0: Expr, R1: Expr): Expr = {
+
+    val (aop, ap) = aproc
+    val (cop, cp) = cproc
+
+    val Proc(ai, ao, apre, apost, abody) = ap
+    val Proc(ci, co, cpre, cpost, cbody) = cp
+
+    val co_ = co map (_.prime)
+
+    val in = Eq(ai, ci)
+    val out = Eq(ao, co_)
+
+    Forall(
+      as ++ ai ++ ao ++ cs ++ ci ++ co_,
+      in ==>
+        (apre && R0) ==>
+        (cpre && WP(cbody, Dia(abody, out && R1))))
+  }
+
+  /* def run(solver: Cuvee, report: Report): Unit = {
     for (cmd <- commands) {
       cmd match {
         case DefineProc(id, proc) =>
@@ -30,48 +87,10 @@ case class Verify(commands: Iterable[Cmd]) extends Source {
 
   private def verifyProcedure(solver: Cuvee, report: Report, proc: Proc, surroundingClass: Option[Obj]) = {
      report(solver.check(!Verify.verificationCondition(proc, solver.top, surroundingClass)))
-  }
+  } */
 }
 
 object Verify {
-  /**
-   * Does some basic checks on a procedure w.r.t. well-definedness. This exludes anything that requires knowledge about
-   * the state.
-   *
-   * @param id    name of the procedure for error messages
-   * @param state (optional) state of the surrounding object if this procedure is defined on an object
-   */
-  def checkProc(id: Id, proc: Proc, state: List[Formal] = List()): Unit = {
-    val Proc(in, out, pre, post, body) = proc
-    val inVars: List[Id] = in
-    val duplicateInputDeclarations = inVars.groupBy(identity).filter(_._2.size > 1)
-    if (duplicateInputDeclarations.nonEmpty) {
-      Error(s"The method $id declares duplicate input parameters ${duplicateInputDeclarations.keys.mkString(", ")}")
-    }
-
-    // the outputs may have the same variable name in multiple places if the type is equal.
-    // outputs may overlap with inputs but, again, the type must be equal
-    val nonUniqueAgruments = (in ++ out).groupBy(_.id).filter(_._2.map(_.typ).distinct.size > 1)
-    if (nonUniqueAgruments.nonEmpty) {
-      Error(s"The method $id declares non-unique type for argument ${nonUniqueAgruments.keys.mkString(", ")}")
-    }
-
-    // procedure must at most modify its output variables
-    val modifiableVariables: List[Id] = (in ++ out ++ state).distinct
-    val modifiedVariables = body.mod
-    val illegallyModifiedVariables = modifiedVariables.filter(!modifiableVariables.contains(_))
-    if (illegallyModifiedVariables.nonEmpty) {
-      Error(s"The method $id modifies undeclared output parameters ${illegallyModifiedVariables.mkString(", ")}")
-    }
-
-    // procedure must at least modify output variables that are not input variables
-    val outputsThatMustBeSet = out.map(_.id).filter(!inVars.contains(_))
-    val unsetOutputs = outputsThatMustBeSet.filter(!modifiedVariables.contains(_))
-    if (unsetOutputs.nonEmpty) {
-      Error(s"The method $id does not modify its output parameters ${unsetOutputs.mkString(", ")}")
-    }
-  }
-
   /**
    * Generates the verification condition for a procedure declaration.
    *
@@ -106,7 +125,7 @@ object Verify {
     val DefineRefinement(abstr, concr, relation) = refinement
     val Formal(aid, asort: Sort) = abstr
     val Formal(cid, csort: Sort) = concr
-    
+
     val ac = st objects asort
     val cc = st objects csort
     val commonProcs = ac.ops map (_._1) intersect cc.ops.map(_._1)
