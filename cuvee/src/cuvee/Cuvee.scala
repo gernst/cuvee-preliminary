@@ -179,7 +179,15 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
 
   def verify(spec: Sort, impl: Sort, sim: Sim): Ack = {
     val verify = Verify(top)
-    verify(spec, impl, sim)
+    val res = verify(spec, impl, sim)
+    ensure(res forall (_ == Unsat), "incorrect refinement", spec, impl)
+    Success
+  }
+
+  def verify(id: Id): Ack = {
+    val verify = Verify(top)
+    val res = verify(id)
+    ensure(res == Unsat, "incorrect contract", id)
     Success
   }
 
@@ -248,6 +256,10 @@ class Task extends Runnable { /* because why not */
 
     case "-debug-simplify" :: rest =>
       Simplify.debug = true
+      configure(rest)
+
+    case "-debug-verify" :: rest =>
+      Verify.debug = true
       configure(rest)
 
     case "-debug-solver" :: rest =>

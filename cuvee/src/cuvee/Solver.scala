@@ -63,6 +63,7 @@ trait Solver {
   def declare(id: Id, args: List[Type], res: Type): Ack
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean): Ack
 
+  def verify(id: Id): Ack
   def verify(spec: Sort, impl: Sort, sim: Sim): Ack
 
   def declare(arities: List[Arity], decls: List[Datatype]): Ack
@@ -131,6 +132,8 @@ trait Solver {
       case DefineClass(sort, obj) =>
         Some(define(sort, obj))
 
+      case VerifyProc(id) =>
+        Some(verify(id))
       case VerifyRefinement(spec, impl, sim) =>
         Some(verify(spec, impl, sim))
 
@@ -256,6 +259,11 @@ object Solver {
 
     def define(sort: Sort, obj: Obj) = {
       write(Printer.define(sort, obj))
+      Ack.from(read())
+    }
+
+    def verify(id: Id): Ack = {
+      write(Printer.verify(id))
       Ack.from(read())
     }
 
@@ -392,6 +400,11 @@ object Solver {
       Success
     }
 
+    def verify(id: Id): Ack = {
+      write(Printer.verify(id))
+      Success
+    }
+
     def verify(spec: Sort, impl: Sort, sim: Sim) = {
       write(Printer.verify(spec, impl, sim))
       Success
@@ -494,8 +507,12 @@ object Solver {
       for (solver <- others) solver.define(sort, obj)
       primary.define(sort, obj)
     }
-    
-    
+
+    def verify(id: Id): Ack = {
+      for (solver <- others) solver.verify(id)
+      primary.verify(id)
+    }
+
     def verify(spec: Sort, impl: Sort, sim: Sim): Ack = {
       for (solver <- others) solver.verify(spec, impl, sim)
       primary.verify(spec, impl, sim)

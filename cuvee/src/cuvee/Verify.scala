@@ -1,8 +1,84 @@
 package cuvee
 
 case class Verify(state: State) {
+  import Verify._
+
   val simplify = Simplify(state)
+  val env = state.env
+  val old = Nil
   import simplify.backend
+
+  def verify(phi: Expr, what: String) = {
+    val expr = !phi
+
+    if (debug) {
+      println(s"(assert ; $what")
+      print(Printer.format(expr, "  "))
+      println(")")
+    }
+
+    val _expr = Eval.eval(expr, env, old, state)
+    val __expr = simplify(_expr)
+
+    if (debug) {
+      println(s"(assert ; $what (simplified)")
+      print(Printer.format(__expr, "  "))
+      println(")")
+    }
+
+    val (ms, res) = time(backend.check(__expr))
+    if (debug) {
+      println(res)
+    }
+    res
+  }
+
+  def apply(spec: Sort, impl: Sort, sim: Sim) = {
+    val A = state objects spec
+    val C = state objects impl
+    val (as, cs, phi) = R(A, C, sim)
+    val (init, conds) = refine(A, as, C, cs, phi)
+    println(s"verification conditions for refinement $spec to $impl")
+    for ((op, phi) <- (init :: conds)) yield {
+      verify(phi, s"refine $op")
+    }
+  }
+
+  def apply(id: Id) = {
+    val proc = state procdefs id
+    val phi = contract(proc)
+    verify(phi, s"contract $id")
+  }
+
+  /* def run(solver: Cuvee, report: Report): Unit = {
+    for (cmd <- commands) {
+      cmd match {
+        case DefineProc(id, proc) =>
+          report(solver.define(id, proc))
+          verifyProcedure(solver, report, proc, None)
+        case DefineClass(sort, obj) =>
+          report(solver.define(sort, obj))
+          obj.ops.foreach(proc => verifyProcedure(solver, report, proc._2, Some(obj)))
+        case refinement: DefineRefinement =>
+          Verify.verificationConditions(refinement, solver.top).foreach(vc => {
+            report(solver.check(!vc))
+          })
+        case other =>
+          solver.exec(other) match {
+            case Some(res) => report(res)
+            case None => Unit
+          }
+      }
+    }
+  }
+
+  private def verifyProcedure(solver: Cuvee, report: Report, proc: Proc, surroundingClass: Option[Obj]) = {
+     report(solver.check(!Verify.verificationCondition(proc, solver.top, surroundingClass)))
+  } */
+}
+
+object Verify {
+  var debug = false
 
   def R(A: Obj, C: Obj, sim: Sim) = sim match {
     case Sim.byFun(fun) =>
@@ -13,24 +89,11 @@ case class Verify(state: State) {
       (as, cs, phi)
   }
 
-  def apply(spec: Sort, impl: Sort, sim: Sim) = {
-    val A = state objects spec
-    val C = state objects impl
-    val (as, cs, phi) = R(A, C, sim)
-    val (init, conds) = refine(A, as, C, cs, phi)
-    println(s"verification conditions for refinement $spec to $impl")
-    for ((op, cond) <- (init :: conds)) {
-      val env = state.env
-      val old = Nil
-      val _cond = Eval.eval(cond, env, old, state)
-      println(s"$op (verification condition)")
-      println(Printer.format(_cond, "  "))
-      val __cond = simplify(_cond)
-      val res = backend.check(!__cond)
-      println(s"$op ($res)")
-      if (res != Unsat)
-        println(Printer.format(__cond, "  "))
-    }
+  def contract(proc: Proc) = {
+    val Proc(in, out, pre, post, body) = proc
+    Forall(
+      in ++ out,
+      pre ==> WP(body, post))
   }
 
   def refine(A: Obj, as: List[Formal], C: Obj, cs: List[Formal], R: Expr) = {
@@ -66,7 +129,7 @@ case class Verify(state: State) {
 
     val in = Eq(ai, ci)
     val out = Eq(ao, co_)
-    
+
     val (apre, apost, abody) = ap.call(as, as, ai, ao)
     val (cpre, cpost, cbody) = cp.call(as, as, ci, co_)
 
@@ -79,34 +142,6 @@ case class Verify(state: State) {
     (aop, phi)
   }
 
-  /* def run(solver: Cuvee, report: Report): Unit = {
-    for (cmd <- commands) {
-      cmd match {
-        case DefineProc(id, proc) =>
-          report(solver.define(id, proc))
-          verifyProcedure(solver, report, proc, None)
-        case DefineClass(sort, obj) =>
-          report(solver.define(sort, obj))
-          obj.ops.foreach(proc => verifyProcedure(solver, report, proc._2, Some(obj)))
-        case refinement: DefineRefinement =>
-          Verify.verificationConditions(refinement, solver.top).foreach(vc => {
-            report(solver.check(!vc))
-          })
-        case other =>
-          solver.exec(other) match {
-            case Some(res) => report(res)
-            case None => Unit
-          }
-      }
-    }
-  }
-
-  private def verifyProcedure(solver: Cuvee, report: Report, proc: Proc, surroundingClass: Option[Obj]) = {
-     report(solver.check(!Verify.verificationCondition(proc, solver.top, surroundingClass)))
-  } */
-}
-
-object Verify {
   /**
    * Generates the verification condition for a procedure declaration.
    *

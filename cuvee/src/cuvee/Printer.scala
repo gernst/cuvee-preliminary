@@ -85,6 +85,11 @@ object Printer {
   def declare(arities: List[Arity], decls: List[Datatype]) = {
     sexpr("declare-datatypes", sexpr(arities), sexpr(decls))
   }
+  
+  
+  def verify(id: Id) = {
+    sexpr("verify-proc", id)
+  }
 
   def verify(spec: Sort, impl: Sort, sim: Sim) = sim match {
     case Sim.byFun(fun) =>

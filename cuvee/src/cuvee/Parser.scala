@@ -112,7 +112,7 @@ object Parser {
 
   val cmd_ : Parser[Cmd] = P(set_logic_ | set_option_ | set_info_ | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
     declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_ |
-    define_proc_ | define_class_ | verify_refinement_)
+    define_proc_ | define_class_ | verify_proc_ | verify_refinement_)
 
   val cmd: Parser[Cmd] = P(parens(cmd_))
 
@@ -165,6 +165,8 @@ object Parser {
   val define_class_ = P(DefineClass("define-class" ~ sort ~ obj_))
   val define_refinement_ = P(DefineRefinement("refinement" ~ formal ~ formal ~ expr))
 
+  val verify_proc_ = P(VerifyProc("verify-proc" ~ id))
+    
   val refine_by_fun_ = VerifyRefinement(sort ~ sort ~ Sim.byFun(id))
   val refine_by_expr_ = parens(sort ~ formals) ~ parens(sort ~ formals) ~ expr map {
     case (((spec, as), (impl, cs)), phi) =>
