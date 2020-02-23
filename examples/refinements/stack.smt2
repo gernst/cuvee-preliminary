@@ -67,3 +67,7 @@
 
 (verify-refinement
    ListStack ArrayStack R)
+
+(check-sat
+  :expect unsat)
+
