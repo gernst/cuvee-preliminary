@@ -187,19 +187,18 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
   } */
 
   def verify(spec: Sort, impl: Sort, sim: Sim): Ack = {
-    val verify = Verify(top)
-    val phi = verify(spec, impl, sim)
+    val A = top objects spec
+    val C = top objects impl
+
+    val (defs, phi) = Verify.refinement(A, C, sim, top, solver)
+    for (df <- defs) assert(df)
     assert(!phi)
-    // ensure(res forall (_ == Unsat), "incorrect refinement", spec, impl)
-    // Success
   }
 
   def verify(id: Id): Ack = {
-    val verify = Verify(top)
-    val phi = verify(id)
+    val proc = top procdefs id
+    val phi = Verify.contract(proc)
     assert(!phi)
-    // ensure(res == Unsat, "incorrect contract", id)
-    // Success
   }
 
   def declare(arities: List[Arity], decls: List[Datatype]) = {

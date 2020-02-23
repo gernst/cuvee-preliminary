@@ -1,19 +1,46 @@
 package cuvee
 
-case class Refine(A: Obj, C: Obj, R: Id, verify: Verify) {
+sealed trait Recipe
+
+object Recipe {
+  case object auto extends Recipe
+  case object output extends Recipe
+}
+
+case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   val as = A.state
   val cs = C.state
   val as_ = as map (_.prime)
   val cs_ = cs map (_.prime)
   val ainit = A.init
   val cinit = C.init
-  
-  import verify.state
-  import verify.simplify
+
+  def inductivePositions = {
+    for ((Formal(_, sort: Sort), i) <- as.zipWithIndex if state.datatypes contains sort) yield {
+      val dt = state datatypes sort
+      (sort, dt, i)
+    }
+  }
+
+  def apply(recipe: Recipe): List[Expr] = recipe match {
+    case Recipe.auto =>
+      fromConsumer()
+    case Recipe.output =>
+      fromOutput()
+  }
 
   ensure(
     A.state.toSet disjoint C.state.toSet,
     "overlapping state variables", A, C)
+
+  def fromOutput() = {
+    Nil
+  }
+
+  def fromConsumer() = {
+    val (sort, dt, pos) = inductivePositions.head
+    induct(sort, dt, pos)
+  }
 
   def infer(as: List[Pat], cs: List[Pat], ctx: List[Expr]): List[Expr] = {
     ???
@@ -69,8 +96,8 @@ case class Refine(A: Obj, C: Obj, R: Id, verify: Verify) {
   }
 
   def base(fun: Id, pos: Int, as0: List[Id], cs0: List[Id], ctx: List[Expr]): List[Expr] = {
-    // lockstep(ainit, as, as0, cinit, cs, cs0)
-    step(cinit, cs, cs0)
+    lockstep(ainit, as, as0, cinit, cs, cs0)
+    // step(cinit, cs, cs0)
   }
 
   def recurse(fun: Id, args: List[Id], pos: Int, hyp: List[Int], as0: List[Id], cs0: List[Id], ctx: List[Expr]): List[Expr] = {
@@ -94,35 +121,38 @@ case class Refine(A: Obj, C: Obj, R: Id, verify: Verify) {
    *  @param as, cs the list of state variables under consideration
    *  @param ctx the current context
    */
-  def induct(sort: Sort, data: Datatype, pos: Int, as: List[Id], cs: List[Id], ctx: List[Expr]): Expr = {
+  def induct(sort: Sort, data: Datatype, pos: Int, as: List[Formal], cs: List[Formal], ctx: List[Expr]): List[Expr] = {
     val Datatype(params, constrs) = data
     ensure(pos < as.length, "unsupported: induction over concrete state", pos, as, cs)
     ensure(params.isEmpty, "unsupported: induction over parametric data types", sort, data)
 
-    val arg = as(pos)
-
-    val cases = for (constr <- constrs) yield {
-      induct(sort, constr, pos, as, cs, ctx)
+    for (constr <- constrs) yield {
+      val (id, args, rhs) = induct(sort, constr, pos, as, cs, ctx)
+      val pat = Apps(id :: (args: List[Id]))
+      val ax: List[Id] = as
+      val cx: List[Id] = cs
+      val ax_ = ax updated (pos, pat)
+      val as__ = as patch (pos, args, 1)
+      Forall(
+        as__ ++ cs,
+        App(R, ax_ ++ cx) === rhs)
     }
-
-    Match(arg, cases)
   }
 
-  def induct(sort: Sort, data: Datatype, pos: Int): Expr = {
-    val rhs = induct(sort, data, pos, as, cs, Nil)
-    App(R, as ++ cs) === rhs
+  def induct(sort: Sort, data: Datatype, pos: Int): List[Expr] = {
+    induct(sort, data, pos, as, cs, Nil)
   }
 
   /**
    * A single case for a given constructor
    */
-  def induct(sort: Sort, constr: Constr, pos: Int, as: List[Id], cs: List[Id], ctx: List[Expr]): Case = {
+  def induct(sort: Sort, constr: Constr, pos: Int, as: List[Formal], cs: List[Formal], ctx: List[Expr]): (Expr, List[Formal], Expr) = {
     val Constr(id, sels) = constr
 
     // fresh variables for each constructor argument,
     // named as the selectors
-    val args = for (sel <- sels)
-      yield Expr.fresh(sel.id)
+    val args = for (Sel(id, typ) <- sels)
+      yield Formal(Expr.fresh(id), typ)
 
     // recursive positions of constructor arguments
     // for which an inductive hypothesis in the form of a recursive call is generated
@@ -136,6 +166,6 @@ case class Refine(A: Obj, C: Obj, R: Id, verify: Verify) {
       recurse(id, args, pos, hyp, as, cs, ctx)
     }
 
-    Case(UnApps(id :: args), And(phis))
+    (id, args, And(phis))
   }
 }

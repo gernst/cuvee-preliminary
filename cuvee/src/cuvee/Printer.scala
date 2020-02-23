@@ -91,8 +91,10 @@ object Printer {
   }
 
   def verify(spec: Sort, impl: Sort, sim: Sim) = sim match {
-    case Sim.byFun(fun) =>
+    case Sim.byFun(fun, None) =>
       sexpr("verify-refinement", spec, impl, fun)
+    case Sim.byFun(fun, Some(_)) =>
+      sexpr("verify-refinement", spec, impl, fun, ":synthesize")
     case Sim.byExpr(as, cs, phi) =>
       sexpr("verify-refinement", sexpr(spec, as: _*), sexpr(impl, cs: _*), phi)
   }

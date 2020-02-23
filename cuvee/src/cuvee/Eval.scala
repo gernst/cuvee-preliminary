@@ -58,7 +58,7 @@ case class Path(fresh: List[Formal], path: List[Expr], env: Env) {
   }
 
   def toExpr = {
-    Exists(fresh, And(env.eqs ++ path))
+    Exists(fresh, And(path map (_ subst env.su)))
   }
 }
 
