@@ -3,7 +3,7 @@ package cuvee
 import java.io._
 import java.nio.file.Files
 
-import cuvee.Solver.tee
+import cuvee.Sink.tee
 import cuvee.Source.file
 import cuvee.test.TestSuite
 
@@ -20,12 +20,12 @@ object FileTest extends TestSuite {
   def run(fileName: String) = {
     Expr._index = 0 // reset because we have reference output
     assert(fileName endsWith ".smt2", "file name must end with .smt2")
-    val capture = new Solver.capture
+    val capture = new Sink.capture
     val task = configureCuvee(fileName)
 
     task.config.printSuccess = true // why this?
     task.config.test = true
-    task.solver = Solver.tee(task.solver, capture)
+    task.sink = Sink.tee(task.sink, capture)
     task.source = Source.file(fileName)
 
     task.run()

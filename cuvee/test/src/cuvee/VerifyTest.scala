@@ -127,7 +127,7 @@ object VerifyTest extends TestSuite {
 
       println(s"Verification condition for $file")
       println()
-      Cuvee.run(source, Solver.stdout, (_: Res) => {})
+      Cuvee.run(source, Sink.stdout, (_: Res) => {})
       println()
 
       val report = prove_!
