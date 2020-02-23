@@ -39,20 +39,24 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
 
   def fromConsumer() = {
     val (sort, dt, pos) = inductivePositions.head
-    induct(sort, dt, pos)
+    val exprs = induct(sort, dt, pos)
+
+    for (phi <- exprs)
+      println(Printer.format(phi, ""))
+    exprs
   }
 
   def infer(as: List[Pat], cs: List[Pat], ctx: List[Expr]): List[Expr] = {
     ???
   }
 
-  def step(proc: Proc, ps: List[Formal], xs: List[Id]): List[Expr] = {
+  /* def step(proc: Proc, ps: List[Formal], xs: List[Id]): List[Expr] = {
     val (xi, xo, pre, post, prog) = proc call (ps, xs)
     val paths = Eval.rel(prog, ps ++ xi ++ xo, state)
     List(pre, Or(paths map (_.toExpr)))
-  }
+  } */
 
-  def step(proc: Proc, ps: List[Formal], xs0: List[Expr], xs1: List[Id]): List[Expr] = {
+  def step(proc: Proc, ps: List[Formal], xs0: List[Expr], xs1: List[Id]) = {
     val (xi, xo, pre, post, prog) = proc call (ps, xs1)
     val su = Expr.subst(xs1, xs0)
     val ty = ps map (_.typ)
@@ -81,6 +85,10 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   def recurse(as0: List[Expr], cs0: List[Id], as1: List[Id], ctx: List[Expr]): List[Expr] = {
     val cs1 = cs0 map (_.prime)
     val rec = App(R, as1 ++ cs1)
+
+    val _as1 = (as zip as1) map { case (a, a1) => Formal(a1, a.typ) }
+    val _cs1 = (cs zip cs1) map { case (c, c1) => Formal(c1, c.typ) }
+
     val ops = for (((aname, aproc), (cname, cproc)) <- A.ops zip C.ops) yield {
       val phis = lockstep(aproc, as0, as1, cproc, cs0, cs1)
       assert(aname == cname)
@@ -90,7 +98,7 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       for (phi <- phis if phi != True)
         println("  " + phi)
       println()
-      And(phis)
+      Exists(_as1 ++ _cs1, And(phis))
     }
     List(rec, Or(ops))
   }

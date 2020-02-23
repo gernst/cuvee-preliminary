@@ -131,6 +131,8 @@ object Printer {
       indent + "(or\n" + format(args, indent + "  ") + ")"
     case Bind(quant, formals, body) =>
       indent + "(" + quant + "\n" + indent + "  " + sexpr(formals) + "\n" + format(body, indent + "  ") + ")"
+    case Eq(left, right) if indent.length <= 4 =>
+      indent + "(=\n" + format(left, indent + "  ")+ "\n" + format(right, indent + "  ") + ")"
     case _ =>
       indent + expr
   }
