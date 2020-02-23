@@ -124,22 +124,6 @@ case class State(
     copy(
       rasserts = expr :: rasserts)
   }
-  
-  def replay(solver: Solver) {
-    import State.default
-    
-    for((sort, arity) <- sorts if !(default.sorts contains sort))
-      solver.declare(sort, arity)
-
-    for((id, (args, res)) <- funs if !(default.funs contains id))
-      solver.declare(id, args, res)
-
-    for(phi <- asserts)
-      solver.assert(phi)
-      
-    // This should be fixed in the future to include fundefs, and optionally all other stuff 
-    // println("WARNING: not using fundefs, procs, objs in replay (see State.replay)")
-  }
 }
 
 object State {

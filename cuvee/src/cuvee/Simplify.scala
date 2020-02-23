@@ -1,9 +1,6 @@
 package cuvee
 
-case class Simplify(state: State) {
-  val backend = Solver.default
-  state replay backend
-
+case class Simplify(backend: Solver) {
   import Simplify._
 
   def apply(phi: Expr): Expr = {
