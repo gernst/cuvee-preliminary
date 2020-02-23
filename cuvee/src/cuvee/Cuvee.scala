@@ -179,16 +179,18 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
 
   def verify(spec: Sort, impl: Sort, sim: Sim): Ack = {
     val verify = Verify(top)
-    val res = verify(spec, impl, sim)
-    ensure(res forall (_ == Unsat), "incorrect refinement", spec, impl)
-    Success
+    val phi = verify(spec, impl, sim)
+    assert(!phi)
+    // ensure(res forall (_ == Unsat), "incorrect refinement", spec, impl)
+    // Success
   }
 
   def verify(id: Id): Ack = {
     val verify = Verify(top)
-    val res = verify(id)
-    ensure(res == Unsat, "incorrect contract", id)
-    Success
+    val phi = verify(id)
+    assert(!phi)
+    // ensure(res == Unsat, "incorrect contract", id)
+    // Success
   }
 
   def declare(arities: List[Arity], decls: List[Datatype]) = {

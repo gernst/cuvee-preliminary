@@ -3,12 +3,12 @@ package cuvee
 case class Verify(state: State) {
   import Verify._
 
-  val simplify = Simplify(state)
+  // val simplify = Simplify(state)
   val env = state.env
   val old = Nil
-  import simplify.backend
+  // import simplify.backend
 
-  def verify(phi: Expr, what: String) = {
+  /* def verify(phi: Expr, what: String) = {
     val expr = !phi
 
     if (debug) {
@@ -31,23 +31,29 @@ case class Verify(state: State) {
       println(res)
     }
     res
-  }
+  } */
 
-  def apply(spec: Sort, impl: Sort, sim: Sim) = {
+  def apply(spec: Sort, impl: Sort, sim: Sim): Expr = {
     val A = state objects spec
     val C = state objects impl
     val (as, cs, phi) = R(A, C, sim)
     val (init, conds) = refine(A, as, C, cs, phi)
-    println(s"verification conditions for refinement $spec to $impl")
-    for ((op, phi) <- (init :: conds)) yield {
+    // println(s"verification conditions for refinement $spec to $impl")
+    /* for ((op, phi) <- (init :: conds)) yield {
       verify(phi, s"refine $op")
-    }
+    } */
+
+    val conj = for ((op, phi) <- (init :: conds))
+      yield phi
+
+    And(conj)
   }
 
   def apply(id: Id) = {
     val proc = state procdefs id
     val phi = contract(proc)
-    verify(phi, s"contract $id")
+    // verify(phi, s"contract $id")
+    phi
   }
 
   /* def run(solver: Cuvee, report: Report): Unit = {
