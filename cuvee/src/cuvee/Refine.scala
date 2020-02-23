@@ -1,68 +1,15 @@
 package cuvee
 
-object Infer {
-  import Id._
-  import Sort._
-  import Type._
-
-  val elem = Sort("Elem")
-  val list = Sort("List")
-
-  val a = Id("a")
-  val R = Id("R")
-
-  val data = Datatype(List(), List(
-    Constr(Id("nil"), List()),
-    Constr(Id("cons"), List(Sel(head, elem), Sel(tail, list)))))
-
-  val stack = Id("stack")
-  val index = Id("index")
-  val values = Id("values")
-
-  object ListStack extends Obj(
-    List(Formal(stack, list)),
-    Proc(List(), List(), True, True,
-      Assign(List(Pair(stack, nil)))),
-    List(
-      Id("push") -> Proc(List(Formal(a, elem)), List(), True, True,
-        Assign(List(
-          Pair(stack, a :: stack)))),
-      Id("pop") -> Proc(List(), List(Formal(a, elem)), stack !== nil, True,
-        Assign(List(
-          Pair(stack, stack.tail),
-          Pair(a, stack.head))))))
-
-  object ArrayStack extends Obj(
-    List(Formal(index, int), Formal(values, array(int, elem))),
-    Proc(List(), List(), True, True,
-      Assign(List(Pair(index, 0)))),
-    List(
-      Id("push") -> Proc(List(Formal(a, elem)), List(), True, True,
-        Assign(List(
-          Pair(index, index + 1),
-          Pair(values, values store (index, a))))),
-      Id("pop") -> Proc(List(), List(Formal(a, elem)), index > 0, True,
-        Assign(List(
-          Pair(index, index - 1),
-          Pair(a, values select (index - 1)))))))
-
-  def main(args: Array[String]) {
-    var st = State.default
-    st = st declare (list, 0, data)
-    val infer = new Infer(ListStack, ArrayStack, R, st)
-    val Eq(_R, rhs) = infer.induct(list, data, 0)
-    println(_R)
-    println(rhs)
-  }
-}
-
-case class Infer(A: Obj, C: Obj, R: Id, st: State) {
+case class Refine(A: Obj, C: Obj, R: Id, verify: Verify) {
   val as = A.state
   val cs = C.state
   val as_ = as map (_.prime)
   val cs_ = cs map (_.prime)
   val ainit = A.init
   val cinit = C.init
+  
+  import verify.state
+  import verify.simplify
 
   ensure(
     A.state.toSet disjoint C.state.toSet,
@@ -74,7 +21,7 @@ case class Infer(A: Obj, C: Obj, R: Id, st: State) {
 
   def step(proc: Proc, ps: List[Formal], xs: List[Id]): List[Expr] = {
     val (xi, xo, pre, post, prog) = proc call (ps, xs)
-    val paths = Eval.rel(prog, ps ++ xi ++ xo, st)
+    val paths = Eval.rel(prog, ps ++ xi ++ xo, state)
     List(pre, Or(paths map (_.toExpr)))
   }
 
@@ -85,8 +32,8 @@ case class Infer(A: Obj, C: Obj, R: Id, st: State) {
     val env0 = Env(su, Map(xs1 zip ty: _*))
     val env1 = env0 bind (xi ++ xo)
     println("  env: " + env1)
-    val _pre = Eval.eval(pre, env1, List(), st)
-    val paths = Eval.rel(List(prog), env1, List(), st)
+    val _pre = Eval.eval(pre, env1, List(), state)
+    val paths = Eval.rel(List(prog), env1, List(), state)
     List(_pre, Or(paths map (_.toExpr)))
   }
 
