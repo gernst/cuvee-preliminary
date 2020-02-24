@@ -12,6 +12,14 @@ trait Solver extends Sink {
     check()
   }
 
+  def isTrue(phi: Expr) = {
+    (phi == True) || isUnsat(!phi)
+  }
+
+  def isFalse(phi: Expr) = {
+    (phi == False) || isUnsat(phi)
+  }
+
   def isSat(phi: Expr) = {
     val sat = check(phi)
     sat == Sat

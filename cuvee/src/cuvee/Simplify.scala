@@ -6,7 +6,7 @@ case class Simplify(backend: Solver) {
   def apply(phi: Expr): Expr = {
     and(apply(List(phi)))
   }
-  
+
   def apply(phis: List[Expr]): List[Expr] = {
     val _phis = norm(phis)
 
@@ -74,9 +74,9 @@ case class Simplify(backend: Solver) {
   }
 
   def _simplify(phi: Expr): Expr = phi match {
-    case _ if isFalse(phi) =>
+    case _ if backend isFalse phi =>
       False
-    case _ if isTrue(phi) =>
+    case _ if backend isTrue phi =>
       True
     case And.nary(args) =>
       val _args = con(args)
@@ -86,16 +86,6 @@ case class Simplify(backend: Solver) {
       or(_args)
     case _ =>
       phi
-  }
-
-  def isTrue(phi: Expr) = {
-    val res = (phi == True) || (backend isUnsat !phi)
-    res
-  }
-
-  def isFalse(phi: Expr) = {
-    val res = (phi == False) || (backend isUnsat phi)
-    res
   }
 }
 

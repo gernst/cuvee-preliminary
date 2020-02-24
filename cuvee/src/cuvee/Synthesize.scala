@@ -7,6 +7,22 @@ object Recipe {
   case object output extends Recipe
 }
 
+case class Step(id: Id, pre: Expr, xi: List[Formal], xs0: List[Formal], xs1: List[Formal], xo: List[Formal], path: Path) {
+  def ensuresPost(that: Expr): Expr = {
+    val Path(zs, phis, env) = path
+    Forall(
+      xi ++ xs0 ++ zs,
+      And(pre :: phis) ==> (that subst env.su))
+  }
+
+  def withPost(post: Expr): Expr = {
+    val Path(zs, phis, env) = path
+    Exists(
+      xi ++ xs0 ++ zs,
+      And(pre :: phis) && (post subst env.su))
+  }
+}
+
 case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   val as = A.state
   val cs = C.state
@@ -15,16 +31,85 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   val ainit = A.init
   val cinit = C.init
 
-  def inductivePositions = {
-    for ((Formal(_, sort: Sort), i) <- as.zipWithIndex if state.datatypes contains sort) yield {
+  /**
+   * Determine positions of abstract state variables
+   * which admit induction over an ADT.
+   */
+  def inductivePositions(xs: List[Formal]) = {
+    for ((Formal(_, sort: Sort), i) <- xs.zipWithIndex if state.datatypes contains sort) yield {
       val dt = state datatypes sort
       (sort, dt, i)
     }
   }
 
+  /**
+   * Compute all possible transitions of operations of an object.
+   * Return steps of operation name, precondition, pairs of state variables, and path.
+   */
+  def transitions(o: Obj) = {
+    val ps0 = o.state
+    val ps1 = ps0 map (_.prime)
+    for (
+      (id, proc) <- o.ops;
+      (_pre, xi, xo, _paths) = paths(proc, ps0, ps0, ps1);
+      _path <- _paths
+    ) yield {
+      Step(id, _pre, xi, ps0, ps1, xo, _path)
+    }
+  }
+
+  /**
+   * Return a list of assertions that capture conditions
+   * under which x occurs as a constructor argument to expression c.
+   */
+  def isSubterm(smaller: Expr, larger: Expr, typ: Type, dt: Datatype) = {
+    for (
+      Constr(_, sels) <- dt.constrs;
+      Sel(sel, `typ`) <- sels
+    ) yield {
+      smaller === App(sel, List(larger)) // TODO: lacks test for this constructor
+    }
+  }
+
+  /**
+   * Check if a path is a consumer, i.e., is guarantee to return subterms where pos is the inductive position.
+   */
+  def isConsumer(step: Step, typ: Type, dt: Datatype, pos: Int) = {
+    val x0 = step.xs0(pos)
+    val x1 = step.xs1(pos)
+    val conds = isSubterm(x1.id, x0.id, typ, dt)
+    val phi = step ensuresPost Or(conds)
+    solver isTrue phi
+  }
+
+  /**
+   * Check if a path is a producer, i.e., is guarantee to return constructor terms where pos is the inductive position.
+   */
+  def isProducer(step: Step, typ: Type, dt: Datatype, pos: Int) = {
+    val x0 = step.xs0(pos)
+    val x1 = step.xs1(pos)
+    val conds = isSubterm(x0.id, x1.id, typ, dt)
+    val phi = step ensuresPost Or(conds)
+    solver isTrue phi
+  }
+
   def apply(recipe: Recipe): List[Expr] = recipe match {
     case Recipe.auto =>
-      fromConsumer()
+      // fromConsumer()
+      val steps = transitions(A)
+      println("analyze transitions")
+      for ((sort, dt, pos) <- inductivePositions(as)) {
+        println(s"  inductive position: $pos of type $sort")
+        for (step <- steps) {
+          print(s"  $step")
+          if (isConsumer(step, sort, dt, pos))
+            print(" consumer")
+          if (isProducer(step, sort, dt, pos))
+            print(" producer")
+          println()
+        }
+      }
+      List(False)
     case Recipe.output =>
       fromOutput()
   }
@@ -38,7 +123,8 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   }
 
   def fromConsumer() = {
-    val (sort, dt, pos) = inductivePositions.head
+    val ips = inductivePositions(as)
+    val (sort, dt, pos) = ips.head
     val exprs = induct(sort, dt, pos)
 
     for (phi <- exprs)
@@ -56,16 +142,26 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     List(pre, Or(paths map (_.toExpr)))
   } */
 
-  def step(proc: Proc, ps: List[Formal], xs0: List[Expr], xs1: List[Id]) = {
+  /**
+   * Determine all paths through proc (splitting conditionals)
+   *  wrt. state parameters ps, such that the path takes a transition from xs0 to xs1.
+   *  Return the instantiated precondition as well as the paths,
+   *  which store constraints and variable assignments for xs1 in the successor states.
+   */
+  def paths(proc: Proc, ps: List[Formal], xs0: List[Expr], xs1: List[Id]) = {
     val (xi, xo, pre, post, prog) = proc call (ps, xs1)
     val su = Expr.subst(xs1, xs0)
     val ty = ps map (_.typ)
     val env0 = Env(su, Map(xs1 zip ty: _*))
     val env1 = env0 bind (xi ++ xo)
-    println("  env: " + env1)
     val _pre = Eval.eval(pre, env1, List(), state)
     val paths = Eval.rel(List(prog), env1, List(), state)
-    List(_pre, Or(paths map (_.toExpr)))
+    (_pre, xi, xo, paths)
+  }
+
+  def step(proc: Proc, ps: List[Formal], xs0: List[Expr], xs1: List[Id]) = {
+    val (_pre, xi, xo, _paths) = paths(proc, ps, xs0, xs1)
+    List(_pre, Or(_paths map (_.toExpr)))
   }
 
   def lockstep(

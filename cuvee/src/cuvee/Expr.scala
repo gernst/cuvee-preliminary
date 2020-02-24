@@ -328,7 +328,13 @@ case class Old(expr: Expr) extends Expr {
 sealed trait Quant {
   def unary_!(): Quant
 
-  def apply(formals: List[Formal], body: Expr) = {
+  def apply(vars: List[Id], types: List[Type], body: Expr): Expr = {
+    ensure(vars.length == types.length, "length mismatch", vars, types)
+    val formals = for ((x, t) <- (vars zip types)) yield Formal(x, t)
+    apply(formals, body)
+  }
+
+  def apply(formals: List[Formal], body: Expr): Expr = {
     val free = body.free
     val _formals = formals filter (free contains _.id)
 
