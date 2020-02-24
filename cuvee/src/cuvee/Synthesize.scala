@@ -136,8 +136,12 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       val eqs = for ((x, x1) <- (xs zip xs1)) yield {
         env(x) === x1
       }
+      
+      val outs = for(o <- out) yield {
+        o.id === env(o.id)
+      }
 
-      Exists(fresh, And(eqs ++ path))
+      Exists(fresh, And(eqs ++ outs ++ path))
     }
     (_pre, conds)
   }
