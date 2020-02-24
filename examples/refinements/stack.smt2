@@ -51,11 +51,6 @@
             (R xs (- size 1) values)))))
 
 (assert
-  (forall ((xs Lst) (size Int) (values (Array Int Elem)))
-    (=> (R xs size values)
-        (>= size 0))))
-
-(assert
   (forall ((x Elem) (xs Lst) (m Int) (n Int) (values (Array Int Elem)))
     (=> (and (<= m n) (R xs m values))
                       (R xs m (store values n x)))))

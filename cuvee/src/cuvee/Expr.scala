@@ -35,6 +35,39 @@ object Type extends Alpha[Type, Sort] {
   }
 }
 
+case class Sel(id: Id, typ: Type) {
+  override def toString = Printer.sel(id, typ)
+}
+
+case class Constr(id: Id, sels: List[Sel]) {
+  override def toString = Printer.constr(id, sels)
+}
+
+case class Datatype(params: List[Sort], constrs: List[Constr]) {
+  override def toString = Printer.datatype(params, constrs)
+
+  /**
+   * Return a pattern for x for each constructor,
+   * and substitutions that instantiates x for each inductive hypotesis.
+   */
+  def induction(x: Id, sort: Sort) = {
+    for (Constr(id, sels) <- constrs) yield {
+      // fresh variables for each constructor argument, named as the selectors
+      val args = for (Sel(id, typ) <- sels)
+        yield Formal(Expr.fresh(id), typ)
+
+      val hyps = for (Formal(arg, typ) <- args if typ == sort)
+        yield Map(x -> arg)
+
+      (id, args, hyps)
+    }
+  }
+}
+
+case class Arity(sort: Sort, arity: Int) {
+  override def toString = Printer.arity(sort, arity)
+}
+
 sealed trait Pat {
   def bound: Set[Id]
   def toExpr: Expr
@@ -273,7 +306,7 @@ case class Store(array: Expr, index: Expr, value: Expr) extends Expr {
 }
 
 case class App(fun: Id, args: List[Expr]) extends Expr {
-  ensure(!args.isEmpty, "no arguments", this)
+  ensure(!args.isEmpty, "no arguments to application", this)
   def free = Set(args flatMap (_.free): _*)
   def rename(re: Map[Id, Id]) = App(fun, args map (_ rename re))
   def subst(su: Map[Id, Expr]) = App(fun, args map (_ subst su))

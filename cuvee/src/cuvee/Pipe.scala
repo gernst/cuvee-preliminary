@@ -58,6 +58,11 @@ trait Sink {
 
   def assert(expr: Expr): Ack
 
+  def assert(exprs: List[Expr]) {
+    for (expr <- exprs)
+      assert(expr)
+  }
+
   def setOption(args: String*): Ack = {
     setOption(args.toList)
   }

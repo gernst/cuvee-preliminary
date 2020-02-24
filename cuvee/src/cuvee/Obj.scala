@@ -3,6 +3,10 @@ package cuvee
 case class Proc(in: List[Formal], out: List[Formal], pre: Expr, post: Expr, body: Prog) {
   def sig = (in map (_.typ), out map (_.typ))
 
+  def call(ps: List[Formal]): (List[Formal], List[Formal], Expr, Expr, Prog) = {
+    call(ps, ps)
+  }
+  
   def call(ps: List[Formal], xs: List[Id]): (List[Formal], List[Formal], Expr, Expr, Prog) = {
     val (pre, post, body) = call(ps, xs, in, out)
     (in, out, pre, post, body)
@@ -27,4 +31,8 @@ object Proc extends ((List[Formal], List[Formal], Prog, Option[Expr], Option[Exp
 }
 
 case class Obj(state: List[Formal], init: Proc, ops: List[(Id, Proc)]) {
+  def op(id: Id) = {
+    val Some((_, proc)) = ops find (_._1 == id)
+    proc
+  }
 }

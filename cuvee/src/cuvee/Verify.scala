@@ -19,7 +19,7 @@ object Verify {
       recipe match {
         case Some(recipe) =>
           val synth = Synthesize(A, C, fun, st, solver)
-         val defs = synth(recipe)
+          val defs = synth(recipe)
           (as, cs, defs, phi)
         case None =>
           (as, cs, Nil, phi)

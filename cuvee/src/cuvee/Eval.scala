@@ -67,6 +67,12 @@ object Path {
 }
 
 object Eval {
+  def eval(expr: Expr, st: State): Expr = {
+    val old = Nil
+    val env = st.env
+    eval(expr, env, old, st)
+  }
+  
   def eval(let: Pair, env: Env, old: List[Env], st: State): (Id, Expr) = let match {
     case Pair(x, e) => (x, eval(e, env, old, st))
   }
@@ -164,7 +170,7 @@ object Eval {
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old, st))
       val (xs, _es) = pairs.unzip
-      val env1 = env0 assign (xs, _es)
+      val env1 = env0 assignUnchecked (xs, _es)
       wp(rest, break, post, env1, old, st)
 
     case Spec(xs, phi, psi) :: rest =>
@@ -243,7 +249,7 @@ object Eval {
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old, st))
       val (xs, _es) = pairs.unzip
-      val env1 = env0 assign (xs, _es)
+      val env1 = env0 assignUnchecked (xs, _es)
       box(rest, break, post, env1, old, st)
 
     case Spec(mod, phi, psi) :: rest =>
@@ -307,7 +313,7 @@ object Eval {
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old, st))
       val (xs, _es) = pairs.unzip
-      val env1 = env0 assign (xs, _es)
+      val env1 = env0 assignUnchecked (xs, _es)
       dia(rest, break, post, env1, old, st)
 
     case Spec(mod, phi, psi) :: rest =>

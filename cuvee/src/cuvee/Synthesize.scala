@@ -31,6 +31,47 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   val ainit = A.init
   val cinit = C.init
 
+  ensure(
+    A.state.toSet disjoint C.state.toSet,
+    "overlapping state variables", A, C)
+
+  def apply(recipe: Recipe): List[Expr] = recipe match {
+    case Recipe.auto =>
+      val inds = inductivePositions(as)
+      val List((sort, dt, pos)) = inds
+      fromConsumer(sort, dt, pos)
+
+    case Recipe.output =>
+      fromOutput()
+  }
+
+  def fromOutput() = {
+    Nil
+  }
+
+  def fromConsumer(sort: Sort, dt: Datatype, pos: Int) = {
+    val asteps = transitions(A)
+    val ax: List[Id] = as
+    val cx: List[Id] = cs
+    val cx_ : List[Id] = cs_
+
+    val ai = ax(pos)
+
+    for ((constr, args, hyps) <- dt.induction(ai, sort)) yield {
+      val vs: List[Id] = args
+      val pat = Apps(constr :: vs)
+
+      val as0 = as patch (pos, args, 1)
+      val ax0 = ax updated (pos, pat)
+      val lhs = App(R, ax0 ++ cx)
+      val rhs = False
+
+      Forall(
+        as0 ++ cs,
+        lhs === rhs)
+    }
+  }
+
   /**
    * Determine positions of abstract state variables
    * which admit induction over an ADT.
@@ -91,45 +132,6 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     val conds = isSubterm(x0.id, x1.id, typ, dt)
     val phi = step ensuresPost Or(conds)
     solver isTrue phi
-  }
-
-  def apply(recipe: Recipe): List[Expr] = recipe match {
-    case Recipe.auto =>
-      // fromConsumer()
-      val steps = transitions(A)
-      println("analyze transitions")
-      for ((sort, dt, pos) <- inductivePositions(as)) {
-        println(s"  inductive position: $pos of type $sort")
-        for (step <- steps) {
-          print(s"  $step")
-          if (isConsumer(step, sort, dt, pos))
-            print(" consumer")
-          if (isProducer(step, sort, dt, pos))
-            print(" producer")
-          println()
-        }
-      }
-      List(False)
-    case Recipe.output =>
-      fromOutput()
-  }
-
-  ensure(
-    A.state.toSet disjoint C.state.toSet,
-    "overlapping state variables", A, C)
-
-  def fromOutput() = {
-    Nil
-  }
-
-  def fromConsumer() = {
-    val ips = inductivePositions(as)
-    val (sort, dt, pos) = ips.head
-    val exprs = induct(sort, dt, pos)
-
-    for (phi <- exprs)
-      println(Printer.format(phi, ""))
-    exprs
   }
 
   def infer(as: List[Pat], cs: List[Pat], ctx: List[Expr]): List[Expr] = {
