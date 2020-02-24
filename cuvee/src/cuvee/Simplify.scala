@@ -144,6 +144,9 @@ object Simplify {
     case Gt(a, b) => Lt(b, a)
     case Ge(a, b) => Le(b, a)
 
+    case Head(Cons(x, xs)) => x
+    case Tail(Cons(x, xs)) => xs
+
     case App(fun, args) =>
       App(fun, norm(args))
 

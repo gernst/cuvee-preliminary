@@ -56,8 +56,8 @@ case class Datatype(params: List[Sort], constrs: List[Constr]) {
       val args = for (Sel(id, typ) <- sels)
         yield Formal(Expr.fresh(id), typ)
 
-      val hyps = for (Formal(arg, typ) <- args if typ == sort)
-        yield Map(x -> arg)
+      val hyps = for ((arg, i) <- args.zipWithIndex if arg.typ == sort)
+        yield i
 
       (id, args, hyps)
     }
@@ -251,6 +251,10 @@ object Lt extends Sugar.binary(Id.lt)
 object Le extends Sugar.binary(Id.le)
 object Gt extends Sugar.binary(Id.gt)
 object Ge extends Sugar.binary(Id.ge)
+
+object Head extends Sugar.unary(Id.head)
+object Tail extends Sugar.unary(Id.tail)
+object Cons extends Sugar.binary(Id.cons)
 
 case class Ite(test: Expr, left: Expr, right: Expr) extends Expr {
   def free = test.free ++ left.free ++ right.free

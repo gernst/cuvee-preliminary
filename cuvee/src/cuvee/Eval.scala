@@ -72,7 +72,7 @@ object Eval {
     val env = st.env
     eval(expr, env, old, st)
   }
-  
+
   def eval(let: Pair, env: Env, old: List[Env], st: State): (Id, Expr) = let match {
     case Pair(x, e) => (x, eval(e, env, old, st))
   }
@@ -357,11 +357,6 @@ object Eval {
 
     case Call(name, _, _) :: rest =>
       error("unknown procedure", name)
-  }
-
-  def rel(prog: Prog, params: List[Formal], st: State): List[Path] = {
-    val env = Env.empty bind params
-    rel(List(prog), env, List(), st)
   }
 
   def rel(progs: List[Prog], env0: Env, old: List[Env], st: State): List[Path] = progs match {
