@@ -114,9 +114,7 @@ object VerifyTest extends TestSuite {
   }
 
   for (
-    file <- List(
-      "examples/verifications/zero-proc.smt2",
-      "examples/refinements/accounts.smt2")
+    file <- List("examples/refinements/accounts.smt2")
   ) {
     test("verify " + file) {
       Expr._index = 0

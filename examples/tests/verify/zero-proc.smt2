@@ -1,3 +1,5 @@
+;! Cuvee -z3
+
 (set-logic ALL)
 
 ; a very stupid way to create zero
@@ -14,6 +16,11 @@
     :precondition (>= x 0)
     :postcondition (= y 0))
 
+(push)
+(verify-proc zero-proc)
+(check-sat :expect unsat)
+(pop)
+
 (declare-const x Int)
 (declare-const y Int)
 
@@ -22,7 +29,7 @@
     (>= x 0)
     (call zero-proc (x) (y))
     (= y 0))
-(check-sat)
+(check-sat :expect unsat)
 (pop)
 
 ; the same function, but uses the same variable name to return the value
@@ -35,3 +42,8 @@
         :postcondition (= x 0))
     :precondition (>= x 0)
     :postcondition (= x 0))
+
+(push)
+(verify-proc zero-proc-inplace)
+(check-sat :expect unsat)
+(pop)
