@@ -113,25 +113,6 @@ object VerifyTest extends TestSuite {
     vcs.foreach(vc => println(PrettyPrinter.printExpr(vc)))
   }
 
-  for (
-    file <- List("examples/refinements/accounts.smt2")
-  ) {
-    test("verify " + file) {
-      Expr._index = 0
-      val in = new File(file)
-      val source = ??? // runUnwrappingErrors(Verify(Script.from(in)))
-
-      println(s"Verification condition for $file")
-      println()
-      Cuvee.run(source, Sink.stdout, (_: Res) => {})
-      println()
-
-      val report = prove_!
-      val solver = Solver.z3()
-      Cuvee.run(source, solver, report)
-    }
-  }
-
   test("absolute function verification condition") {
     val verificationCondition = Verify.verificationCondition(ParserTest.abs.proc, State.default, None)
     assertEquals(verificationCondition, Forall(List(Formal(Id("x"), Sort("Int"))), True ==> ((Id("x") < 0 ==> 0 - Id("x") >= 0) && !(Id("x") < 0) ==> Id("x") >= 0)))

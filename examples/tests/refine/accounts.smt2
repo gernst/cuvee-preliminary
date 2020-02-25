@@ -1,3 +1,5 @@
+;! Cuvee -z3
+
 (set-logic ALL)
 
 ; this is an example where the relation just drops out of the proof
@@ -19,28 +21,22 @@
             (credit 0)
             (debit 0))
         :precondition (>= od-lim 0))
-    (deposit ((amount Int)) ((new-balance Int)) (block
-            (assign (credit (+ credit amount)))
-            (assign (new-balance (- credit debit))))
+
+    ; use different argument names here to make sure the right variables names are used
+    (deposit ((add Int)) ((increased Int)) (block
+            (assign (credit (+ credit add)))
+            (assign (increased (- credit debit))))
         :precondition (> amount 0))
-    (withdraw ((amount Int)) ((new-balance Int)) (block
-            (assign (debit (+ debit amount)))
-            (assign (new-balance (- credit debit))))
+
+    ; use different argument names here to make sure the right variables names are used
+    (withdraw ((remove Int)) ((decreased Int)) (block
+            (assign (debit (+ debit remove)))
+            (assign (decreased (- credit debit))))
         :precondition (and (> amount 0) (<= amount (+ (- credit debit) overdraft-limit)))))
 
-; balance = credit - debit comes immediately out of the output equality
-; overdraft-limit >= 0 is also required for the proof. Maybe it can be extracted.
+; we're using aliases for all state variables to make sure that they're renamed in all places
+(verify-refinement (simple-account (b Int)) (double-account (d Int) (c Int) (l Int)) (and
+        (= b (- c d))
+        (>= l 0)))
 
-(refinement (as simple-account) (cs double-account) (and
-        (= as_balance (- cs_credit cs_debit))
-        (>= cs_overdraft-limit 0)))
-
-; (declare-fun R ((balance Int) (debit Int) (credit Int) (overdraft-limit Int)))
-; (verify-refinement
-;    simple-account double-account R))
-; unsat if correct
-
-; (verify-refinement
-;   (simple-account balance)
-;   (double-account debit credit overdraft-limit)
-;       <formula>)
+(check-sat :expect unsat)
