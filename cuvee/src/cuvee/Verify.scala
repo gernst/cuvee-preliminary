@@ -99,7 +99,7 @@ object Verify {
     val Proc(in, out, pre, post, body) = proc
     Forall(
       in ++ out,
-      pre ==> WP(body, post))
+      pre ==> WP(new Block(List(body), true), post))
   }
 
   def refine(A: Obj, as: List[Formal], C: Obj, cs: List[Formal], R: Expr) = {
