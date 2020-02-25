@@ -115,7 +115,6 @@ object VerifyTest extends TestSuite {
 
   for (
     file <- List(
-      "examples/verifications/abs-proc.smt2",
       "examples/verifications/zero-proc.smt2",
       "examples/refinements/accounts.smt2")
   ) {
