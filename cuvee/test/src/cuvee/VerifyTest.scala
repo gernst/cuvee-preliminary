@@ -14,11 +14,6 @@ object VerifyTest extends TestSuite {
     }
   }
 
-  test("absolute function verification condition") {
-    val verificationCondition = Verify.verificationCondition(ParserTest.abs.proc, State.default, None)
-    assertEquals(verificationCondition, Forall(List(Formal(Id("x"), Sort("Int"))), True ==> ((Id("x") < 0 ==> 0 - Id("x") >= 0) && !(Id("x") < 0) ==> Id("x") >= 0)))
-  }
-
   def runUnwrappingErrors[A](fun: => A): A = {
     try {
       fun
