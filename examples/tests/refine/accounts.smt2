@@ -4,7 +4,7 @@
 
 ; this is an example where the relation just drops out of the proof
 
-(define-class simple-account ((balance Int))
+(define-class SimpleAccount ((balance Int))
     (init () () (assign (balance 0)))
     (deposit ((amount Int)) ((new-balance Int)) (block
             (assign (balance (+ balance amount)))
@@ -15,7 +15,7 @@
             (assign (new-balance balance)))
         :precondition (and (> amount 0) (<= amount balance))))
 
-(define-class double-account ((debit Int) (credit Int) (overdraft-limit Int))
+(define-class DoubleAccount ((debit Int) (credit Int) (overdraft-limit Int))
     (init ((od-lim Int)) () (assign
             (overdraft-limit od-lim)
             (credit 0)
@@ -35,7 +35,7 @@
         :precondition (and (> amount 0) (<= amount (+ (- credit debit) overdraft-limit)))))
 
 ; we're using aliases for all state variables to make sure that they're renamed in all places
-(verify-refinement (simple-account (b Int)) (double-account (d Int) (c Int) (l Int)) (and
+(verify-refinement (SimpleAccount (b Int)) (DoubleAccount (d Int) (c Int) (l Int)) (and
         (= b (- c d))
         (>= l 0)))
 
