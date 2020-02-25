@@ -142,8 +142,8 @@ object Verify {
     val phi = Forall(
       as ++ ai ++ ao ++ cs ++ ci ++ co_,
       in ==>
-        (apre && R0) ==>
-        (cpre && WP(cbody, Dia(abody, out && R1))))
+        ((apre && R0) ==>
+          (cpre && WP(cbody, Dia(abody, out && R1)))))
 
     (aop, phi)
   }
