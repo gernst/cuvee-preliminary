@@ -163,7 +163,6 @@ object Parser {
   val obj_op = parens(id ~ proc_)
   val obj_ = Obj(parens(formals) ~ obj_init ~ obj_op.*)
   val define_class_ = P(DefineClass("define-class" ~ sort ~ obj_))
-  val define_refinement_ = P(DefineRefinement("refinement" ~ formal ~ formal ~ expr))
 
   val verify_proc_ = P(VerifyProc("verify-proc" ~ id))
     

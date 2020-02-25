@@ -50,11 +50,6 @@ object ParserTest extends TestSuite {
           Nil)))
   }
 
-  test("parse refinement") {
-    val proc = parseCmd("(refinement (as abstract-class) (cs concrete-class) (= cs_member (- 0 as_member)))")
-    assertEquals(proc, DefineRefinement(("as", "abstract-class"), ("cs", "concrete-class"), "cs_member" === (Num(0) - "as_member")))
-  }
-
   test("parse comment") {
     assertEquals(parseCmds("; foo\n; bar"), List())
   }

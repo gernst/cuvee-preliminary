@@ -128,8 +128,6 @@ case class VerifyRefinement(spec: Sort, impl: Sort, sim: Sim) extends Cmd {
   
 }
 
-case class DefineRefinement(abstr: Formal, concr: Formal, relation: Expr) extends Def
-
 /*
 case class DeclareProc(id: Id, in: List[Type], ref: List[Type], out: List[Type]) extends Cmd {
   override def toString = sexpr("declare-proc", id, sexpr(in), ref)
