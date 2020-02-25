@@ -1,3 +1,5 @@
+;! Cuvee -z3
+
 (set-logic ALL)
 
 (define-proc
@@ -8,3 +10,4 @@
   :postcondition (and (>= z x) (>= z y)))
 
 (verify-proc max)
+(check-sat :expect unsat)
