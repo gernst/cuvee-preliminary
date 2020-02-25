@@ -23,10 +23,14 @@ object FileTest extends TestSuite {
     val capture = new Sink.capture
     val task = configureCuvee(fileName)
 
-    task.config.printSuccess = true // why this?
+    task.config.printSuccess = false
     task.config.test = true
     task.sink = Sink.tee(task.sink, capture)
     task.source = Source.file(fileName)
+    task.report = result => result match {
+      case e: Error => throw e
+      case _ => // whatever
+    }
 
     task.run()
 
