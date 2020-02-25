@@ -114,16 +114,19 @@ case class DefineClass(sort: Sort, obj: Obj) extends Def {
   override def toString = Printer.define(sort, obj)
 }
 
-/**
- * Defines a refinement: a relation between an abstract and a concrete type
- *
- * @param abstr abstract type and the variable name to refer to it in the relation
- * @param concr concrete type and the variable name to refer to it in the relation
- * @param relation members of classes can be referred to with "class_member"
- */
-case class DefineRefinement(abstr: Formal, concr: Formal, relation: Expr) extends Def
+case class VerifyProc(id: Id) extends Cmd {
+  
+}
 
-// (declare-datatypes () ((Lst (cons (head Elem) (tail Lst)) (nil))))
+sealed trait Sim
+object Sim {
+  case class byFun(fun: Id) extends Sim
+  case class byExpr(as: List[Formal], cs: List[Formal], phi: Expr) extends Sim
+}
+
+case class VerifyRefinement(spec: Sort, impl: Sort, sim: Sim) extends Cmd {
+  
+}
 
 /*
 case class DeclareProc(id: Id, in: List[Type], ref: List[Type], out: List[Type]) extends Cmd {
@@ -131,11 +134,6 @@ case class DeclareProc(id: Id, in: List[Type], ref: List[Type], out: List[Type])
 }
 */
 
-/**
- * Defines a procedure.
- *
- * @param id  name of the procedure
- */
 case class DefineProc(id: Id, proc: Proc) extends Def {
   def in = proc.in
   def out = proc.out

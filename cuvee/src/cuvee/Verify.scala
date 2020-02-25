@@ -1,168 +1,94 @@
 package cuvee
 
-case class Verify(commands: Iterable[Cmd]) extends Source {
-  def run(solver: Solver, report: Report): Unit = solver match {
-    case cuvee: Cuvee => run(cuvee, report)
-    case _ => ???
+case class Verify(state: State) {
+  import Verify._
+
+  def apply(spec: Sort, impl: Sort, sim: Sim): Expr = {
+    val A = state objects spec
+    val C = state objects impl
+    val (as, cs, phi) = R(A, C, sim)
+    val (init, conds) = refine(A, as, C, cs, phi)
+
+    val conj = for ((op, phi) <- (init :: conds))
+      yield phi
+
+    And(conj)
   }
 
-  def run(solver: Cuvee, report: Report): Unit = {
-    for (cmd <- commands) {
-      cmd match {
-        case DefineProc(id, proc) =>
-          report(solver.define(id, proc))
-          verifyProcedure(solver, report, proc, None)
-        case DefineClass(sort, obj) =>
-          report(solver.define(sort, obj))
-          obj.ops.foreach(proc => verifyProcedure(solver, report, proc._2, Some(obj)))
-        case refinement: DefineRefinement =>
-          Verify.verificationConditions(refinement, solver.top).foreach(vc => {
-            report(solver.check(!vc))
-          })
-        case other =>
-          solver.exec(other) match {
-            case Some(res) => report(res)
-            case None => Unit
-          }
-      }
-    }
-  }
-
-  private def verifyProcedure(solver: Cuvee, report: Report, proc: Proc, surroundingClass: Option[Obj]) = {
-     report(solver.check(!Verify.verificationCondition(proc, solver.top, surroundingClass)))
+  def apply(id: Id) = {
+    val proc = state procdefs id
+    val phi = contract(proc)
+    phi
   }
 }
 
 object Verify {
-  /**
-   * Does some basic checks on a procedure w.r.t. well-definedness. This exludes anything that requires knowledge about
-   * the state.
-   *
-   * @param id    name of the procedure for error messages
-   * @param state (optional) state of the surrounding object if this procedure is defined on an object
-   */
-  def checkProc(id: Id, proc: Proc, state: List[Formal] = List()): Unit = {
+  var debug = false
+
+  def R(A: Obj, C: Obj, sim: Sim) = sim match {
+    case Sim.byFun(fun) =>
+      val as = A.state
+      val cs = C.state
+      (as, cs, App(fun, as ++ cs))
+    case Sim.byExpr(as, cs, phi) =>
+      (as, cs, phi)
+  }
+
+  def contract(proc: Proc) = {
     val Proc(in, out, pre, post, body) = proc
-    val inVars: List[Id] = in
-    val duplicateInputDeclarations = inVars.groupBy(identity).filter(_._2.size > 1)
-    if (duplicateInputDeclarations.nonEmpty) {
-      Error(s"The method $id declares duplicate input parameters ${duplicateInputDeclarations.keys.mkString(", ")}")
-    }
-
-    // the outputs may have the same variable name in multiple places if the type is equal.
-    // outputs may overlap with inputs but, again, the type must be equal
-    val nonUniqueAgruments = (in ++ out).groupBy(_.id).filter(_._2.map(_.typ).distinct.size > 1)
-    if (nonUniqueAgruments.nonEmpty) {
-      Error(s"The method $id declares non-unique type for argument ${nonUniqueAgruments.keys.mkString(", ")}")
-    }
-
-    // procedure must at most modify its output variables
-    val modifiableVariables: List[Id] = (in ++ out ++ state).distinct
-    val modifiedVariables = body.mod
-    val illegallyModifiedVariables = modifiedVariables.filter(!modifiableVariables.contains(_))
-    if (illegallyModifiedVariables.nonEmpty) {
-      Error(s"The method $id modifies undeclared output parameters ${illegallyModifiedVariables.mkString(", ")}")
-    }
-
-    // procedure must at least modify output variables that are not input variables
-    val outputsThatMustBeSet = out.map(_.id).filter(!inVars.contains(_))
-    val unsetOutputs = outputsThatMustBeSet.filter(!modifiedVariables.contains(_))
-    if (unsetOutputs.nonEmpty) {
-      Error(s"The method $id does not modify its output parameters ${unsetOutputs.mkString(", ")}")
-    }
+    Forall(
+      in ++ out,
+      pre ==> WP(new Block(List(body), true), post))
   }
 
-  /**
-   * Generates the verification condition for a procedure declaration.
-   *
-   * @param state auxiliary function/constant definitions
-   * @return an all-quantified expression
-   */
-  def verificationCondition(proc: Proc, state: State, containingClass: Option[Obj]): Expr = {
-    val env0 = containingClass match {
-      case None => state.env.bind(proc.in)
-      case Some(cls) => state.env bind proc.in bind cls.state
+  def refine(A: Obj, as: List[Formal], C: Obj, cs: List[Formal], R: Expr) = {
+    val init = diagram(
+      A, as, Id("init") -> A.init,
+      C, cs, Id("init") -> C.init,
+      True, R)
+
+    val ops = for ((aproc, cproc) <- (A.ops zip C.ops)) yield {
+      diagram(
+        A, as, aproc,
+        C, cs, cproc,
+        R, R)
     }
 
-    // we evaluate the precondition just to make sure that it is safe, i.e.:
-    // - does not contain refer to any "old" values
-    // - only refers to input variables and global identifiers
-    Eval.eval(proc.pre, env0, List(), state)
-
-    val env1 = env0.bind(proc.out)
-    val wpRaw = WP(proc.body, proc.post)
-    val wpEval = Eval.eval(wpRaw, env1, List(env0), state)
-    Forall((proc.in ++ proc.out ++ containingClass.map(_.state).getOrElse(Nil)).distinct, proc.pre ==> wpEval)
+    (init, ops.toList)
   }
 
-  def verificationConditions(refinement: DefineRefinement, st: State): List[Expr] = {
+  def diagram(
+    A: Obj, as: List[Formal], aproc: (Id, Proc),
+    C: Obj ,cs: List[Formal], cproc: (Id, Proc),
+    R0: Expr, R1: Expr): (Id, Expr) = {
 
-    def prefixedMembers(obj: Obj, instanceName: Id): List[Formal] = obj.state.map(f => Formal(Id(s"${instanceName}_${f.id}"), f.typ))
+    val (aop, ap) = aproc
+    val (cop, cp) = cproc
 
-    def prefixingMembers(obj: Obj, instanceName: Id): Map[Id, Id] = obj.state.map(f => (f.id -> Id(s"${instanceName}_${f.id}"))) toMap
+    ensure(aop == cop, "mismatching operation", aop, cop)
 
-    def proc(obj: Obj, id: Id): Proc = obj.ops.filter(_._1 == id).head._2
+    val Proc(ai, ao, _, _, _) = ap
+    val Proc(ci, co, _, _, _) = cp
 
-    val DefineRefinement(abstr, concr, relation) = refinement
-    val Formal(aid, asort: Sort) = abstr
-    val Formal(cid, csort: Sort) = concr
-    
-    val ac = st objects asort
-    val cc = st objects csort
-    val commonProcs = ac.ops map (_._1) intersect cc.ops.map(_._1)
+    val ci_ = ci map (_.prime)
+    val co_ = co map (_.prime)
 
-    val aPrefixed = prefixedMembers(ac, abstr.id)
-    val cPrefixed = prefixedMembers(cc, concr.id)
+    val (apre, _, abody) = ap.call(A.state, as, ai, ao)
+    val (cpre, _, cbody) = cp.call(C.state, cs, ci_, co_)
 
-    val aPrefixing = prefixingMembers(ac, abstr.id)
-    val cPrefixing = prefixingMembers(cc, concr.id)
+    val phi = if (aop == Id("init")) {
+      (apre && cpre) ==> WP(cbody, Dia(abody, R1))
+    } else {
+      val in = Eq(ai, ci_)
+      val out = Eq(ao, co_)
 
-    val init: Expr = {
-      val ap = ac.init
-      if (ap.out.nonEmpty) {
-        throw Error(s"init method of ${abstr.typ} must not declare output parameters")
-      }
-      val cp = cc.init
-      if (cp.out.nonEmpty) {
-        throw Error(s"init method of ${concr.typ} must not declare output parameters")
-      }
+      in ==>
+        ((apre && R0) ==>
+          (cpre && WP(cbody, Dia(abody, out && R1))))
 
-      val aPre = ap.pre rename aPrefixing
-      val cPre = cp.pre rename cPrefixing rename cp.in.priming
-
-      val aBody = ap.body replace aPrefixing
-      val cBodyPrime = cp.body replace cPrefixing replace cp.in.distinct.priming
-
-      val allVars = aPrefixed ++ cPrefixed ++ ap.in ++ cp.in.prime
-      val env_ = st.env bind allVars
-      val unqualified = (aPre && cPre) ==> Eval.eval(WP(Block(List(aBody, cBodyPrime)), relation), env_, List(), st)
-
-      Forall(allVars, unqualified)
     }
-
-    val nonInitProcs: List[Expr] = commonProcs filter (_.name != "init") map (name => {
-      val ap = proc(ac, name)
-      val cp = proc(cc, name)
-      if (ap.in != cp.in || ap.out != cp.out) {
-        throw Error(s"Signatures of ${abstr.typ}.$name and ${concr.typ}.$name do not match")
-      }
-
-      val insEq = And(ap.in.map(f => f.id === f.id.prime))
-      val outsEq = And(ap.out.map(f => f.id === f.id.prime))
-
-      val aPre = ap.pre rename aPrefixing // prefix class members with name of class instance
-      val cPre = cp.pre rename cPrefixing // don't prime variables for precondition
-
-      val aBody = ap.body replace aPrefixing
-      val cBodyPrime = cp.body replace cPrefixing replace (cp.in ++ cp.out).distinct.priming // in the body of C prime all vars for sequential execution
-
-      val allVars = aPrefixed ++ cPrefixed ++ ap.in ++ ap.out ++ cp.in.prime ++ cp.out.prime
-      val env_ = st.env bind allVars
-      val unqualified = relation ==> (aPre ==> (cPre && (insEq ==> Eval.eval(WP(Block(List(aBody, cBodyPrime)), outsEq && relation), env_, List(), st))))
-
-      Forall(allVars, unqualified)
-    })
-
-    init :: nonInitProcs
+    (aop, Forall(
+      as ++ ai ++ ao ++ cs ++ ci_ ++ co_,
+      phi))
   }
 }

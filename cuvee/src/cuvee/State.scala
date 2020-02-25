@@ -3,6 +3,7 @@ package cuvee
 case class State(
   sorts: Map[Sort, Int],
   sortdefs: Map[Sort, (List[Sort], Type)],
+  datatypes: Map[Sort, Datatype],
 
   funs: Map[Id, (List[Type], Type)],
   fundefs: Map[Id, (List[Formal], Expr)],
@@ -14,27 +15,27 @@ case class State(
 
   rasserts: List[Expr],
   model: Option[Model]) {
-  
+
   def asserts = {
     rasserts.reverse
   }
-  
+
   def withoutAsserts = {
     copy(
-      rasserts = Nil, 
+      rasserts = Nil,
       model = None)
   }
-  
+
   def withModel(model: Model) = {
     copy(
       model = Some(model))
   }
-  
+
   def clearModel = {
     copy(
       model = None)
   }
-  
+
   def env = {
     val su = funs collect {
       case (id, (Nil, typ)) => (id, id)
@@ -42,17 +43,17 @@ case class State(
     val ty = funs collect {
       case (id, (Nil, typ)) => (id, typ)
     }
-    
+
     Env(su, ty)
   }
-  
+
   def const(id: Id): Formal = {
     ensure(funs contains id, "undeclared identifier", id, funs)
     val (args, res) = funs(id)
     ensure(args.isEmpty, "not constant", id)
     Formal(id, res)
   }
-  
+
   def declare(sort: Sort, arity: Int): State = {
     ensure(!(sorts contains sort), "sort already defined", sort)
     copy(
@@ -82,7 +83,7 @@ case class State(
 
   def define(id: Id, proc: Proc) = {
     ensure(!(procs contains id), "procedure already defined", id)
-    Verify.checkProc(id, proc)
+    Check.checkProc(id, proc)
     val ins: List[Type] = proc.in
     val outs: List[Type] = proc.out
     copy(
@@ -91,56 +92,44 @@ case class State(
   }
 
   def define(sort: Sort, obj: Obj): State = {
-    val Obj(state, init, ops) = obj
     ensure(!(objects contains sort), "object already defined", sort)
-    Verify.checkProc(Id.init, init, state)
-    ops.foreach(proc => Verify.checkProc(proc._1, proc._2, state))
+    Check.checkObj(sort, obj)
     copy(
       objects = objects + (sort -> obj))
   }
 
   def declare(sort: Sort, arity: Int, decl: Datatype): State = {
-    val st = declare(sort, arity)
+    var st = declare(sort, arity)
     ensure(arity == decl.params.length, "arity mismatch", arity, decl.params)
-      
-    decl.constrs.foldLeft(st) {
-      case (st, Constr(id, sels)) =>
-        val args = sels map (_.typ)
-        val st_ = st declare (id, args, sort)
-        sels.foldLeft(st_) {
-          case (st, Sel(id, typ)) =>
-            st declare (id, List(sort), typ)
-        }
+
+    st = st.copy(
+      datatypes = datatypes + (sort -> decl))
+
+    for (Constr(id, sels) <- decl.constrs) {
+      val args = sels map (_.typ)
+      st = st declare (id, args, sort)
+      for (Sel(id, typ) <- sels) {
+        st = st declare (id, List(sort), typ)
+      }
     }
+
+    st
   }
-  
+
   def declare(arities: List[Arity], decls: List[Datatype]): State = {
     ensure(arities.length == decls.length, "length mismatch", arities, decls)
-    (arities zip decls).foldLeft(this) {
-      case (st, (Arity(sort, arity), decl)) =>
-        st declare(sort, arity, decl)
+    var st = this
+
+    for ((Arity(sort, arity), decl) <- (arities zip decls)) {
+      st = st declare (sort, arity, decl)
     }
+
+    st
   }
-  
+
   def assert(expr: Expr) = {
     copy(
       rasserts = expr :: rasserts)
-  }
-  
-  def replay(solver: Solver) {
-    import State.default
-    
-    for((sort, arity) <- sorts if !(default.sorts contains sort))
-      solver.declare(sort, arity)
-
-    for((id, (args, res)) <- funs if !(default.funs contains id))
-      solver.declare(id, args, res)
-
-    for(phi <- asserts)
-      solver.assert(phi)
-      
-    // This should be fixed in the future to include fundefs, and optionally all other stuff 
-    // println("WARNING: not using fundefs, procs, objs in replay (see State.replay)")
   }
 }
 
@@ -150,14 +139,15 @@ object State {
       Sort.bool -> 0,
       Sort.int -> 0),
     sortdefs = Map(),
-    
+    datatypes = Map(),
+
     funs = Map(
       True -> (List(), Sort.bool),
       False -> (List(), Sort.bool),
 
       Id.exp -> (List(Sort.int, Sort.int), Sort.int),
       Id.abs -> (List(Sort.int), Sort.int),
-      Id.times ->(List(Sort.int, Sort.int), Sort.int),
+      Id.times -> (List(Sort.int, Sort.int), Sort.int),
       Id.divBy -> (List(Sort.int, Sort.int), Sort.int),
       Id.mod -> (List(Sort.int, Sort.int), Sort.int),
 
@@ -173,9 +163,9 @@ object State {
       Id.not -> (List(Sort.bool), Sort.bool),
       Id.and -> (List(Sort.bool, Sort.bool), Sort.bool),
       Id.or -> (List(Sort.bool, Sort.bool), Sort.bool),
-      Id.imp -> (List(Sort.bool, Sort.bool), Sort.bool),
+      Id.imp -> (List(Sort.bool, Sort.bool), Sort.bool)
 
-      /* Id.nil -> Fun.nil,
+    /* Id.nil -> Fun.nil,
       Id.cons -> Fun.cons,
       Id.in -> Fun.in,
       Id.head -> Fun.head,
@@ -184,7 +174,7 @@ object State {
       Id.init -> Fun.init,
 
       Id.select -> Fun.select,
-      Id.store -> Fun.store */),
+      Id.store -> Fun.store */ ),
     fundefs = Map(),
 
     procs = Map(),

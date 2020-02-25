@@ -1,3 +1,5 @@
+;! Cuvee -z3
+
 (set-logic ALL)
 
 (define-proc abs-proc ((x Int)) ((y Int))
@@ -12,5 +14,5 @@
 (assert-counterexample true
     (call abs-proc (x) (x))
     (= x (abs (old x))))
-(check-sat)
+(check-sat :expect unsat)
 (pop)

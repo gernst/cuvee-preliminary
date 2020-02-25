@@ -9,10 +9,17 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.InputStream
 
-case class Cuvee(backend: Solver, config: Config) extends Solver {
+case class Cuvee(sink: Sink, config: Config) extends Solver {
   var states: List[State] = List(State.default)
 
-  override def toString = log.mkString("\n")
+  val (backend, solver) = sink match {
+    case solver: Solver =>
+      (solver, solver)
+    case _ =>
+      val solver = Solver.default
+      val backend = Sink.tee(sink, solver)
+      (backend, solver)
+  }
 
   def top = states.head
 
@@ -31,6 +38,10 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
 
     case _ =>
       backend.setOption(args)
+  }
+
+  def setInfo(attr: String, arg: Option[Any]): Ack = {
+    backend.setInfo(attr, arg)
   }
 
   def report(res: Option[Res]): Option[Res] = res match {
@@ -103,7 +114,7 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
     var _asserts = top.asserts map eval
 
     if (config.simplify) {
-      val simplify = Simplify(top.withoutAsserts)
+      val simplify = Simplify(solver)
       _asserts = simplify(_asserts)
     }
 
@@ -156,12 +167,14 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
 
   def define(id: Id, proc: Proc): Ack = {
     map(_ define (id, proc))
-    backend.define(id, proc)
+    // backend.define(id, proc)
+    Success
   }
 
   def define(sort: Sort, obj: Obj): Ack = {
     map(_ define (sort, obj))
-    backend.define(sort, obj)
+    // backend.define(sort, obj)
+    Success
   }
 
   /* def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
@@ -172,6 +185,22 @@ case class Cuvee(backend: Solver, config: Config) extends Solver {
     map(_ assert axiom)
     backend.declare(id, args, res)
   } */
+
+  def verify(spec: Sort, impl: Sort, sim: Sim): Ack = {
+    val verify = Verify(top)
+    val phi = verify(spec, impl, sim)
+    assert(!phi)
+    // ensure(res forall (_ == Unsat), "incorrect refinement", spec, impl)
+    // Success
+  }
+
+  def verify(id: Id): Ack = {
+    val verify = Verify(top)
+    val phi = verify(id)
+    assert(!phi)
+    // ensure(res == Unsat, "incorrect contract", id)
+    // Success
+  }
 
   def declare(arities: List[Arity], decls: List[Datatype]) = {
     map(_ declare (arities, decls))
@@ -191,9 +220,9 @@ object Task {
     new Task
   }
 
-  def apply(source: Source, solver: Solver, report: Report): Task = {
+  def apply(source: Source, sink: Sink, report: Report): Task = {
     val task = new Task
-    task.configure(source, solver, report)
+    task.configure(source, sink, report)
     task
   }
 
@@ -208,12 +237,12 @@ class Task extends Runnable { /* because why not */
   var config = new Config
   var timeout = 1000
   var source: Source = Source.stdin
-  var solver: Solver = Solver.stdout
+  var sink: Sink = Sink.stdout
   var report: Report = Report.stderr
 
-  def configure(_source: Source, _solver: Solver, _report: Report) = {
+  def configure(_source: Source, _sink: Sink, _report: Report) = {
     source = _source
-    solver = _solver
+    sink = _sink
     report = _report
   }
 
@@ -240,6 +269,10 @@ class Task extends Runnable { /* because why not */
       Simplify.debug = true
       configure(rest)
 
+    case "-debug-verify" :: rest =>
+      Verify.debug = true
+      configure(rest)
+
     case "-debug-solver" :: rest =>
       Solver.debug = true
       configure(rest)
@@ -250,28 +283,28 @@ class Task extends Runnable { /* because why not */
 
     case "-z3" :: rest =>
       ensure(rest.isEmpty, "-z3 must be the last argument")
-      solver = Solver.z3(timeout)
+      sink = Solver.z3(timeout)
       report = Report.stdout
 
     case "-cvc4" :: rest =>
       ensure(rest.isEmpty, "-cvc4 must be the last argument")
-      solver = Solver.cvc4(timeout)
+      sink = Solver.cvc4(timeout)
       report = Report.stdout
 
     case "-princess" :: rest =>
       ensure(rest.isEmpty, "-princess must be the last argument")
-      solver = Solver.princess(timeout)
+      sink = Solver.princess(timeout)
       report = Report.stdout
 
     case "--" :: args =>
       ensure(args.length >= 1, "-- needs an SMT solver as argument")
-      solver = Solver.process(args: _*)
+      sink = Solver.process(args: _*)
       report = Report.stdout
 
     case "-o" :: path :: rest =>
       ensure(rest.isEmpty, "-o <file> must be the last argument")
       val out = new File(path)
-      solver = Solver.file(out)
+      sink = Sink.file(out)
       report = Report.stdout
 
     case "-o" :: _ =>
@@ -286,13 +319,13 @@ class Task extends Runnable { /* because why not */
   }
 
   def run() = {
-    val cuvee = Cuvee(solver, config)
+    val cuvee = Cuvee(sink, config)
     source.run(cuvee, report)
   }
 }
 
 object Cuvee {
-  def run(source: Source, backend: Solver, report: Report) {
+  def run(source: Source, backend: Sink, report: Report) {
     val task = Task(source, backend, report)
     task.run()
   }
