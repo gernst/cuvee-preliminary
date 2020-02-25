@@ -104,14 +104,14 @@ object Verify {
 
   def refine(A: Obj, as: List[Formal], C: Obj, cs: List[Formal], R: Expr) = {
     val init = diagram(
-      as, Id("init") -> A.init,
-      cs, Id("init") -> C.init,
+      A, as, Id("init") -> A.init,
+      C, cs, Id("init") -> C.init,
       True, R)
 
     val ops = for ((aproc, cproc) <- (A.ops zip C.ops)) yield {
       diagram(
-        as, aproc,
-        cs, cproc,
+        A, as, aproc,
+        C, cs, cproc,
         R, R)
     }
 
@@ -119,8 +119,8 @@ object Verify {
   }
 
   def diagram(
-    as: List[Formal], aproc: (Id, Proc),
-    cs: List[Formal], cproc: (Id, Proc),
+    A: Obj, as: List[Formal], aproc: (Id, Proc),
+    C: Obj ,cs: List[Formal], cproc: (Id, Proc),
     R0: Expr, R1: Expr): (Id, Expr) = {
 
     val (aop, ap) = aproc
@@ -131,21 +131,26 @@ object Verify {
     val Proc(ai, ao, _, _, _) = ap
     val Proc(ci, co, _, _, _) = cp
 
+    val ci_ = ci map (_.prime)
     val co_ = co map (_.prime)
 
-    val in = Eq(ai, ci)
-    val out = Eq(ao, co_)
+    val (apre, _, abody) = ap.call(A.state, as, ai, ao)
+    val (cpre, _, cbody) = cp.call(C.state, cs, ci_, co_)
 
-    val (apre, apost, abody) = ap.call(as, as, ai, ao)
-    val (cpre, cpost, cbody) = cp.call(as, as, ci, co_)
+    val phi = if (aop == Id("init")) {
+      (apre && cpre) ==> WP(cbody, Dia(abody, R1))
+    } else {
+      val in = Eq(ai, ci_)
+      val out = Eq(ao, co_)
 
-    val phi = Forall(
-      as ++ ai ++ ao ++ cs ++ ci ++ co_,
       in ==>
         ((apre && R0) ==>
-          (cpre && WP(cbody, Dia(abody, out && R1)))))
+          (cpre && WP(cbody, Dia(abody, out && R1))))
 
-    (aop, phi)
+    }
+    (aop, Forall(
+      as ++ ai ++ ao ++ cs ++ ci_ ++ co_,
+      phi))
   }
 
   /**
