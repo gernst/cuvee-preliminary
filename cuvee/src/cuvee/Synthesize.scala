@@ -14,7 +14,7 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   val as_ = as map (_.prime)
   val cs_ = cs map (_.prime)
 
-  /** corresponding tate variables */
+  /** corresponding state variables */
   val ax: List[Id] = as
   val ax_ : List[Id] = as_
   val cx: List[Id] = cs
