@@ -13,3 +13,12 @@ paper/*.log
 paper/*.out
 paper/*.pdf
 
+# osx
+/.DS_Store
+
+# IntelliJ
+/.idea
+
+# SBT
+/project
+/target

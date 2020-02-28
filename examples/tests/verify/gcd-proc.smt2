@@ -1,3 +1,5 @@
+;! Cuvee -z3
+
 (set-logic ALL)
 
 (declare-fun gcd (Int Int) Int)
@@ -27,3 +29,13 @@
   :precondition (and (< 0 m) (< 0 n))
   :postcondition (and (< 0 m) (= m (gcd (old m) (old n))))
 )
+
+(push)
+(verify-proc find-gcd)
+(check-sat :expect unsat)
+(pop)
+
+(push)
+(verify-proc find-gcd-rec)
+(check-sat :expect unsat)
+(pop)

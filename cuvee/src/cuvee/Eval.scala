@@ -264,6 +264,22 @@ object Eval {
       val _right = !_test ==> box(right :: rest, break, post, env0, old, st)
       _left && _right
 
+    case While(test, body, Skip, term, inv, True) :: rest =>
+      val mod = body.mod
+      val mod_ = mod.toList
+
+      val (formals, env1) = env0 havoc mod
+
+      val _test = eval(test, env1, env1 :: old, st)
+
+      val _inv0 = eval(inv, env0, old, st)
+      val _inv1 = eval(inv, env1, old, st)
+
+      val init = Forall(formals, (!_test && _inv1) ==> box(rest, break, post, env1, env1 :: old, st))
+      val step = Forall(formals, (_test && _inv1) ==> box(List(body), Some(inv), inv, env1, env1 :: old, st))
+
+      _inv0 && init && step
+
     case While(test, body, after, term, phi, psi) :: rest =>
       val mod = body.mod
       val mod_ = mod.toList
@@ -345,6 +361,7 @@ object Eval {
       val _phi1 = eval(phi, env1, old, st)
       val _psi1 = eval(psi, env1, env1 :: old, st)
 
+      error("loop rule for dia likely incorrect")
       val use = _phi0 && Exists(formals, _psi0 && dia(rest, break, post, env1, old, st))
       val base = Forall(formals, (!_test && _phi1) ==> dia(List(after), break, psi, env1, env1 :: old, st))
       val step = Forall(formals, (_test && _phi1) ==> dia(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
