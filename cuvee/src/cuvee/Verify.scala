@@ -15,6 +15,8 @@ object Verify {
     case Sim.byFun(fun, recipe) =>
       val as = A.state
       val cs = C.state
+      val common = toIds(as).toSet.intersect(toIds(cs).toSet)
+      ensure(common.isEmpty, s"state variable names must be disjoint but share: ${common.mkString(", ")}")
       val phi = App(fun, as ++ cs)
       recipe match {
         case Some(recipe) =>
