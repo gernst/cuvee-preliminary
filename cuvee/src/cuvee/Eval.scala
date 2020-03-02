@@ -67,6 +67,8 @@ object Path {
 }
 
 object Eval {
+  var inferInvariants = false
+
   def eval(let: Pair, env: Env, old: List[Env], st: State): (Id, Expr) = let match {
     case Pair(x, e) => (x, eval(e, env, old, st))
   }
@@ -258,19 +260,34 @@ object Eval {
       val _right = !_test ==> box(right :: rest, break, post, env0, old, st)
       _left && _right
 
-    case While(test, body, Skip, term, inv, True) :: rest =>
+    case While(test, body, Skip, term, phi, True) :: rest =>
       val mod = body.mod
       val mod_ = mod.toList
 
+      var inv = phi
+
       val (formals, env1) = env0 havoc mod
 
-      val _test = eval(test, env1, env1 :: old, st)
+      val _test1 = eval(test, env1, env1 :: old, st)
+
+      if (inferInvariants) {
+        val (others, env2) = env0 havoc mod
+        "⋀ s'. ¬ test s' ⟹ I s' ⟹ Q s s' ⟹ Q s0 s'"
+        val _test2 = eval(test, env2, env1 :: old, st)
+        val _inv2 = eval(phi, env2, env1 :: old, st)
+        // s0 == env0
+        // s  == env1
+        // s' == env2
+        /* Forall(
+            others,
+          */  
+      }
 
       val _inv0 = eval(inv, env0, old, st)
       val _inv1 = eval(inv, env1, old, st)
 
-      val init = Forall(formals, (!_test && _inv1) ==> box(rest, break, post, env1, env1 :: old, st))
-      val step = Forall(formals, (_test && _inv1) ==> box(List(body), Some(inv), inv, env1, env1 :: old, st))
+      val init = Forall(formals, (!_test1 && _inv1) ==> box(rest, break, post, env1, env1 :: old, st))
+      val step = Forall(formals, (_test1 && _inv1) ==> box(List(body), Some(inv), inv, env1, env1 :: old, st))
 
       _inv0 && init && step
 

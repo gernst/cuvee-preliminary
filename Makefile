@@ -1,7 +1,7 @@
 SCALA=$(wildcard cuvee/src/cuvee/*.scala)
 
 JAR=./out/cuvee/assembly/dest/out.jar
-BIN=./Cuvee
+BIN=./cuvee.sh
 MILL=./mill -s -disable-ticker
 
 .PHONY: all test clean

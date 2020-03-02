@@ -281,6 +281,10 @@ class Task extends Runnable { /* because why not */
       Printer.format = true
       configure(rest)
 
+    case "-inferInvariants" :: rest =>
+      Eval.inferInvariants = true
+      configure(rest)
+
     case "-z3" :: rest =>
       ensure(rest.isEmpty, "-z3 must be the last argument")
       sink = Solver.z3(timeout)
