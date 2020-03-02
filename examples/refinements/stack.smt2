@@ -39,16 +39,20 @@
   Bool)
 
 (assert
-  (forall ((size Int) (values (Array Int Elem)))
-    (= (R nil size values)
-       (= size 0))))
-
+  (forall
+    ((head1 Elem) (tail2 Lst) (size Int) (values (Array Int Elem)))
+    (=
+      (R (cons head1 tail2) size values)
+      (and
+        (< 0 size)
+        (= head1 (select values (- size 1)))
+        (R tail2 (- size 1) values)))))
 (assert
-  (forall ((x Elem) (xs Lst) (size Int) (values (Array Int Elem)))
-    (= (R (cons x xs) size values)
-       (and (> size 0)
-            (= x (select values (- size 1)))
-            (R xs (- size 1) values)))))
+  (forall
+    ((size Int) (values (Array Int Elem)))
+    (=
+      (R nil size values)
+      (= 0 size))))
 
 (assert
   (forall ((x Elem) (xs Lst) (m Int) (n Int) (values (Array Int Elem)))

@@ -70,10 +70,6 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       val inds = inductivePositions(as)
       val List((sort, dt, pos)) = inds
       val defs = fromConsumer(sort, dt, pos)
-      println("candidate simulation relation")
-      for (df <- defs) {
-        println(Printer.format(df, "  "))
-      }
       defs
 
     case Recipe.output =>
@@ -132,10 +128,6 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       astep @ Step(op, as, ain, aout, aex, apath, asu) <- asteps if solver isTrue astep.isConsumer(bound, pos, arg);
       cstep @ Step(`op`, cs, cin, cout, cex, cpath, csu) <- csteps
     ) yield {
-      println("using consumer")
-      println("  " + astep)
-      println("  " + cstep)
-
       assert(aex.toSet disjoint cex.toSet)
 
       val ex = aex ++ cex
@@ -147,11 +139,7 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
 
       import Simplify.and
       import Simplify.norm
-      println(constrs)
       val phi = and(norm(constrs))
-      
-      println(phi)
-
       Exists(ex, phi)
     }
 
