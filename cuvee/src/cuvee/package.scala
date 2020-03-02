@@ -1,10 +1,10 @@
-import scala.io.StdIn
-import java.lang.UNIXProcess
-import java.io.File
-import java.io.FileInputStream
+
 
 package object cuvee {
   import scala.language.implicitConversions
+  import scala.io.StdIn
+  import java.io.File
+  import java.io.FileInputStream
 
   def error(info: Any*) = {
     throw Error(info)
@@ -119,7 +119,7 @@ package object cuvee {
   implicit class ProcessOps(process: Process) {
     def pid: Long = {
       val klass = process.getClass
-      assert(klass.getName == "java.lang.UNIXProcess")
+      // assert(klass.getName == "java.lang.UNIXProcess")
       val field = klass.getDeclaredField("pid");
       field.setAccessible(true)
       val res = field.getLong(process)
