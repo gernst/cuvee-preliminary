@@ -7,6 +7,33 @@ object Recipe {
   case object output extends Recipe
 }
 
+case class Step(op: Id, ps: List[Formal], in: List[Formal], out: List[Formal], ex: List[Formal], path: List[Expr], su: Map[Id, Expr]) {
+  /** Formula such that post is checked to hold in the post-state */
+  def ==>(post: Expr) = {
+    Forall(
+      ps ++ in ++ out ++ ex,
+      And(path) ==> (post subst su))
+  }
+
+  /** Formula such that the step is taken and the given postcondition holds */
+  def &&(post: Expr) = {
+    Exists(
+      ps ++ in ++ out ++ ex,
+      And(path) && (post subst su))
+  }
+
+  /** Cormula to check that ps(pos) is guaranteed to be equal to arg in the post-state */
+  def isConsumer(vs: List[Formal], pos: Int, arg: Expr) = {
+    val Formal(x, _) = ps(pos)
+    val post = x === arg
+
+    val phi = Forall(
+      vs ++ in ++ out ++ ex,
+      And(path) ==> (post subst su))
+    phi
+  }
+}
+
 case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   /** state formal parameters */
   val as = A.state
@@ -23,6 +50,20 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   ensure(
     A.state.toSet disjoint C.state.toSet,
     "overlapping state variables", A, C)
+
+  def steps(o: Obj, es: List[Expr]) = {
+    import Eval.forward
+
+    val Obj(ps, init, ops) = o
+
+    for (
+      (op, proc) <- ((Id.init, init) :: ops);
+      in = proc.in; out = proc.out;
+      Path(ex, path, env) <- forward(proc, ps, in, out, es, state)
+    ) yield {
+      Step(op, ps, in, out, ex, path, env.su)
+    }
+  }
 
   def apply(recipe: Recipe): List[Expr] = recipe match {
     case Recipe.auto =>
@@ -67,9 +108,7 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
         define(as0 ++ cs, lhs, base(ax, cx, ax0, cx))
       } else {
         val cases = for (hyp <- hyps) yield {
-          Exists(as_ ++ cs_, rec(
-            as0 ++ cs ++ as_ ++ cs_,
-            pos, vs(hyp), ax0, cx, ax_, cx_))
+          rec(as0, pos, vs(hyp), ax0, cx, ax_, cx_)
         }
 
         define(as0 ++ cs, lhs, And(cases))
@@ -86,7 +125,37 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
 
   /** Synthesize recursive cases from transitions that consume as0(pos) such that as1(pos) == arg */
   def rec(bound: List[Formal], pos: Int, arg: Id, as0: List[Expr], cs0: List[Expr], as1: List[Id], cs1: List[Id]): Expr = {
-    val post = as1(pos) === arg
+    val asteps = steps(A, as0)
+    val csteps = steps(C, cs0)
+
+    val alts = for (
+      astep @ Step(op, as, ain, aout, aex, apath, asu) <- asteps if solver isTrue astep.isConsumer(bound, pos, arg);
+      cstep @ Step(`op`, cs, cin, cout, cex, cpath, csu) <- csteps
+    ) yield {
+      println("using consumer")
+      println("  " + astep)
+      println("  " + cstep)
+
+      assert(aex.toSet disjoint cex.toSet)
+
+      val ex = aex ++ cex
+      val path = apath ++ cpath
+      val ins = Eq.zip(ain map (_ subst asu), cin map (_ subst csu))
+      val outs = Eq.zip(aout map (_ subst asu), cout map (_ subst csu))
+      val psi = App(R, (as map (_ subst asu)) ++ (cs map (_ subst csu)))
+      val constrs = ins ++ path ++ outs ++ List(psi)
+
+      import Simplify.and
+      import Simplify.norm
+      println(constrs)
+      val phi = and(norm(constrs))
+      
+      println(phi)
+
+      Exists(ex, phi)
+    }
+
+    /* val post = as1(pos) === arg
 
     val alts = for (
       (id, aproc) <- A.ops;
@@ -100,7 +169,7 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       val psi = App(R, as1 ++ cs1)
 
       phi && psi
-    }
+    } */
 
     Or(alts)
   }
@@ -136,8 +205,8 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       val eqs = for ((x, x1) <- (xs zip xs1)) yield {
         env(x) === x1
       }
-      
-      val outs = for(o <- out) yield {
+
+      val outs = for (o <- out) yield {
         o.id === env(o.id)
       }
 

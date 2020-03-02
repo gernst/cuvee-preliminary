@@ -256,7 +256,7 @@ object Eval {
       val (formals, env1) = env0 havoc mod
       val _phi = eval(phi, env0, old, st)
       val _psi = eval(psi, env1, env0 :: old, st)
-      _phi ==> Forall(formals, _psi ==> box(rest, break, post, env1, old, st))
+      _phi && Forall(formals, _psi ==> box(rest, break, post, env1, old, st))
 
     case If(test, left, right) :: rest =>
       val _test = eval(test, env0, old, st)
@@ -296,7 +296,7 @@ object Eval {
       val _phi1 = eval(phi, env1, old, st)
       val _psi1 = eval(psi, env1, env1 :: old, st)
 
-      val use = _phi0 ==> Forall(formals, _psi0 ==> box(rest, break, post, env1, old, st))
+      val use = _phi0 && Forall(formals, _psi0 ==> box(rest, break, post, env1, old, st))
       val base = Forall(formals, (!_test && _phi1) ==> box(List(after), break, psi, env1, env1 :: old, st))
       val step = Forall(formals, (_test && _phi1) ==> box(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
 
@@ -420,5 +420,25 @@ object Eval {
 
     case Call(name, _, _) :: rest =>
       error("unknown procedure", name)
+  }
+
+  /**
+   * Determine all paths through proc (splitting conditionals)
+   *  wrt. state parameters ps, such that the path takes a transition from xs0 to xs1.
+   *  Return the instantiated precondition as well as the paths,
+   *  which store constraints and variable assignments for xs1 in the successor states.
+   */
+  def forward(proc: Proc, ps: List[Formal], in: List[Formal], out: List[Formal], init: List[Expr], st: State): List[Path] = {
+    val xs: List[Id] = ps
+    val (pre, post, prog) = proc call (ps, xs, in, out)
+    val env0 = Env.empty
+    val env1 = env0 bind (ps ++ in ++ out)
+    val env2 = env1.assign(xs, init)
+    val old = Nil
+    val _pre = Eval.eval(pre, env2, old, st)
+    val paths = Eval.rel(List(prog), env2, old, st)
+
+    for (path <- paths)
+      yield _pre :: path
   }
 }

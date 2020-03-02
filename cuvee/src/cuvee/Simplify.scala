@@ -92,6 +92,22 @@ case class Simplify(backend: Solver) {
 object Simplify {
   var debug = false
 
+  def eq(left: Expr, right: Expr) = {
+    if (left == right) True
+    else Eq(left, right)
+  }
+
+  def distinct(args: List[Expr]) = args match {
+    case _ if args.hasDuplicates =>
+      False
+    case List(Id.nil, Cons(_, _)) =>
+      True
+    case List(Cons(_, _), Id.nil) =>
+      True
+    case _ =>
+      Distinct(args)
+  }
+
   def not(phi: Expr): Expr = phi match {
     case True => False
     case False => True
@@ -147,8 +163,19 @@ object Simplify {
     case Head(Cons(x, xs)) => x
     case Tail(Cons(x, xs)) => xs
 
+    case Distinct(List(Cons(_, _), Id.nil)) =>
+      True
+    case Distinct(List(Id.nil, Cons(_, _))) =>
+      True
+
+    case Distinct(args) =>
+      distinct(norm(args))
+
     case App(fun, args) =>
       App(fun, norm(args))
+
+    case Eq(left, right) =>
+      eq(norm(left), norm(right))
 
     case _ =>
       expr

@@ -165,6 +165,7 @@ object Id extends (String => Id) {
 case class Formal(id: Id, typ: Type) {
   def prime = Formal(id.prime, typ)
   def rename(re: Map[Id, Id]) = Formal(id rename re, typ)
+  def subst(su: Map[Id, Expr]) = id subst su
   override def toString = sexpr(id, typ)
 }
 
@@ -199,6 +200,10 @@ case class Eq(left: Expr, right: Expr) extends Expr {
 object Eq extends ((Expr, Expr) => Expr) {
   def zip(pairs: List[(Expr, Expr)]): List[Expr] = {
     pairs map { case (left, right) => Eq(left, right) }
+  }
+
+  def zip(lefts: List[Expr], rights: List[Expr]): List[Expr] = {
+    zip(lefts zip rights)
   }
 
   def apply(lefts: List[Expr], rights: List[Expr]): Expr = {

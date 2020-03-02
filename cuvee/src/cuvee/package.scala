@@ -76,6 +76,10 @@ package object cuvee {
     def duplicates(eq: (A, A) => Boolean) = {
       classes(eq).flatten
     }
+
+    def hasDuplicates = {
+      self.toSeq.distinct != self
+    }
   }
 
   implicit class FileOps(file: File) {
