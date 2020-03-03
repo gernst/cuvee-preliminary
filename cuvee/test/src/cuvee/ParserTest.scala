@@ -23,7 +23,7 @@ object ParserTest extends TestSuite {
 
     val proc = parseCmd("(define-proc abs ((x Int)) ((y Int))" +
       "(if (< x 0) (assign (y (- 0 x))) (assign (y x)))" +
-      ":precondition true" +
+      ":precondition true " +
       ":postcondition (>= y 0))")
     assertEquals(proc, abs)
   }
@@ -34,7 +34,7 @@ object ParserTest extends TestSuite {
       proc,
       DefineProc(
         Id("empty"),
-        Proc(List(), List(), True, True)))
+        Proc(List(), List(), True, True, Skip)))
   }
 
   test("parse class") {

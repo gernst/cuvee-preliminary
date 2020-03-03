@@ -9,7 +9,7 @@ object cuvee extends ScalaModule {
   def mainClass = Some("cuvee.Cuvee")
 
   def ivyDeps = Agg(
-    ivy"com.lihaoyi::sourcecode:0.1.7")
+    ivy"com.lihaoyi::sourcecode:0.2.0")
 
   object test extends Tests {
     def forkArgs = Seq("-Xss32m")

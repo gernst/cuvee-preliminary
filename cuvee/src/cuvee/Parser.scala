@@ -88,7 +88,8 @@ object Parser {
   val formals = P(formal.*)
   val bind_ = P(Bind(quant ~ parens(formals) ~ expr))
 
-  val prog: Parser[Prog] = P(parens(break_ | assign_ | asm_ | asrt_ | spec_ | call_ | if_ | while_ | block_))
+  val prog_ : Parser[Prog] = P(break_ | assign_ | asm_ | asrt_ | spec_ | call_ | if_ | while_ | block_)
+  val prog: Parser[Prog] = P(parens(prog_))
   val progs = P(prog.*)
   val block_ = P(Block("block" ~ progs))
 
@@ -155,9 +156,13 @@ object Parser {
   val define_fun_ = P(DefineFun("define-fun" ~ id ~ parens(formals) ~ typ ~ expr))
   val define_fun_rec_ = P(DefineFunRec("define-fun-rec" ~ id ~ parens(formals) ~ typ ~ expr))
 
-  val locals = ("let" ~ parens(formals)) | ret(Nil)
-  val body = P(Body(locals ~ prog.+)) 
-  val proc_ = P(Proc(parens(formals) ~ parens(formals) ~ pre.? ~ post.? ~ body.?))
+  // LL1 sucks
+  val locals_ = "let" ~ formals
+  val _progs = ret(Nil) ~ ((prog_ ~ ")") :: prog.*)
+  val _locals_progs = locals_ ~ ")" ~ prog.+
+  val body_ = "(" ~ (_locals_progs | _progs)
+  val body = P(Body(body_))
+  val proc_ = P(Proc(parens(formals) ~ parens(formals) ~ body.? ~ pre.? ~ post.?))
   val define_proc_ = P(DefineProc("define-proc" ~ id ~ proc_))
 
   val obj_init = parens("init" ~ proc_)

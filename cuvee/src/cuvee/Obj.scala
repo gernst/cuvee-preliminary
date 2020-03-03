@@ -51,8 +51,9 @@ case class Proc(in: List[Formal], out: List[Formal], pre: Expr, post: Expr, body
   override def toString = Printer.proc(in, out, pre, post, body)
 }
 
-object Proc extends ((List[Formal], List[Formal], Option[Expr], Option[Expr], Option[Body]) => Proc) {
-  def apply(in: List[Formal], out: List[Formal], pre: Option[Expr], post: Option[Expr], body: Option[Body]): Proc = {
+object Proc extends ((List[Formal], List[Formal], Option[Body], Option[Expr], Option[Expr]) => Proc) {
+  // NOTE: changed order of parameters to accomodate parser
+  def apply(in: List[Formal], out: List[Formal], body: Option[Body], pre: Option[Expr], post: Option[Expr]): Proc = {
     val _pre = pre.getOrElse(True)
     val _post = post.getOrElse(True)
     Proc(in, out, _pre, _post, body)
