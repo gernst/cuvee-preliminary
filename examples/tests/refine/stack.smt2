@@ -1,3 +1,5 @@
+;! Cuvee -z3
+
 (set-logic ALL)
 
 (declare-sort Elem)
