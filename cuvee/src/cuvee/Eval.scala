@@ -180,7 +180,7 @@ object Eval {
       val _phi = eval(phi, env0, old, st)
       val _psi = eval(psi, env1, env0 :: old, st)
       _phi && Forall(formals, _psi ==> wp(rest, break, post, env1, old, st))
-      
+
     case Choose(xs, phi) :: rest =>
       val (formals, env1) = env0 havoc xs
       val _phi = eval(phi, env1, env0 :: old, st)
@@ -264,7 +264,7 @@ object Eval {
       val _phi = eval(phi, env0, old, st)
       val _psi = eval(psi, env1, env0 :: old, st)
       _phi && Forall(formals, _psi ==> box(rest, break, post, env1, old, st))
-      
+
     case Choose(xs, phi) :: rest =>
       val (formals, env1) = env0 havoc xs
       val _phi = eval(phi, env1, env0 :: old, st)
@@ -288,7 +288,7 @@ object Eval {
 
       if (inferInvariants) {
         val (others, env2) = env0 havoc mod
-        "⋀ s'. ¬ test s' ⟹ I s' ⟹ Q s s' ⟹ Q s0 s'"
+        // ⋀ s'. ¬ test s' ⟹ I s' ⟹ Q s s' ⟹ Q s0 s'
         val _test2 = eval(test, env2, env1 :: old, st)
         val _inv2 = eval(phi, env2, env1 :: old, st)
         // s0 == env0
@@ -364,7 +364,7 @@ object Eval {
       val _phi = eval(phi, env0, old, st)
       val _psi = eval(psi, env1, env0 :: old, st)
       _phi && Exists(formals, _psi && dia(rest, break, post, env1, old, st))
-      
+
     case Choose(xs, phi) :: rest =>
       val (formals, env1) = env0 havoc xs
       val _phi = eval(phi, env1, env0 :: old, st)
@@ -407,7 +407,7 @@ object Eval {
     case Call(name, _, _) :: rest =>
       error("unknown procedure", name)
   }
-  
+
   def rel(body: Body, env0: Env, old: List[Env], st: State): List[Path] = {
     val Body(locals, progs) = body
     val env1 = env0 bind locals
@@ -469,7 +469,7 @@ object Eval {
   def forward(proc: Proc, ps: List[Formal], in: List[Formal], out: List[Formal], init: List[Expr], st: State): List[(Expr, Path)] = {
     val xs: List[Id] = ps
     val (pre, post, body) = proc call (ps, xs, in, out)
-    
+
     val env0 = Env.empty
     val env1 = env0 bind (ps ++ in ++ out)
     val env2 = env1.assign(xs, init)
