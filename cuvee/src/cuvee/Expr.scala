@@ -414,25 +414,47 @@ case class Bind(quant: Quant, formals: List[Formal], body: Expr) extends Expr wi
   override def toString = sexpr(quant, sexpr(formals), body)
 }
 
-case class WP(prog: Prog, post: Expr) extends Expr {
-  def free = prog.read ++ post.free // XXX: overapproximation
-  def rename(re: Map[Id, Id]) = WP(prog replace re, post rename re)
-  def subst(su: Map[Id, Expr]) = ???
-  override def toString = sexpr("wp", prog, post)
+sealed trait Modality extends ((Prog, Expr) => Expr) {
+  def quant: Quant
+
+  def apply(prog: Prog, post: Expr) = {
+    Post(this, prog, post)
+  }
+
+  def apply(body: Body, post: Expr) = {
+    quant(
+      body.locals,
+      Post(this, body.prog, post))
+  }
+
+  def unapply(expr: Post) = expr match {
+    case Post(how, prog, post) if how == this =>
+      Some((prog, post))
+    case _ =>
+      None
+  }
 }
 
-case class Box(prog: Prog, post: Expr) extends Expr {
-  def free = prog.read ++ post.free // XXX: overapproximation
-  def rename(re: Map[Id, Id]) = Box(prog replace re, post rename re)
-  def subst(su: Map[Id, Expr]) = ???
-  override def toString = sexpr("box", prog, post)
+case object WP extends Modality {
+  def quant = Forall
+  override def toString = "wp"
 }
 
-case class Dia(prog: Prog, post: Expr) extends Expr {
+case object Dia extends Modality {
+  def quant = Exists
+  override def toString = "dia"
+}
+
+case object Box extends Modality {
+  def quant = Forall
+  override def toString = "box"
+}
+
+case class Post(how: Modality, prog: Prog, post: Expr) extends Expr {
   def free = prog.read ++ post.free // XXX: overapproximation
-  def rename(re: Map[Id, Id]) = Dia(prog replace re, post rename re)
+  def rename(re: Map[Id, Id]) = Post(how, prog replace re, post rename re)
   def subst(su: Map[Id, Expr]) = ???
-  override def toString = sexpr("dia", prog, post)
+  override def toString = sexpr(how, prog, post)
 }
 
 sealed trait Prog {

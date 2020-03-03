@@ -32,9 +32,15 @@ object Verify {
 
   def contract(proc: Proc) = {
     val Proc(in, out, pre, post, body) = proc
-    Forall(
-      in ++ out,
-      pre ==> WP(new Block(List(body), true), post))
+
+    body match {
+      case None =>
+        True
+      case Some(Body(locals, progs)) =>
+        Forall(
+          in ++ out ++ locals,
+          pre ==> WP(new Block(progs, true), post))
+    }
   }
 
   def refine(A: Obj, as: List[Formal], C: Obj, cs: List[Formal], R: Expr) = {
@@ -55,7 +61,7 @@ object Verify {
 
   def diagram(
     A: Obj, as: List[Formal], aproc: (Id, Proc),
-    C: Obj ,cs: List[Formal], cproc: (Id, Proc),
+    C: Obj, cs: List[Formal], cproc: (Id, Proc),
     R0: Expr, R1: Expr): (Id, Expr) = {
 
     val (aop, ap) = aproc

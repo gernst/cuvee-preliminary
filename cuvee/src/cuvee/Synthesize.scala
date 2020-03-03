@@ -191,13 +191,13 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   def paths(proc: Proc, st: List[Formal], xs0: List[Expr], xs1: List[Expr],
     in: List[Formal], out: List[Formal]) = {
     val xs: List[Id] = st
-    val (pre, post, prog) = proc call (st, xs, in, out)
+    val (pre, post, body) = proc call (st, xs, in, out)
     val env0 = Env.empty
     val env1 = env0 bind (st ++ in ++ out)
     val env2 = env1.assign(xs, xs0)
     val old = Nil
     val _pre = Eval.eval(pre, env2, old, state)
-    val paths = Eval.rel(List(prog), env2, old, state)
+    val paths = Eval.rel(body, env2, old, state)
     val conds = for (Path(fresh, path, env) <- paths) yield {
       val eqs = for ((x, x1) <- (xs zip xs1)) yield {
         env(x) === x1

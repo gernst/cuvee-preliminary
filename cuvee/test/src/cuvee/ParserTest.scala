@@ -34,7 +34,7 @@ object ParserTest extends TestSuite {
       proc,
       DefineProc(
         Id("empty"),
-        Proc(List(), List(), True, True, Block(List()))))
+        Proc(List(), List(), True, True)))
   }
 
   test("parse class") {

@@ -392,6 +392,12 @@ object Eval {
     case Call(name, _, _) :: rest =>
       error("unknown procedure", name)
   }
+  
+  def rel(body: Body, env0: Env, old: List[Env], st: State): List[Path] = {
+    val Body(locals, progs) = body
+    val env1 = env0 bind locals
+    rel(progs, env1, old, st)
+  }
 
   def rel(progs: List[Prog], env0: Env, old: List[Env], st: State): List[Path] = progs match {
     case Nil =>
@@ -447,13 +453,14 @@ object Eval {
    */
   def forward(proc: Proc, ps: List[Formal], in: List[Formal], out: List[Formal], init: List[Expr], st: State): List[(Expr, Path)] = {
     val xs: List[Id] = ps
-    val (pre, post, prog) = proc call (ps, xs, in, out)
+    val (pre, post, body) = proc call (ps, xs, in, out)
+    
     val env0 = Env.empty
     val env1 = env0 bind (ps ++ in ++ out)
     val env2 = env1.assign(xs, init)
     val old = Nil
     val _pre = Eval.eval(pre, env2, old, st)
-    val paths = Eval.rel(List(prog), env2, old, st)
+    val paths = Eval.rel(body, env2, old, st)
 
     for (path <- paths)
       yield (_pre, path)

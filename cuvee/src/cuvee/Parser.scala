@@ -155,7 +155,9 @@ object Parser {
   val define_fun_ = P(DefineFun("define-fun" ~ id ~ parens(formals) ~ typ ~ expr))
   val define_fun_rec_ = P(DefineFunRec("define-fun-rec" ~ id ~ parens(formals) ~ typ ~ expr))
 
-  val proc_ = Proc(parens(formals) ~ parens(formals) ~ prog ~ pre.? ~ post.?)
+  val locals = ("let" ~ parens(formals)) | ret(Nil)
+  val body = P(Body(locals ~ prog.+)) 
+  val proc_ = P(Proc(parens(formals) ~ parens(formals) ~ pre.? ~ post.? ~ body.?))
   val define_proc_ = P(DefineProc("define-proc" ~ id ~ proc_))
 
   val obj_init = parens("init" ~ proc_)

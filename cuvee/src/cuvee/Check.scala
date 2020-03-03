@@ -132,34 +132,34 @@ object Check {
    * @param id    name of the procedure for error messages
    * @param state (optional) state of the surrounding object if this procedure is defined on an object
    */
-  def checkProc(id: Id, proc: Proc, state: List[Formal] = List()): Unit = {
+  def checkProc(id: Id, proc: Proc, state: List[Formal] = Nil): Unit = {
     val Proc(in, out, pre, post, body) = proc
     val inVars: List[Id] = in
     val duplicateInputDeclarations = inVars.groupBy(identity).filter(_._2.size > 1)
-    if (duplicateInputDeclarations.nonEmpty) {
-      Error(s"The method $id declares duplicate input parameters ${duplicateInputDeclarations.keys.mkString(", ")}")
-    }
+    ensure(duplicateInputDeclarations.isEmpty, s"The method $id declares duplicate input parameters ${duplicateInputDeclarations.keys.mkString(", ")}")
 
     // the outputs may have the same variable name in multiple places if the type is equal.
     // outputs may overlap with inputs but, again, the type must be equal
     val nonUniqueAgruments = (in ++ out).groupBy(_.id).filter(_._2.map(_.typ).distinct.size > 1)
-    if (nonUniqueAgruments.nonEmpty) {
-      Error(s"The method $id declares non-unique type for argument ${nonUniqueAgruments.keys.mkString(", ")}")
+    ensure(nonUniqueAgruments.isEmpty, "The method $id declares non-unique type for argument ${nonUniqueAgruments.keys.mkString(", ")}")
+
+    for (body <- body) {
+      checkBody(id, body, in, out, state)
     }
+  }
+
+  def checkBody(id: Id, body: Body, in: List[Formal], out: List[Formal], state: List[Formal] = Nil): Unit = {
+    val inVars: List[Id] = in
 
     // procedure must at most modify its output variables
     val modifiableVariables: List[Id] = (in ++ out ++ state).distinct
     val modifiedVariables = body.mod
     val illegallyModifiedVariables = modifiedVariables.filter(!modifiableVariables.contains(_))
-    if (illegallyModifiedVariables.nonEmpty) {
-      Error(s"The method $id modifies undeclared output parameters ${illegallyModifiedVariables.mkString(", ")}")
-    }
+    ensure(illegallyModifiedVariables.isEmpty, s"The method $id modifies undeclared output parameters ${illegallyModifiedVariables.mkString(", ")}")
 
     // procedure must at least modify output variables that are not input variables
     val outputsThatMustBeSet = out.map(_.id).filter(!inVars.contains(_))
     val unsetOutputs = outputsThatMustBeSet.filter(!modifiedVariables.contains(_))
-    if (unsetOutputs.nonEmpty) {
-      Error(s"The method $id does not modify its output parameters ${unsetOutputs.mkString(", ")}")
-    }
+    ensure(unsetOutputs.isEmpty, s"The method $id does not modify its output parameters ${unsetOutputs.mkString(", ")}")
   }
 }

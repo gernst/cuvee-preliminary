@@ -46,8 +46,11 @@ object Printer {
     else sexpr("define-fun-rec", id, sexpr(formals), res, body)
   }
 
-  def proc(in: List[Formal], out: List[Formal], pre: Expr, post: Expr, body: Prog) = {
-    sexpr(sexpr(in), sexpr(out), ":precondition", pre, ":postcondition", post, body)
+  def proc(in: List[Formal], out: List[Formal], pre: Expr, post: Expr, body: Option[Body]) = body match {
+    case None =>
+      sexpr(sexpr(in), sexpr(out), ":precondition", pre, ":postcondition", post)
+    case Some(body) =>
+      sexpr(sexpr(in), sexpr(out), ":precondition", pre, ":postcondition", post, body)
   }
 
   def op(descr: (Id, Proc)) = {
@@ -132,7 +135,7 @@ object Printer {
     case Bind(quant, formals, body) =>
       indent + "(" + quant + "\n" + indent + "  " + sexpr(formals) + "\n" + format(body, indent + "  ") + ")"
     case Eq(left, right) if indent.length <= 4 =>
-      indent + "(=\n" + format(left, indent + "  ")+ "\n" + format(right, indent + "  ") + ")"
+      indent + "(=\n" + format(left, indent + "  ") + "\n" + format(right, indent + "  ") + ")"
     case _ =>
       indent + expr
   }
