@@ -14,4 +14,5 @@
 
 (verify-refinement Counter NegativeCounter R :synthesize-output)
 
-(check-sat :expect unsat)
+(set-info :status unsat)
+(check-sat)
