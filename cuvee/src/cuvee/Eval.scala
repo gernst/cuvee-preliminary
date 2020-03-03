@@ -180,6 +180,11 @@ object Eval {
       val _phi = eval(phi, env0, old, st)
       val _psi = eval(psi, env1, env0 :: old, st)
       _phi && Forall(formals, _psi ==> wp(rest, break, post, env1, old, st))
+      
+    case Choose(xs, phi) :: rest =>
+      val (formals, env1) = env0 havoc xs
+      val _phi = eval(phi, env1, env0 :: old, st)
+      Exists(formals, _phi) && Forall(formals, _phi ==> wp(rest, break, post, env1, old, st))
 
     case If(test, left, right) :: rest =>
       val _test = eval(test, env0, old, st)
@@ -259,6 +264,11 @@ object Eval {
       val _phi = eval(phi, env0, old, st)
       val _psi = eval(psi, env1, env0 :: old, st)
       _phi && Forall(formals, _psi ==> box(rest, break, post, env1, old, st))
+      
+    case Choose(xs, phi) :: rest =>
+      val (formals, env1) = env0 havoc xs
+      val _phi = eval(phi, env1, env0 :: old, st)
+      Exists(formals, _phi) && Forall(formals, _phi ==> box(rest, break, post, env1, old, st))
 
     case If(test, left, right) :: rest =>
       val _test = eval(test, env0, old, st)
@@ -354,6 +364,11 @@ object Eval {
       val _phi = eval(phi, env0, old, st)
       val _psi = eval(psi, env1, env0 :: old, st)
       _phi && Exists(formals, _psi && dia(rest, break, post, env1, old, st))
+      
+    case Choose(xs, phi) :: rest =>
+      val (formals, env1) = env0 havoc xs
+      val _phi = eval(phi, env1, env0 :: old, st)
+      Exists(formals, _phi && dia(rest, break, post, env1, old, st))
 
     case If(test, left, right) :: rest =>
       val _test = eval(test, env0, old, st)

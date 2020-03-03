@@ -501,6 +501,16 @@ case class Spec(xs: List[Id], pre: Expr, post: Expr) extends Prog {
   override def toString = sexpr("spec", sexpr(xs), pre, post)
 }
 
+/* Can't have this as Spec currently, since we need to prove existence of such a value,
+ * and that requires the types to be known.
+ */
+case class Choose(xs: List[Id], phi: Expr) extends Prog {
+  def mod = xs.toSet
+  def read = phi.free -- mod
+  def replace(re: Map[Id, Id]) = Choose(xs map (_ rename re), phi rename re)
+  override def toString = sexpr("choose", sexpr(xs), phi)
+}
+
 object Spec extends ((List[Id], Expr, Expr) => Spec) {
   def assert = (pre: Expr) => Spec(Nil, pre, True)
   def assume = (post: Expr) => Spec(Nil, True, post)
