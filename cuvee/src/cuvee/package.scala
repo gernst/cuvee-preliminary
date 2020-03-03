@@ -1,9 +1,8 @@
-import scala.io.StdIn
-import java.io.File
-import java.io.FileInputStream
-
 package object cuvee {
   import scala.language.implicitConversions
+  import scala.io.StdIn
+  import java.io.File
+  import java.io.FileInputStream
 
   def error(info: Any*) = {
     throw Error(info)

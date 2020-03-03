@@ -14,6 +14,7 @@ case class State(
   objects: Map[Sort, Obj],
 
   rasserts: List[Expr],
+  status: Option[IsSat],
   model: Option[Model]) {
 
   def asserts = {
@@ -24,6 +25,16 @@ case class State(
     copy(
       rasserts = Nil,
       model = None)
+  }
+
+  def withStatus(status: IsSat) = {
+    copy(
+      status = Some(status))
+  }
+
+  def clearStatus = {
+    copy(
+      status = None)
   }
 
   def withModel(model: Model) = {
@@ -183,5 +194,6 @@ object State {
     objects = Map(),
 
     rasserts = Nil,
+    status = None,
     model = None)
 }

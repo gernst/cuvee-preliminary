@@ -14,5 +14,6 @@
 (assert-counterexample true
     (call abs-proc (x) (x))
     (= x (abs (old x))))
-(check-sat :expect unsat)
+(set-info :status unsat)
+(check-sat)
 (pop)

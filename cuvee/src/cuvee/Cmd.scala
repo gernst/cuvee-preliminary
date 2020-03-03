@@ -43,7 +43,7 @@ case object GetAssertions extends Cmd {
   override def toString = Printer.assertions()
 }
 
-case class CheckSat(expected: Option[IsSat] = None) extends Cmd {
+case object CheckSat extends Cmd {
   override def toString = Printer.check()
 }
 

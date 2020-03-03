@@ -12,4 +12,5 @@
 
 (verify-refinement (Counter (c Int)) (NegativeCounter (n Int)) (= c (- 0 n)))
 
-(check-sat :expect unsat)
+(set-info :status unsat)
+(check-sat)

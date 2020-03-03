@@ -40,8 +40,13 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
       backend.setOption(args)
   }
 
-  def setInfo(attr: String, arg: Option[Any]): Ack = {
-    backend.setInfo(attr, arg)
+  def setInfo(attr: String, arg: Option[Any]): Ack = (attr, arg) match {
+    case (":status", Some(arg: String)) =>
+      val status = IsSat.from(arg)
+      map(_ withStatus status)
+      Success
+    case _ =>
+      backend.setInfo(attr, arg)
   }
 
   def report(res: Option[Res]): Option[Res] = res match {
@@ -103,13 +108,6 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
     Eval.eval(expr, env, old, top)
   }
 
-  override def check(expected: IsSat) = {
-    val actual = check()
-    if (config.test)
-      ensure(expected == actual, "check-sat command returned unexpected result", actual, expected)
-    actual
-  }
-
   def check() = backend.scoped {
     var _asserts = top.asserts map eval
 
@@ -122,14 +120,18 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
       backend.assert(expr)
     }
 
-    val res = backend.check()
+    val actual = backend.check()
+
+    for (expected <- top.status if config.test) {
+      ensure(expected == actual, "check-sat command returned unexpected result", actual, expected)
+    }
 
     if (config.produceModels) {
       val model = backend.model()
       map(_ withModel model)
     }
 
-    res
+    actual
   }
 
   def assertions() = {
@@ -278,6 +280,10 @@ class Task extends Runnable { /* because why not */
 
     case "-format" :: rest =>
       Printer.format = true
+      configure(rest)
+
+    case "-inferInvariants" :: rest =>
+      Eval.inferInvariants = true
       configure(rest)
 
     case "-z3" :: rest =>

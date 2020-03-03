@@ -20,4 +20,5 @@
   (and (< 0 m)
        (= m (gcd (old m) (old n)))))
 
-(check-sat :expect unsat)
+(set-info :status unsat)
+(check-sat)

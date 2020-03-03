@@ -10,4 +10,5 @@
   :postcondition (and (>= z x) (>= z y)))
 
 (verify-proc max)
-(check-sat :expect unsat)
+(set-info :status unsat)
+(check-sat)
