@@ -157,7 +157,7 @@ object Parser {
   val define_fun_rec_ = P(DefineFunRec("define-fun-rec" ~ id ~ parens(formals) ~ typ ~ expr))
 
   // LL1 sucks
-  val locals_ = "let" ~ formals
+  val locals_ = "local" ~ formals
   val _progs = ret(Nil) ~ ((prog_ ~ ")") :: prog.*)
   val _locals_progs = locals_ ~ ")" ~ prog.+
   val body_ = "(" ~ (_locals_progs | _progs)
