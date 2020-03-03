@@ -268,7 +268,7 @@ object Eval {
     case Choose(xs, phi) :: rest =>
       val (formals, env1) = env0 havoc xs
       val _phi = eval(phi, env1, env0 :: old, st)
-      Exists(formals, _phi) && Forall(formals, _phi ==> box(rest, break, post, env1, old, st))
+      Forall(formals, _phi ==> box(rest, break, post, env1, old, st))
 
     case If(test, left, right) :: rest =>
       val _test = eval(test, env0, old, st)

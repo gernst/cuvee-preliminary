@@ -501,8 +501,8 @@ case class Spec(xs: List[Id], pre: Expr, post: Expr) extends Prog {
   override def toString = sexpr("spec", sexpr(xs), pre, post)
 }
 
-/* Can't have this as Spec currently, since we need to prove existence of such a value,
- * and that requires the types to be known.
+/* Can't have this as Spec currently, since we need to prove existence of such a value, and that requires the types to be known.
+ * Also, within a Box, existence of such xs is not needed to be shown.
  */
 case class Choose(xs: List[Id], phi: Expr) extends Prog {
   def mod = xs.toSet

@@ -266,6 +266,14 @@ class Task extends Runnable { /* because why not */
       config.simplify = false
       configure(rest)
 
+    case "-qe" :: rest =>
+      Simplify.qe = true
+      configure(rest)
+
+    case "-no-qe" :: rest =>
+      Simplify.qe = false
+      configure(rest)
+
     case "-debug-simplify" :: rest =>
       Simplify.debug = true
       configure(rest)

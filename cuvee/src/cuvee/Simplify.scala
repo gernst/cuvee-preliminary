@@ -75,7 +75,7 @@ case class Simplify(backend: Solver) {
     // don't simplify top-level axioms (rarely useful)
     case (phi @ Forall(_, _)) :: rest if top =>
       assert(!neg)
-      val phi_ = eliminateBindings(phi)
+      val phi_ = if(Simplify.qe) eliminateBindings(phi) else phi
       nary(rest, phi_ :: rdone, neg, top, changed)
 
     case phi :: rest =>
@@ -117,6 +117,7 @@ case class Simplify(backend: Solver) {
 
 object Simplify {
   var debug = false
+  var qe = true
 
   def eq(left: Expr, right: Expr) = {
     if (left == right) True
