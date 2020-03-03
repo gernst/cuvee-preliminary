@@ -59,9 +59,9 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     for (
       (op, proc) <- ((Id.init, init) :: ops);
       in = proc.in; out = proc.out;
-      Path(ex, path, env) <- forward(proc, ps, in, out, es, state)
+      (pre, Path(ex, path, env)) <- forward(proc, ps, in, out, es, state)
     ) yield {
-      Step(op, ps, in, out, ex, path, env.su)
+      Step(op, ps, in, out, ex, pre :: path, env.su)
     }
   }
 

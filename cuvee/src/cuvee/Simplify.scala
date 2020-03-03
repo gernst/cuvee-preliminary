@@ -75,8 +75,8 @@ case class Simplify(backend: Solver) {
     // don't simplify top-level axioms (rarely useful)
     case (phi @ Forall(_, _)) :: rest if top =>
       assert(!neg)
-      val phi_ = eliminateBindings(phi)
-      nary(rest, phi_ :: rdone, neg, top, changed)
+      // val phi_ = eliminateBindings(phi)
+      nary(rest, phi :: rdone, neg, top, changed)
 
     case phi :: rest =>
       val _phi = backend.scoped {

@@ -445,7 +445,7 @@ object Eval {
    *  Return the instantiated precondition as well as the paths,
    *  which store constraints and variable assignments for xs1 in the successor states.
    */
-  def forward(proc: Proc, ps: List[Formal], in: List[Formal], out: List[Formal], init: List[Expr], st: State): List[Path] = {
+  def forward(proc: Proc, ps: List[Formal], in: List[Formal], out: List[Formal], init: List[Expr], st: State): List[(Expr, Path)] = {
     val xs: List[Id] = ps
     val (pre, post, prog) = proc call (ps, xs, in, out)
     val env0 = Env.empty
@@ -456,6 +456,6 @@ object Eval {
     val paths = Eval.rel(List(prog), env2, old, st)
 
     for (path <- paths)
-      yield _pre :: path
+      yield (_pre, path)
   }
 }
