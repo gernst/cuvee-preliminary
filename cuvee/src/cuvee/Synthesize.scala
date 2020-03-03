@@ -141,7 +141,7 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
 
       val ex = aex ++ cex
       val path = apath ++ cpath
-      val ins = Eq.zip(ain map (_ subst asu), cin map (_ subst csu))
+      val ins = Eq.zip(ain, cin)
       val outs = Eq.zip(aout map (_ subst asu), cout map (_ subst csu))
       val psi = App(R, (as map (_ subst asu)) ++ (cs map (_ subst csu)))
       val constrs = ins ++ path ++ outs ++ List(psi)

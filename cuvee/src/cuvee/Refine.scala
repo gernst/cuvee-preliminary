@@ -97,6 +97,10 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     in: List[Expr], out: List[Id]) = {
     val out_ = out map (_.prime)
   }
+  
+  def lemmas = {
+    
+  }
 
   /**
    * Determine positions of abstract state variables which admit induction over an ADT
