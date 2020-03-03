@@ -41,6 +41,31 @@ case class Simplify(backend: Solver) {
       backend.assert(phi)
   }
 
+  def eliminateBindings(phi: Expr): Expr = {
+    phi match {
+      case Bind(quant, formals, body) => {
+        body match {
+          case Or.nary(args) => quant(formals, Or.nary(eliminateBindingsFromDisjunction(formals, args)))
+          case other => other
+        }
+      }
+      case other => other
+    }
+  }
+
+  def eliminateBindingsFromDisjunction(formals: List[Formal], args: List[Expr]): List[Expr] = {
+    for (arg <- args) {
+      arg match {
+        case Not(Eq(id: Id, right)) if formals.ids contains id =>
+          return eliminateBindingsFromDisjunction(formals, args filter (_ != arg) map (_.subst(Map(id -> right))))
+        case Not(Eq(left, id: Id)) if formals.ids contains id =>
+          return eliminateBindingsFromDisjunction(formals, args filter (_ != arg) map (_.subst(Map(id -> left))))
+        case any =>
+      }
+    }
+    args
+  }
+
   def nary(todo: List[Expr], rdone: List[Expr], neg: Boolean, top: Boolean, changed: Boolean = false): List[Expr] = todo match {
     case Nil =>
       val done = rdone.reverse
@@ -50,7 +75,8 @@ case class Simplify(backend: Solver) {
     // don't simplify top-level axioms (rarely useful)
     case (phi @ Forall(_, _)) :: rest if top =>
       assert(!neg)
-      nary(rest, phi :: rdone, neg, top, changed)
+      val phi_ = eliminateBindings(phi)
+      nary(rest, phi_ :: rdone, neg, top, changed)
 
     case phi :: rest =>
       val _phi = backend.scoped {

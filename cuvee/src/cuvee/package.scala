@@ -134,6 +134,7 @@ package object cuvee {
   implicit class FormalList(formals: List[Formal]) {
     def prime = formals map (_.prime)
     def priming = formals map (_.id) map (id => id -> id.prime) toMap
+    def ids = toIds(formals)
   }
 
   def time[A](f: => A) = {

@@ -3,16 +3,18 @@ package cuvee
 import java.io._
 import java.nio.file.Files
 
-import cuvee.Sink.tee
-import cuvee.Source.file
 import cuvee.test.TestSuite
 
 object FileTest extends TestSuite {
   val TestHeaderPrefix = ";! Cuvee "
+  // File filter for debugging.
+  // Make sure never to commit anything else than "None"
+  val fileMask: Option[String] = None
 
   Files.walk(new File("examples/tests").toPath)
     .filter(Files.isRegularFile(_))
     .filter(!_.getFileName.toString.endsWith(".out.smt2"))
+    .filter(path => fileMask forall (mask => path.toString contains mask))
     .forEach(path => test(path.toString) {
       run(path.toString)
     })

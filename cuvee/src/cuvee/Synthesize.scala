@@ -76,8 +76,17 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       fromOutput()
   }
 
-  def fromOutput() = {
-    Nil
+  def fromOutput(): List[Expr] = {
+    for ((aop, ap) <- A.ops.filterNot(proc => proc._2.out.isEmpty)) yield {
+      val cp = C op aop
+      ensure((ap.in ++ ap.out).map(_.typ) == (cp.in ++ cp.out).map(_.typ))
+
+      val aBody = step(ap, as, ax, ax_, ap.in, ap.out)
+      val insEq = cp.in.prime.zip(ap.in.ids).map(p => p._1.id -> p._2).toMap
+      val cBody = step(cp, cs, cx, cx_, cp.in.prime, cp.out.prime) subst insEq
+      val outsEq: Expr = And(ap.out.ids.zip(cp.out.prime.ids).map(p => Eq(p._1, p._2)))
+      define(as ++ cs, App(R, as ++ cs), Forall(as_ ++ cs_ ++ ap.in ++ ap.out ++ cp.in.prime ++ cp.out.prime, (aBody && cBody) ==> outsEq))
+    }
   }
 
   def define(bound: List[Formal], lhs: Expr, rhs: Expr): Expr = {

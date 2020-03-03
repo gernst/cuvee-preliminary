@@ -166,7 +166,7 @@ object Parser {
 
   val verify_proc_ = P(VerifyProc("verify-proc" ~ id))
 
-  val synth = Recipe.auto(":synthesize")
+  val synth = Recipe.output(":synthesize-output") | Recipe.auto(":synthesize") // TODO this is dumb
   val refine_by_fun_ = VerifyRefinement(sort ~ sort ~ Sim.byFun(id ~ synth.?))
   val refine_by_expr_ = parens(sort ~ formals) ~ parens(sort ~ formals) ~ expr map {
     case (((spec, as), (impl, cs)), phi) =>
