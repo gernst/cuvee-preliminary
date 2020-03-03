@@ -32,10 +32,12 @@
 
 (push)
 (verify-proc find-gcd)
-(check-sat :expect unsat)
+(set-info :status unsat)
+(check-sat)
 (pop)
 
 (push)
 (verify-proc find-gcd-rec)
-(check-sat :expect unsat)
+(set-info :status unsat)
+(check-sat)
 (pop)

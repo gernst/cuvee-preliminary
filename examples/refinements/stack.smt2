@@ -63,6 +63,6 @@
 (verify-refinement
    ListStack ArrayStack R)
 
-(check-sat
-  :expect unsat)
+(set-info :status unsat)
+(check-sat)
 

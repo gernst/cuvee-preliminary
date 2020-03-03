@@ -39,4 +39,5 @@
         (= b (- c d))
         (>= l 0)))
 
-(check-sat :expect unsat)
+(set-info :status unsat)
+(check-sat)

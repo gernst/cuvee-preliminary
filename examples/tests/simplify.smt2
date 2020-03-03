@@ -9,4 +9,5 @@
 (assert (and p (and p q r)))
 (assert (=> (or p q) (=> p q)))
 
-(check-sat :expect unknown)
+(set-info :status unknown)
+(check-sat)

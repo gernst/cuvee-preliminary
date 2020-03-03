@@ -33,10 +33,6 @@ trait Sink {
 
   def check(): IsSat
 
-  def check(expected: IsSat): IsSat = {
-    check()
-  }
-
   def assertions(): Assertions
   def model(): Model
 
@@ -84,10 +80,8 @@ trait Sink {
       case Exit =>
         exit(); None
 
-      case CheckSat(None) =>
+      case CheckSat =>
         Some(check())
-      case CheckSat(Some(expected)) =>
-        Some(check(expected))
       case GetAssertions =>
         Some(assertions())
       case GetModel =>

@@ -142,8 +142,7 @@ object Parser {
   val push_ = P(Push("push" ~ int_1))
   val pop_ = P(Pop("pop" ~ int_1))
 
-  val expect_is_sat = ":expect" ~ is_sat
-  val check_sat_ = P(CheckSat("check-sat" ~ expect_is_sat.?))
+  val check_sat_ = P(CheckSat("check-sat"))
 
   val assert_ = P(Assert("assert" ~ expr))
   val verify_ = P(CounterExample("assert-counterexample" ~ expr ~ prog ~ expr))

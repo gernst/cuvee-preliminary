@@ -18,7 +18,8 @@
 
 (push)
 (verify-proc zero-proc)
-(check-sat :expect unsat)
+(set-info :status unsat)
+(check-sat)
 (pop)
 
 (declare-const x Int)
@@ -29,7 +30,8 @@
     (>= x 0)
     (call zero-proc (x) (y))
     (= y 0))
-(check-sat :expect unsat)
+(set-info :status unsat)
+(check-sat)
 (pop)
 
 ; the same function, but uses the same variable name to return the value
@@ -45,5 +47,6 @@
 
 (push)
 (verify-proc zero-proc-inplace)
-(check-sat :expect unsat)
+(set-info :status unsat)
+(check-sat)
 (pop)
