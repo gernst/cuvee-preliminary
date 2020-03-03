@@ -16,10 +16,10 @@
 (assert
   (forall ((x1 Elem))
     (=> (and (test x1 y) (pre x1 y))
-        (=> (pre (body x1 y) y)
-            (forall ((x2 Elem))
-              (=> (and (not (test x2 y)) (post (body x1 y) x2 y))
-                  (post x1 x2 y)))))))
+        (and (pre (body x1 y) y)
+             (forall ((x2 Elem))
+               (=> (and (not (test x2 y)) (post (body x1 y) x2 y))
+                   (post x1 x2 y)))))))
 
 (assert-counterexample
   (pre x y)
