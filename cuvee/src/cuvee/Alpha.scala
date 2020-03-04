@@ -88,7 +88,7 @@ trait Alpha[E <: Alpha.term[E, V], V <: E with Alpha.x[E, V]] {
   }
 
   def subst[B <: E](xs: Iterable[V], ys: Iterable[B]): Map[V, B] = {
-    assert(xs.size == ys.size)
+    ensure(xs.size == ys.size, "length mismatch", xs, ys)
     val zs = (xs zip ys)
     zs.toMap
   }

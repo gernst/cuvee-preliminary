@@ -4,40 +4,39 @@
 
 ; this is an example where the relation just drops out of the proof
 
+(declare-const overdraft-limit Int)
+(assert (>= overdraft-limit 0))
+  
 (define-class SimpleAccount ((balance Int))
     (init () () (assign (balance 0)))
-    (deposit ((amount Int)) ((new-balance Int)) (block
+    (deposit ((amount Int)) ((new-balance Int))
             (assign (balance (+ balance amount)))
-            (assign (new-balance balance)))
+            (assign (new-balance balance))
         :precondition (> amount 0))
-    (withdraw ((amount Int)) ((new-balance Int)) (block
+    (withdraw ((amount Int)) ((new-balance Int))
             (assign (balance (- balance amount)))
-            (assign (new-balance balance)))
+            (assign (new-balance balance))
         :precondition (and (> amount 0) (<= amount balance))))
 
-(define-class DoubleAccount ((debit Int) (credit Int) (overdraft-limit Int))
-    (init ((od-lim Int)) () (assign
-            (overdraft-limit od-lim)
-            (credit 0)
-            (debit 0))
-        :precondition (>= od-lim 0))
+(define-class DoubleAccount ((debit Int) (credit Int))
+    (init () ()
+      (assign (credit 0) (debit 0)))
 
     ; use different argument names here to make sure the right variables names are used
-    (deposit ((add Int)) ((increased Int)) (block
+    (deposit ((add Int)) ((increased Int))
             (assign (credit (+ credit add)))
-            (assign (increased (- credit debit))))
+            (assign (increased (- credit debit)))
         :precondition (> amount 0))
 
     ; use different argument names here to make sure the right variables names are used
-    (withdraw ((remove Int)) ((decreased Int)) (block
+    (withdraw ((remove Int)) ((decreased Int))
             (assign (debit (+ debit remove)))
-            (assign (decreased (- credit debit))))
+            (assign (decreased (- credit debit)))
         :precondition (and (> amount 0) (<= amount (+ (- credit debit) overdraft-limit)))))
 
 ; we're using aliases for all state variables to make sure that they're renamed in all places
-(verify-refinement (SimpleAccount (b Int)) (DoubleAccount (d Int) (c Int) (l Int)) (and
-        (= b (- c d))
-        (>= l 0)))
+(verify-refinement (SimpleAccount (b Int)) (DoubleAccount (d Int) (c Int))
+   (= b (- c d)))
 
 (set-info :status unsat)
 (check-sat)

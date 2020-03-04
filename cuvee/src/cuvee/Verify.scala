@@ -15,8 +15,6 @@ object Verify {
     case Sim.byFun(fun, recipe) =>
       val as = A.state
       val cs = C.state
-      val common = toIds(as).toSet.intersect(toIds(cs).toSet)
-      ensure(common.isEmpty, s"state variable names must be disjoint but share: ${common.mkString(", ")}")
       val phi = App(fun, as ++ cs)
       recipe match {
         case Some(recipe) =>
@@ -39,14 +37,19 @@ object Verify {
       case Some(Body(locals, progs)) =>
         Forall(
           in ++ out ++ locals,
-          pre ==> WP(new Block(progs, true), post))
+          pre ==> WP(Block(progs, true), post))
     }
   }
 
   def refine(A: Obj, as: List[Formal], C: Obj, cs: List[Formal], R: Expr) = {
+    val ax: List[Id] = as
+    val cx: List[Id] = cs
+    val common = ax.toSet intersect cx.toSet
+    ensure(common.isEmpty, s"state variable names must be disjoint but share: ${common.mkString(", ")}")
+
     val init = diagram(
-      A, as, Id("init") -> A.init,
-      C, cs, Id("init") -> C.init,
+      A, as, Id.init -> A.init,
+      C, cs, Id.init -> C.init,
       True, R)
 
     val ops = for ((aproc, cproc) <- (A.ops zip C.ops)) yield {
@@ -78,17 +81,13 @@ object Verify {
     val (apre, _, abody) = ap.call(A.state, as, ai, ao)
     val (cpre, _, cbody) = cp.call(C.state, cs, ci_, co_)
 
-    val phi = if (aop == Id("init")) {
-      (apre && cpre) ==> WP(cbody, Dia(abody, R1))
-    } else {
-      val in = Eq(ai, ci_)
-      val out = Eq(ao, co_)
+    val in = Eq(ai, ci_)
+    val out = Eq(ao, co_)
 
-      in ==>
-        ((apre && R0) ==>
-          (cpre && WP(cbody, Dia(abody, out && R1))))
+    val phi =
+      ((in && apre && R0) ==>
+        (cpre && WP(cbody, Dia(abody, out && R1))))
 
-    }
     (aop, Forall(
       as ++ ai ++ ao ++ cs ++ ci_ ++ co_,
       phi))

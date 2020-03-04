@@ -1,19 +1,7 @@
 (set-logic ALL)
+(declare-fun overdraft-limit () Int)
 (push 1)
-(assert (not (and
-    ; init
-    (forall ((b Int) (d Int) (c Int) (l Int) (|od-lim'| Int)) (=> (and true (>= |od-lim'| 0)) (and (= 0 (- 0 0)) (>= |od-lim'| 0))))
-
-    ; deposit
-    (forall ((b Int) (amount Int) (new-balance Int) (d Int) (c Int) (l Int) (|add'| Int) (|increased'| Int))
-        (=> (= amount |add'|) (=> (and (> amount 0) (= b (- c d)) (>= l 0)) (and (> amount 0)
-            ; post
-            (and (= (+ b amount) (- (+ c |add'|) d)) (= (+ b amount) (- (+ c |add'|) d)) (>= l 0))))))
-
-    ; withdraw
-    (forall ((b Int) (amount Int) (new-balance Int) (d Int) (c Int) (l Int) (|remove'| Int) (|decreased'| Int))
-        (=> (= amount |remove'|) (=> (and (> amount 0) (<= amount b) (= b (- c d)) (>= l 0)) (and (> amount 0)
-            ; post
-            (<= amount (+ (- c d) l)) (and (= (- b amount) (- c (+ d |remove'|))) (= (- b amount) (- c (+ d |remove'|))) (>= l 0)))))))))
+(assert (>= overdraft-limit 0))
+(assert (not (and (forall ((b Int) (d Int) (c Int)) (=> (and true true true) (and true (and true (= 0 (- 0 0)))))) (forall ((b Int) (amount Int) (new-balance Int) (d Int) (c Int) (|add'| Int) (|increased'| Int)) (=> (and (= amount |add'|) (> amount 0) (= b (- c d))) (and (> amount 0) (and (= (+ b amount) (- (+ c |add'|) d)) (= (+ b amount) (- (+ c |add'|) d)))))) (forall ((b Int) (amount Int) (new-balance Int) (d Int) (c Int) (|remove'| Int) (|decreased'| Int)) (=> (and (= amount |remove'|) (> amount 0) (<= amount b) (= b (- c d))) (and (> amount 0) (<= amount (+ (- c d) overdraft-limit)) (and (= (- b amount) (- c (+ d |remove'|))) (= (- b amount) (- c (+ d |remove'|))))))))))
 (check-sat)
 (pop 1)
