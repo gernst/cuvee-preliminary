@@ -8,6 +8,7 @@ object EvalTest extends TestSuite {
   private val b: Id = Id("b")
   private val x: Id = Id("x")
   private val y: Id = Id("y")
+  private val z: Id = Id("z")
   private val int: Sort = Sort("Int")
 
   test("wp old value with double reassign") {
@@ -33,6 +34,12 @@ object EvalTest extends TestSuite {
     println(evald)
   }
 
+  test("access form") {
+    assertEquals(
+      Assign.shift(Select(Select(a, x), y), z),
+      Pair(a, Store(a, x, Store(Select(a, x), y, z))))
+  }
+
   def formal(id: Id, sort: Sort) = List(Formal(id, sort))
 
-  }
+}

@@ -154,7 +154,7 @@ object Eval {
     case Dia(prog, post) =>
       dia(List(prog), None, post, env, old, st)
   }
-
+  
   def wp(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
     case Nil =>
       eval(post, env0, old, st)

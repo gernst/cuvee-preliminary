@@ -97,7 +97,9 @@ object Parser {
   val box_ = P(Box("box" ~ prog ~ expr))
   val dia_ = P(Dia("dia" ~ prog ~ expr))
 
-  val assign_ = P(Assign("assign" ~ pairs))
+  val asg = P(parens(expr ~ expr))
+  val asgs = P(asg.+)
+  val assign_ = P(Assign.from("assign" ~ asgs))
 
   val break_ = P(Break("break"))
   val asm_ = P(Spec.assume("assume" ~ expr))

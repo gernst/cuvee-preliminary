@@ -497,6 +497,19 @@ case class Assign(pairs: List[Pair]) extends Prog {
   override def toString = sexpr("assign", sexpr(pairs))
 }
 
+object Assign extends (List[Pair] => Assign) {
+  def from = (pairs: List[(Expr, Expr)]) => Assign(pairs map shift)
+
+  def shift(xe: (Expr, Expr)): Pair = xe match {
+    case (x: Id, e) =>
+      Pair(x, e)
+    case (Select(a, i), e) =>
+      shift(a, Store(a, i, e))
+    case (x, e) =>
+      error("not an access form on left-hand side of assignment", x, e)
+  }
+}
+
 case class Spec(xs: List[Id], pre: Expr, post: Expr) extends Prog {
   def mod = xs.toSet
   def read = pre.free ++ (post.free -- mod)

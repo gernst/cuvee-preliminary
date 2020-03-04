@@ -28,7 +28,7 @@
     :precondition (distinct (select fs name) empty))
   (write ((name Name) (file File))
          ()
-    (assign (fs (store fs name file)))
+    (assign ((select fs name) file))
     :precondition (distinct (select fs name) empty)))
 
 (define-class
@@ -37,7 +37,7 @@
    (disk  (Array Address File)))
   (init () ()
     (assign (index index0)
-            (disk  (store disk null empty))))
+            ((select disk null) empty)))
   (read ((name Name))
         ((file File))
     (assign (file (select disk (select index name))))
@@ -51,8 +51,8 @@
     (choose (addr)
       (and (distinct addr null)
            (= (select disk addr) empty)))
-    (assign (index (store index name addr))
-            (disk  (store disk  addr file)))
+    (assign ((select index name) addr)
+            ((select disk  addr) file))
     :precondition (distinct (select index name) null)))
 
 (declare-fun R 
