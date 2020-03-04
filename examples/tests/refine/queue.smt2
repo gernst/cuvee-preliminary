@@ -34,7 +34,7 @@
    (n Int)
    (values (Array Int Elem)))
   (init () ()
-    (assign (m 0) (n 0)))
+    (assign (m n)))
   (enq ((x Elem)) ()
     (assign (values (store values n x))
             (n      (+ n 1))))
@@ -48,6 +48,7 @@
   (Lst Int Int (Array Int Elem))
   Bool)
 
+(push)
 (assert
   (forall
     ((m Int) (n Int) (values (Array Int Elem)))
@@ -64,9 +65,11 @@
         (< m n)
         (= x (select values m))
         (R xs (+ m 1) n values)))))
+(pop)
 
 (verify-refinement
-   ListQueue ArrayQueue R)
+   ListQueue ArrayQueue R
+   :synthesize consumer)
 
 ; (set-info :status unsat)
 (check-sat)
