@@ -169,6 +169,8 @@ object Simplify {
       and(norm(Not(args)))
     case Not(Bind(quant, formals, body)) =>
       Bind(!quant, formals, norm(!body))
+    case Not(Distinct(List(left, right))) =>
+      eq(norm(left), norm(right))
 
     case Imp(phi, psi) =>
       norm(!phi || psi)

@@ -1,4 +1,4 @@
-SCALA=$(wildcard cuvee/src/cuvee/*.scala)
+SCALA=$(wildcard cuvee/src/cuvee/*.scala cuvee/test/src/cuvee/**.scala)
 
 JAR=./out/cuvee/assembly/dest/out.jar
 BIN=./cuvee.sh

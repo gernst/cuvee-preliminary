@@ -4,7 +4,6 @@
 (declare-sort File)
 (declare-sort Address)
 
-(declare-const none  Name)
 (declare-const empty File)
 (declare-const null  Address)
 
@@ -26,31 +25,35 @@
   (read ((name Name))
         ((file File))
     (assign (file (select fs name)))
-    :precondition (distinct name none))
+    :precondition (distinct (select fs name) empty))
   (write ((name Name) (file File))
          ()
     (assign (fs (store fs name file)))
-    :precondition (distinct name none)))
+    :precondition (distinct (select fs name) empty)))
 
 (define-class
   FlashFS
   ((index (Array Name Address))
    (disk  (Array Address File)))
   (init () ()
-    (assign (index index0)))
+    (assign (index index0)
+            (disk  (store disk null empty))))
   (read ((name Name))
         ((file File))
     (assign (file (select disk (select index name))))
-    :precondition (distinct name none))
+    :precondition (distinct (select index name) null))
   (write ((name Name) (file File))
          ()
     (local  (addr Address))
+    (assume (exists ((addr Address))
+      (and (distinct addr null)
+           (= (select disk addr) empty))))
     (choose (addr)
       (and (distinct addr null)
            (= (select disk addr) empty)))
     (assign (index (store index name addr))
             (disk  (store disk  addr file)))
-    :precondition (distinct name none)))
+    :precondition (distinct (select index name) null)))
 
 (declare-fun R 
   ((Array Name File)
@@ -64,10 +67,13 @@
    (disk  (Array Address File)))
   (= (R fs index disk)
      (forall ((name Name))
-       (=> (distinct name none)
-           (= (select fs name)
-              (select disk (select index name))))))))
+       (=> (distinct (select fs name) empty)
+           (and (distinct (select index name) null)
+                (= (select fs name)
+                   (select disk (select index name)))))))))
 
 (verify-refinement
   AbstractFS FlashFS R)
+
+(set-info :status unsat)
 (check-sat)

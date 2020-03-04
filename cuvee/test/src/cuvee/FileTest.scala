@@ -7,9 +7,8 @@ import cuvee.test.TestSuite
 
 object FileTest extends TestSuite {
   val TestHeaderPrefix = ";! Cuvee "
-  // File filter for debugging.
-  // Make sure never to commit anything else than "None"
-  val fileMask: List[String] = List("filesystem")
+  // File filter for debugging and unfinished, but committed tests (should usually be: Nil)
+  val fileMask: List[String] = Nil
 
   Files.walk(new File("examples/tests").toPath)
     .filter(Files.isRegularFile(_))
