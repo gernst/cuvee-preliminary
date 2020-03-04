@@ -41,29 +41,37 @@
   Bool)
 
 (assert
-  (forall
-    ((head1 Elem) (tail2 Lst) (size Int) (values (Array Int Elem)))
-    (=
-      (R (cons head1 tail2) size values)
-      (and
-        (< 0 size)
-        (= head1 (select values (- size 1)))
-        (R tail2 (- size 1) values)))))
-(assert
-  (forall
-    ((size Int) (values (Array Int Elem)))
-    (=
-      (R nil size values)
-      (= 0 size))))
-
-(assert
   (forall ((x Elem) (xs Lst) (m Int) (n Int) (values (Array Int Elem)))
     (=> (and (<= m n) (R xs m values))
                       (R xs m (store values n x)))))
 
-(verify-refinement
-   ListStack ArrayStack R)
+(push)
+  (assert
+    (forall
+      ((head1 Elem) (tail2 Lst) (size Int) (values (Array Int Elem)))
+      (=
+        (R (cons head1 tail2) size values)
+        (and
+          (< 0 size)
+          (= head1 (select values (- size 1)))
+          (R tail2 (- size 1) values)))))
+  (assert
+    (forall
+      ((size Int) (values (Array Int Elem)))
+      (=
+        (R nil size values)
+        (= 0 size))))
 
-(set-info :status unsat)
-(check-sat)
+  (verify-refinement
+     ListStack ArrayStack R)
+  (set-info :status unsat)
+  (check-sat)
+(pop)
 
+(push)
+  (verify-refinement
+     ListStack ArrayStack R
+     :synthesize consumer)
+  (set-info :status unsat)
+  (check-sat)
+(pop)
