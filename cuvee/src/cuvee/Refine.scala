@@ -171,10 +171,7 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       val (apre, cpre, steps) = locksteps(aproc, cproc, as0, cs0, in0)
       val pre = apre && cpre
 
-      println(s"analyzing $aname")
-
       for (step <- steps if step.a isConsumer (bound ++ aproc.in, pos, arg)) yield {
-        println(s"  found a step")
         val eqs = step.outputsEq
         val call = step.recursiveCall
         val post = step withPost (eqs && call)
