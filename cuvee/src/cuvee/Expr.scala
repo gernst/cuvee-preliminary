@@ -113,6 +113,9 @@ sealed trait Expr extends Expr.term {
 
 object Expr extends Parseable[Expr](Parser.expr) with Alpha[Expr, Id] {
 
+  def fresh(name: String) = {
+    Id(name, Some(nextIndex))
+  }
 }
 
 case class Id(name: String, index: Option[Int]) extends Expr with Pat with Expr.x {

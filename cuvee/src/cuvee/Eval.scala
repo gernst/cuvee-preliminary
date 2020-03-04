@@ -9,8 +9,10 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
   }
 
   def check(xs: Iterable[Id]) {
-    for (x <- xs)
+    for (x <- xs) {
       ensure(su contains x, "undeclared variable", x, su.keySet)
+      ensure(ty contains x, "no type for variable", x, ty.keySet)
+    }
   }
 
   def bind(fs: List[Formal]): Env = {
@@ -112,10 +114,10 @@ object Eval {
     case Ite(test, left, right) =>
       Ite(eval(test, env, old, st), eval(left, env, old, st), eval(right, env, old, st))
 
-    case Let(lets, body) =>
+    /* case Let(lets, body) =>
       val pairs = lets map (eval(_, env, old, st))
       val (xs, _es) = pairs.unzip
-      eval(body, env assignUnchecked (xs, _es), old, st)
+      eval(body, env assignUnchecked (xs, _es), old, st) */
 
     case Select(array, index) =>
       Select(eval(array, env, old, st), eval(index, env, old, st))
@@ -172,7 +174,7 @@ object Eval {
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old, st))
       val (xs, _es) = pairs.unzip
-      val env1 = env0 assignUnchecked (xs, _es)
+      val env1 = env0 assign (xs, _es)
       wp(rest, break, post, env1, old, st)
 
     case Spec(xs, phi, psi) :: rest =>
@@ -256,7 +258,7 @@ object Eval {
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old, st))
       val (xs, _es) = pairs.unzip
-      val env1 = env0 assignUnchecked (xs, _es)
+      val env1 = env0 assign (xs, _es)
       box(rest, break, post, env1, old, st)
 
     case Spec(mod, phi, psi) :: rest =>
@@ -356,7 +358,7 @@ object Eval {
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old, st))
       val (xs, _es) = pairs.unzip
-      val env1 = env0 assignUnchecked (xs, _es)
+      val env1 = env0 assign (xs, _es)
       dia(rest, break, post, env1, old, st)
 
     case Spec(mod, phi, psi) :: rest =>
@@ -479,5 +481,18 @@ object Eval {
 
     for (path <- paths)
       yield (_pre, path)
+  }
+
+  def paths(proc: Proc, ps: List[Formal], init: List[Expr], in: List[Expr], st: State): (Expr, List[Path]) = {
+    val (xi, xo, pre, post, body) = proc call ps
+    var env = Env.empty
+    env = env bind (ps ++ xi ++ xo)
+    env = env assign (ps, init)
+    val old = Nil
+
+    val _pre = Eval.eval(pre, env, old, st)
+    val paths = Eval.rel(body, env, old, st)
+
+    (_pre, paths)
   }
 }
