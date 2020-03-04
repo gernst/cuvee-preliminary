@@ -20,7 +20,7 @@ object Verify {
       val phi = App(fun, as ++ cs)
       recipe match {
         case Some(recipe) =>
-          val synth = Synthesize(A, C, fun, st, solver)
+          val synth = Refine(A, C, fun, st, solver)
           val defs = synth(recipe)
           (as, cs, defs, phi)
         case None =>

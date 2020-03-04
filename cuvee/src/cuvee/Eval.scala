@@ -440,6 +440,12 @@ object Eval {
       for (path <- rel(rest, env1, old, st))
         yield _phi :: _psi :: path bind formals
 
+    case Choose(xs, phi) :: rest =>
+      val (formals, env1) = env0 havoc xs
+      val _phi = eval(phi, env1, env0 :: old, st)
+      for (path <- rel(rest, env1, old, st))
+        yield _phi :: path bind formals
+
     case If(test, left, right) :: rest =>
       val _test = eval(test, env0, old, st)
       val _left = for (path <- rel(left :: rest, env0, old, st))

@@ -12,7 +12,7 @@
 
 (declare-fun R (Int Int) Bool)
 
-(verify-refinement Counter NegativeCounter R :synthesize-output)
+(verify-refinement Counter NegativeCounter R :synthesize output)
 
 (set-info :status unsat)
 (check-sat)

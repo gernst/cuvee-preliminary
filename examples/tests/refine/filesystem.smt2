@@ -61,19 +61,26 @@
    (Array Address File))
    Bool)
 
-(assert (forall 
-  ((fs    (Array Name File))
-   (index (Array Name Address))
-   (disk  (Array Address File)))
-  (= (R fs index disk)
-     (forall ((name Name))
-       (=> (distinct (select fs name) empty)
-           (and (distinct (select index name) null)
-                (= (select fs name)
-                   (select disk (select index name)))))))))
+(push)
+  (assert (forall 
+    ((fs    (Array Name File))
+     (index (Array Name Address))
+     (disk  (Array Address File)))
+    (= (R fs index disk)
+       (forall ((name Name))
+         (=> (distinct (select fs name) empty)
+             (and (distinct (select index name) null)
+                  (= (select fs name)
+                     (select disk (select index name)))))))))
 
-(verify-refinement
-  AbstractFS FlashFS R)
+  (verify-refinement AbstractFS FlashFS R)
+  (set-info :status unsat)
+  (check-sat)
+(pop)
 
-(set-info :status unsat)
-(check-sat)
+(push)
+  (verify-refinement AbstractFS FlashFS R :synthesize output)
+  (set-info :status unsat)
+  (check-sat)
+(pop)
+

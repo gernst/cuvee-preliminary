@@ -7,26 +7,38 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   val ax: List[Id] = as
   val cx: List[Id] = cs
 
+  def apply(recipe: Recipe): List[Expr] = {
+    val cs = candidates(recipe)
+    ensure(cs.nonEmpty, "no candidates")
+    cs.head
+  }
+
+  def candidates(recipe: Recipe): List[List[Expr]] = recipe match {
+    case Recipe.output =>
+      outputs()
+
+    case Recipe.producer | Recipe.consumer =>
+      induct(recipe)
+  }
+
   /**
    * Synthesize constraints for a recursive definition
    * bound are all variables in scope
    * as0, cs0 are the initial states (left-hand side of definition)
+   *
+   * result is different candidates
    */
-  def induct(
-    bound: List[Formal],
-    as0: List[Expr], cs0: List[Expr]) = {
-
+  def induct(recipe: Recipe): List[List[Expr]] = {
+    for ((sort, dt, pos) <- inductivePositions(as)) yield {
+      induct(sort, dt, pos, recipe)
+    }
   }
 
   /**
    * Perform induction over a given data type
    * pos is the inductive position in A.state
    */
-  def induct(
-    bound: List[Formal],
-    sort: Sort, dt: Datatype, pos: Int,
-    as0: List[Expr], cs0: List[Expr]) = {
-
+  def induct(sort: Sort, dt: Datatype, pos: Int, recipe: Recipe): List[Expr] = {
     val ai = ax(pos)
 
     for ((constr, args, hyps) <- dt.induction(ai, sort)) yield {
@@ -46,7 +58,7 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       } else {
         val cases = for (hyp <- hyps) yield {
           val arg = vs(hyp)
-          rec(bound, pos, arg, ax0, cx)
+          rec(bound, pos, arg, ax0, cx, recipe)
         }
 
         define(
@@ -62,10 +74,30 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
    * as0, cs0 are the initial states (left-hand side of definition)
    * consider those operations only that can take as0 resp. cs0 as input (i.e. precondition is not falsified)
    */
-  def outputs(
-    bound: List[Formal],
-    as0: List[Expr], cs0: List[Expr]) {
+  def outputs(): List[List[Expr]] = {
+    val ops = A.ops zip C.ops
 
+    val phis = for (((aname, aproc), (cname, cproc)) <- ops if aproc.out.nonEmpty) yield {
+      ensure(aname == cname, "operations must occur in same order", A.ops, C.ops, aname, cname)
+      val in: List[Id] = aproc.in
+      val bound = aproc.in
+      val (apre, cpre, steps) = locksteps(aproc, cproc, as, cs, in)
+
+      val outs = for (step <- steps) yield {
+        val eqs = step.outputsEq
+        (step ensures eqs)
+      }
+
+      Forall(
+        bound,
+        apre ==> And(cpre :: outs))
+    }
+
+    val lhs = App(R, ax ++ cx)
+    val rhs = And(phis)
+    val psi = define(as ++ cs, lhs, rhs)
+
+    List(List(psi))
   }
 
   /**
@@ -75,7 +107,17 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   def base(
     bound: List[Formal],
     as0: List[Expr], cs0: List[Expr]): Expr = {
-    ???
+    val aproc = A.init
+    val cproc = C.init
+    val in0: List[Id] = aproc.in
+    val (apre, cpre, steps) = locksteps(aproc, cproc, as, cs, in0)
+    val pre = apre && cpre
+    val phis = for (step <- steps) yield {
+      val eqs = step produces (as0, cs0)
+      val post = step withPost eqs
+      post
+    }
+    pre && Or(phis)
   }
 
   /**
@@ -88,8 +130,16 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   def rec(
     bound: List[Formal],
     pos: Int, arg: Id,
-    as0: List[Expr], cs0: List[Expr]): Expr = {
-    val phis = consume(bound, pos, arg, as0, cs0)
+    as0: List[Expr], cs0: List[Expr],
+    recipe: Recipe): Expr = {
+
+    val phis = recipe match {
+      case Recipe.consumer =>
+        consume(bound, pos, arg, as0, cs0)
+      case _ =>
+        error("unsupported inductive recipe")
+    }
+
     Simplify.and(phis.flatten)
   }
 
@@ -121,8 +171,14 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       val (apre, cpre, steps) = locksteps(aproc, cproc, as0, cs0, in0)
       val pre = apre && cpre
 
-      for (step <- steps if step.a isConsumer (pos, arg)) yield {
-        Simplify.norm(pre && step.constraints)
+      println(s"analyzing $aname")
+
+      for (step <- steps if step.a isConsumer (bound ++ aproc.in, pos, arg)) yield {
+        println(s"  found a step")
+        val eqs = step.outputsEq
+        val call = step.recursiveCall
+        val post = step withPost (eqs && call)
+        Simplify.norm(pre && post)
       }
     }
   }
@@ -157,8 +213,12 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       Exists(fresh, path && post)
     }
 
-    def isConsumer(pos: Int, arg: Expr) = {
-      fin(pos) == arg
+    def isConsumer(bound: List[Formal], pos: Int, arg: Expr) = {
+      val phi = Forall(
+        bound ++ fresh,
+        path ==> (fin(pos) === arg))
+
+      solver.isTrue(phi)
     }
   }
 
@@ -171,16 +231,16 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       Exists(fresh, path ==> post)
     }
 
+    def produces(as1: List[Expr], cs1: List[Expr]) = {
+      Eq(a.fin, as1) && Eq(c.fin, cs1)
+    }
+
     def withPost(post: Expr) = {
       Exists(fresh, path && post)
     }
 
-    def outputEqs = {
+    def outputsEq = {
       Eq(a.out, c.out)
-    }
-
-    def constraints = {
-      withPost(outputEqs && recursiveCall)
     }
 
     def recursiveCall = {

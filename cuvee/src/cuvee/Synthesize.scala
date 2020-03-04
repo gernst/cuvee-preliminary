@@ -3,8 +3,9 @@ package cuvee
 sealed trait Recipe
 
 object Recipe {
-  case object auto extends Recipe
   case object output extends Recipe
+  case object consumer extends Recipe
+  case object producer extends Recipe
 }
 
 case class Step(op: Id, ps: List[Formal], in: List[Formal], out: List[Formal], ex: List[Formal], path: List[Expr], su: Map[Id, Expr]) {
@@ -66,7 +67,7 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   }
 
   def apply(recipe: Recipe): List[Expr] = recipe match {
-    case Recipe.auto =>
+    case Recipe.consumer =>
       val inds = inductivePositions(as)
       val List((sort, dt, pos)) = inds
       val defs = fromConsumer(sort, dt, pos)

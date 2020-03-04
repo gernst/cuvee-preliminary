@@ -39,7 +39,7 @@
   Bool)
 
 (verify-refinement
-   ListStack ArrayStack R :synthesize)
+   ListStack ArrayStack R :synthesize consumer)
 
 (check-sat)
 
