@@ -4,6 +4,8 @@
 
 ; this is an example where the relation just drops out of the proof
 
+; can't have this as an argument of initialization in the current theory
+; for now, let's model it as an arbitrary global constant with some properties
 (declare-const overdraft-limit Int)
 (assert (>= overdraft-limit 0))
   
