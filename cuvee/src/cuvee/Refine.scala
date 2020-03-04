@@ -99,6 +99,32 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     bound: List[Formal],
     as0: List[Expr], cs0: List[Expr],
     in0: List[Expr]) = {
+
+    val aproc = A op name
+    val cproc = C op name
+
+    val (apre, cpre, steps) = locksteps(aproc, cproc, as0, cs0, in0)
+  }
+
+  case class Step(fresh: List[Formal], path: Expr, fin: List[Expr], out: List[Expr]) {
+    def bound = Set(fresh map (_.id): _*)
+  }
+
+  case class Lockstep(astep: Step, cstep: Step) {
+    def fresh = astep.fresh ++ cstep.fresh
+    def path = astep.path && cstep.path
+
+    def withPost(post: Expr) = {
+      Exists(fresh, path && post)
+    }
+
+    def outputEqs = {
+      Eq(astep.out, cstep.out)
+    }
+
+    def recursiveCall(R: Id) = {
+      App(R, astep.fin ++ cstep.fin)
+    }
   }
 
   /**
@@ -123,13 +149,11 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     val _paths = for (Path(fresh, path, Env(su, _)) <- paths) yield {
       val fin = xs map (_ subst su)
       val out = proc.out map (_ subst su)
-      (fresh, And(path), fin, out)
+      Step(fresh, And(path), fin, out)
     }
 
     (pre, _paths)
   }
-
-  type LockstepTest = (List[Formal], Expr, List[Expr], List[Expr], List[Formal], Expr, List[Expr], List[Expr]) => Boolean
 
   /**
    * Collect constraints from lockstep transitions of aproc and cproc
@@ -141,32 +165,25 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
    *
    * result is the combined precondition and all pairwise combinations of paths
    * through the procedures, each providing auxiliary variables,
-   * a constraint (that includes equivalence of outputs),
-   * and final states for each procedure
+   * constraints,
    */
   def locksteps(
     aproc: Proc, cproc: Proc,
     as0: List[Expr], cs0: List[Expr],
-    in: List[Expr],
-    use: LockstepTest) = {
+    in0: List[Expr]) = {
 
     ensure(aproc.sig == cproc.sig, "incompatible signatures", aproc, cproc)
-    val (apre, apaths) = steps(aproc, as, as0, in)
-    val (cpre, cpaths) = steps(cproc, cs, cs0, in)
+    val (apre, asteps) = steps(aproc, as, as0, in0)
+    val (cpre, csteps) = steps(cproc, cs, cs0, in0)
 
-    val _paths = for (
-      (aex, apath, as1, aout) <- apaths;
-      (cex, cpath, cs1, cout) <- cpaths if use(aex, apath, as1, aout, cex, cpath, cs1, cout)
+    val _steps = for (
+      astep <- asteps; cstep <- csteps
     ) yield {
-      ensure(aex.ids.toSet disjoint cex.ids.toSet, "unsupported", "overlapping auxiliary variables", aex, cex)
-
-      val ex = aex ++ cex
-      val path = Eq(aout, cout) && apath && cpath
-      (ex, path, as1, cs1)
+      ensure(astep.bound disjoint cstep.bound, "unsupported", "overlapping auxiliary variables", astep, cstep)
+      Lockstep(astep, cstep)
     }
 
-    val pre = apre && cpre
-    (pre, _paths)
+    (apre, cpre, _steps)
   }
 
   def lemmas = {
