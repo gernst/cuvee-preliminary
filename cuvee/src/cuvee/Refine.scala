@@ -27,6 +27,33 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     sort: Sort, dt: Datatype, pos: Int,
     as0: List[Expr], cs0: List[Expr]) = {
 
+    val ai = ax(pos)
+
+    for ((constr, args, hyps) <- dt.induction(ai, sort)) yield {
+      val vs: List[Id] = args
+      val pat = Apps(constr :: vs)
+
+      val as_args = as patch (pos, args, 1)
+
+      val bound = as_args ++ cs
+
+      val ax0 = ax updated (pos, pat)
+      val lhs = App(R, ax0 ++ cx)
+
+      if (hyps.isEmpty) {
+        define(bound, lhs,
+          base(bound, ax0, cx))
+      } else {
+        val cases = for (hyp <- hyps) yield {
+          val arg = vs(hyp)
+          rec(bound, pos, arg, ax0, cx)
+        }
+
+        define(
+          bound,
+          lhs, And(cases))
+      }
+    }
   }
 
   /**
@@ -47,8 +74,8 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
    */
   def base(
     bound: List[Formal],
-    as0: List[Expr], cs0: List[Expr]) = {
-
+    as0: List[Expr], cs0: List[Expr]): Expr = {
+    ???
   }
 
   /**
@@ -61,8 +88,9 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   def rec(
     bound: List[Formal],
     pos: Int, arg: Id,
-    as0: List[Expr], cs0: List[Expr]) = {
-
+    as0: List[Expr], cs0: List[Expr]): Expr = {
+    val phis = consume(bound, pos, arg, as0, cs0)
+    Simplify.and(phis.flatten)
   }
 
   /**
@@ -83,8 +111,20 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   def consume(
     bound: List[Formal],
     pos: Int, arg: Id,
-    as0: List[Expr], cs0: List[Expr]) = {
+    as0: List[Expr], cs0: List[Expr]): List[List[Expr]] = {
 
+    val ops = A.ops zip C.ops
+
+    for (((aname, aproc), (cname, cproc)) <- ops) yield {
+      ensure(aname == cname, "operations must occur in same order", A.ops, C.ops, aname, cname)
+      val in0: List[Id] = aproc.in
+      val (apre, cpre, steps) = locksteps(aproc, cproc, as0, cs0, in0)
+      val pre = apre && cpre
+
+      for (step <- steps if step.a isConsumer (pos, arg)) yield {
+        Simplify.norm(pre && step.constraints)
+      }
+    }
   }
 
   /**
@@ -108,22 +148,43 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
 
   case class Step(fresh: List[Formal], path: Expr, fin: List[Expr], out: List[Expr]) {
     def bound = Set(fresh map (_.id): _*)
+
+    def ensures(post: Expr) = {
+      Forall(fresh, path ==> post)
+    }
+
+    def withPost(post: Expr) = {
+      Exists(fresh, path && post)
+    }
+
+    def isConsumer(pos: Int, arg: Expr) = {
+      fin(pos) == arg
+    }
   }
 
-  case class Lockstep(astep: Step, cstep: Step) {
-    def fresh = astep.fresh ++ cstep.fresh
-    def path = astep.path && cstep.path
+  case class Lockstep(a: Step, c: Step) {
+    def bound = a.bound ++ c.bound
+    def fresh = a.fresh ++ c.fresh
+    def path = a.path && c.path
+
+    def ensures(post: Expr) = {
+      Exists(fresh, path ==> post)
+    }
 
     def withPost(post: Expr) = {
       Exists(fresh, path && post)
     }
 
     def outputEqs = {
-      Eq(astep.out, cstep.out)
+      Eq(a.out, c.out)
     }
 
-    def recursiveCall(R: Id) = {
-      App(R, astep.fin ++ cstep.fin)
+    def constraints = {
+      withPost(outputEqs && recursiveCall)
+    }
+
+    def recursiveCall = {
+      App(R, a.fin ++ c.fin)
     }
   }
 
@@ -188,6 +249,18 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
 
   def lemmas = {
 
+  }
+
+  /**
+   *  Simplify right hand side and build a quantified equation
+   */
+  def define(bound: List[Formal], lhs: Expr, rhs: Expr): Expr = {
+    val simplify = Simplify(solver)
+    solver.scoped {
+      solver.bind(bound)
+      val _rhs = simplify(rhs)
+      Forall(bound, lhs === _rhs)
+    }
   }
 
   /**
