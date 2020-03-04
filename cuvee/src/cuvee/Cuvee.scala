@@ -109,15 +109,35 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
   }
 
   def check() = backend.scoped {
-    var _asserts = top.asserts map eval
+    val rasserts = top.rasserts map eval
 
-    if (config.simplify) {
-      val simplify = Simplify(solver)
-      _asserts = simplify(_asserts)
-    }
+    rasserts match {
+      case Not(phi) :: rest if false =>
+        var _asserts = rest.reverse
 
-    for (expr <- _asserts) {
-      backend.assert(expr)
+        for (expr <- _asserts) {
+          backend.assert(expr)
+        }
+        
+        if(config.simplify) {
+          val simplify = Simplify(solver)
+          val res = simplify.prove(phi)
+          backend.assert(Not(res))
+        } else {
+          backend.assert(Not(phi))
+        }
+
+      case _ =>
+        var _asserts = rasserts.reverse
+
+        if (config.simplify) {
+          val simplify = Simplify(solver)
+          _asserts = simplify(_asserts)
+        }
+
+        for (expr <- _asserts) {
+          backend.assert(expr)
+        }
     }
 
     val actual = backend.check()

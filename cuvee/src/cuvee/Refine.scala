@@ -1,6 +1,8 @@
 package cuvee
 
 case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
+  import Simplify.norm
+
   val as = A.state
   val cs = C.state
 
@@ -140,7 +142,7 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
         error("unsupported inductive recipe")
     }
 
-    Simplify.and(phis.flatten)
+    And(phis.flatten)
   }
 
   /**
@@ -175,7 +177,7 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
         val eqs = step.outputsEq
         val call = step.recursiveCall
         val post = step withPost (eqs && call)
-        Simplify.norm(pre && post)
+        norm(pre && post)
       }
     }
   }
@@ -312,12 +314,14 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
    *  Simplify right hand side and build a quantified equation
    */
   def define(bound: List[Formal], lhs: Expr, rhs: Expr): Expr = {
-    val simplify = Simplify(solver)
+    /* val simplify = Simplify(solver)
     solver.scoped {
       solver.bind(bound)
       val _rhs = simplify(rhs)
       Forall(bound, lhs === _rhs)
-    }
+    } */
+
+    Forall(bound, lhs === norm(rhs))
   }
 
   /**

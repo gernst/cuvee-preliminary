@@ -90,7 +90,7 @@
                     (= (select values (+ k 1)) (select (old values) k))))))
     :precondition (<= i (len xs)))
   (remove ((i Int)) ()
-    (block)
+    (spec () true false)
     :precondition (< i (len xs))))
 
 (declare-fun R (Lst Int (Array Int Elem)) Bool)

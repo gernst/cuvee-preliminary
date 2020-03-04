@@ -75,7 +75,7 @@ case class Simplify(backend: Solver) {
     // don't simplify top-level axioms (rarely useful)
     case (phi @ Forall(_, _)) :: rest if top =>
       assert(!neg)
-      val phi_ = if(Simplify.qe) eliminateBindings(phi) else phi
+      val phi_ = if (Simplify.qe) eliminateBindings(phi) else phi
       nary(rest, phi_ :: rdone, neg, top, changed)
 
     case phi :: rest =>
@@ -110,6 +110,33 @@ case class Simplify(backend: Solver) {
     case Or.nary(args) =>
       val _args = dis(args)
       or(_args)
+    case _ =>
+      phi
+  }
+
+  def assuming(pre: Expr, post: Expr): Expr = backend.scoped {
+    backend assert pre
+    prove(post)
+  }
+
+  def scoped(bound: List[Formal], post: Expr): Expr = backend.scoped {
+    backend bind bound
+    prove(post)
+  }
+
+  def prove(phi: Expr): Expr = phi match {
+    case _ if backend isFalse phi =>
+      False
+    case _ if backend isTrue phi =>
+      True
+    case Imp(phi, psi) =>
+      assuming(phi, psi)
+    case And.nary(args) =>
+      and(args map prove)
+    case Or.nary(args) =>
+      or(args map prove)
+    case Forall(bound, body) =>
+     scoped(bound, body)
     case _ =>
       phi
   }
