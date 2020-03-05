@@ -45,12 +45,16 @@ object Sugar {
     }
 
     object nary extends (List[Expr] => Expr) {
-      def apply(args: List[Expr]) = {
-        App(fun, args)
+      def apply(args: List[Expr]) = (fun, args) match {
+        case (Id.minus, List(unary)) =>
+          App(fun, List(Num(0), unary))
+        case _ =>
+          App(fun, args)
       }
 
       def unapply(expr: Expr) = expr match {
-        case App(`fun`, List(left, right)) if fun == Id.minus && left == Num(0) => Some(List(right))
+        case App(`fun`, List(left, right)) if fun == Id.minus && left == Num(0) =>
+          Some(List(right))
         case App(`fun`, args) =>
           Some(args flatMap flatten)
         case _ =>
