@@ -8,9 +8,12 @@ class Parseable[+A](p: Parser[A]) {
   def from(text: String): A = {
     import Parser.whitespace
     ensure(text != null, "cannot parse the null string")
-    // val withoutComments = text split raw"[\r\n]+" filter (!_.startsWith(";")) mkString "\n"
-    // p.parseAll(withoutComments)
-    p.parseAll(text)
+    try {
+      p.parseAll(text)
+    } catch {
+      case e: arse.Error => throw Error(Seq(e.toString())) initCause e.getCause
+      case any: Throwable => throw any
+    }
   }
 
   def fromFile(path: String): A = {

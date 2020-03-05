@@ -31,7 +31,6 @@ object EvalTest extends TestSuite {
     val code = Call(Id("forward"), List(x * 2), List(y))
     val wp = WP(code, y === Old(x) * 2)
     val evald = Eval.eval(wp, env, List(env), state)
-    println(evald)
   }
 
   test("access form") {

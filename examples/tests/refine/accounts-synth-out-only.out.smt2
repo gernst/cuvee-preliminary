@@ -1,0 +1,7 @@
+(set-logic ALL)
+(declare-fun R (Int Int Int) Bool)
+(push 1)
+(assert (forall ((balance Int) (debit Int) (credit Int)) (= (R balance debit credit) (= balance (+ credit (- 0 debit))))))
+(assert (not (and (forall ((balance Int) (debit Int) (credit Int)) (=> (and true true) (R 0 0 0))) (forall ((balance Int) (amount Int) (new-balance Int) (debit Int) (credit Int) (|add'| Int) (|increased'| Int)) (=> (= amount |add'|) (=> (and (> amount 0) (R balance debit credit)) (and (> |add'| 0) (and (= (+ balance amount) (- (+ credit |add'|) debit)) (R (+ balance amount) debit (+ credit |add'|))))))) (forall ((balance Int) (amount Int) (new-balance Int) (debit Int) (credit Int) (|remove'| Int) (|decreased'| Int)) (=> (= amount |remove'|) (=> (and (> amount 0) (<= amount balance) (R balance debit credit)) (and (> |remove'| 0) (<= |remove'| (- credit debit)) (and (= (- balance amount) (- credit (+ debit |remove'|))) (R (- balance amount) (+ debit |remove'|) credit)))))))))
+(check-sat)
+(pop 1)

@@ -336,6 +336,22 @@ object App {
   def apply(fun: Id, args: Expr*): App = {
     App(fun, args.toList)
   }
+
+  def apply(fun: Id, args: List[Expr]): App = {
+    if (fun == Id("-") && args.size == 1) {
+      // This is a hack for parsing expressions from a solver.
+      // Internally, every function id must belong to a unique signature,
+      // so we need to convert the unary minus into a binary minus
+      new App(fun, List(Num(0), args.head))
+    } else if(fun == Id("+") && args.size > 2) {
+      // This is a hack for parsing expressions from a solver.
+      // Internally, every function id must belong to a unique signature,
+      // so we need to convert varargs-+ into a binary +
+      App(fun, args.head, App(fun, args.tail))
+    } else {
+      new App(fun, args)
+    }
+  }
 }
 
 object Apps extends (List[Expr] => Expr) {

@@ -34,6 +34,7 @@
     (withdraw ((remove Int)) ((decreased Int))
             (assign (debit (+ debit remove)))
             (assign (decreased (- credit debit)))
+; BUG BUG BUG "amount" is allowed to refer to the abstract precondition here, lol
         :precondition (and (> amount 0) (<= amount (+ (- credit debit) overdraft-limit)))))
 
 ; we're using aliases for all state variables to make sure that they're renamed in all places

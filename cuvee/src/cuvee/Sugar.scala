@@ -50,6 +50,7 @@ object Sugar {
       }
 
       def unapply(expr: Expr) = expr match {
+        case App(`fun`, List(left, right)) if fun == Id.minus && left == Num(0) => Some(List(right))
         case App(`fun`, args) =>
           Some(args flatMap flatten)
         case _ =>
