@@ -232,7 +232,7 @@ object Not extends Sugar.unary(Id.not) {
   }
 }
 
-object Imp extends Sugar.binary(Id.imp)
+object Imp extends Sugar.binary(Id.imp, false, Right)
 
 object And extends Sugar.binary(Id.and) {
   def apply(args: List[Expr]) = args match {
@@ -251,9 +251,9 @@ object Or extends Sugar.binary(Id.or) {
 }
 
 object Plus extends Sugar.binary(Id.plus)
-object Minus extends Sugar.binary(Id.minus)
+object Minus extends Sugar.binary(Id.minus, false)
 object Times extends Sugar.binary(Id.times)
-object DivBy extends Sugar.binary(Id.divBy)
+object DivBy extends Sugar.binary(Id.divBy, false)
 
 object Lt extends Sugar.binary(Id.lt)
 object Le extends Sugar.binary(Id.le)
@@ -262,7 +262,7 @@ object Ge extends Sugar.binary(Id.ge)
 
 object Head extends Sugar.unary(Id.head)
 object Tail extends Sugar.unary(Id.tail)
-object Cons extends Sugar.binary(Id.cons)
+object Cons extends Sugar.binary(Id.cons, false, Right)
 
 case class Ite(test: Expr, left: Expr, right: Expr) extends Expr {
   def free = test.free ++ left.free ++ right.free
