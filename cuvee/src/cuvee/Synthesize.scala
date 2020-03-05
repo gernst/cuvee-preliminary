@@ -4,6 +4,7 @@ sealed trait Recipe
 
 object Recipe {
   case object output extends Recipe
+  case object precondition extends Recipe
   case object consumer extends Recipe
   case object producer extends Recipe
 }

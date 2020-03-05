@@ -17,12 +17,12 @@ object Verify {
       val cs = C.state
       val phi = App(fun, as ++ cs)
       recipe match {
-        case Some(recipe) =>
-          val synth = Refine(A, C, fun, st, solver)
-          val defs = synth(recipe)
-          (as, cs, defs, phi)
-        case None =>
+        case Nil =>
           (as, cs, Nil, phi)
+        case recipes =>
+          val synth = Refine(A, C, fun, st, solver)
+          val defs = recipes.flatMap(synth(_))
+          (as, cs, defs, phi)
       }
     case Sim.byExpr(as, cs, phi) =>
       (as, cs, Nil, phi)

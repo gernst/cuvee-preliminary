@@ -178,9 +178,9 @@ object Parser {
 
   val verify_proc_ = P(VerifyProc("verify-proc" ~ id))
 
-  val recipe = Recipe.output("output") | Recipe.consumer("consumer") | Recipe.producer("producer")
-  val synth = ":synthesize" ~ recipe
-  val refine_by_fun_ = VerifyRefinement(sort ~ sort ~ Sim.byFun(id ~ synth.?))
+  val recipe = Recipe.output("output") | Recipe.precondition("precondition") | Recipe.consumer("consumer") | Recipe.producer("producer")
+  val synth = ":synthesize" ~ recipe.*
+  val refine_by_fun_ = VerifyRefinement(sort ~ sort ~ Sim.byFun(id ~ synth.?.map(_.getOrElse(Nil))))
   val refine_by_expr_ = parens(sort ~ formals) ~ parens(sort ~ formals) ~ expr map {
     case (((spec, as), (impl, cs)), phi) =>
       VerifyRefinement(spec, impl, Sim.byExpr(as, cs, phi))

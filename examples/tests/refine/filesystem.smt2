@@ -79,7 +79,7 @@
 (pop)
 
 (push)
-  (verify-refinement AbstractFS FlashFS R :synthesize output)
+  (verify-refinement AbstractFS FlashFS R :synthesize output precondition)
   (set-info :status unsat)
   (check-sat)
 (pop)

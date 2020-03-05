@@ -20,17 +20,15 @@
             (credit 0)
             (debit 0)))
 
-    ; use different argument names here to make sure the right variables names are used
-    (deposit ((add Int)) ((increased Int)) (block
-            (assign (credit (+ credit add)))
+    (deposit ((amount Int)) ((increased Int)) (block
+            (assign (credit (+ credit amount)))
             (assign (increased (- credit debit))))
-        :precondition (> add 0))
+        :precondition (> amount 0))
 
-    ; use different argument names here to make sure the right variables names are used
-    (withdraw ((remove Int)) ((decreased Int)) (block
-            (assign (debit (+ debit remove)))
+    (withdraw ((amount Int)) ((decreased Int)) (block
+            (assign (debit (+ debit amount)))
             (assign (decreased (- credit debit))))
-        :precondition (and (> remove 0) (<= remove (- credit debit)))))
+        :precondition (and (> amount 0) (<= amount (- credit debit)))))
 
 (declare-fun R (Int Int Int) Bool)
 

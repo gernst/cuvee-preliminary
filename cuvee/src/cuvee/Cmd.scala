@@ -104,7 +104,7 @@ case class VerifyProc(id: Id) extends Cmd {
 
 sealed trait Sim
 object Sim {
-  case class byFun(fun: Id, synth: Option[Recipe]) extends Sim
+  case class byFun(fun: Id, synth: List[Recipe]) extends Sim
   case class byExpr(as: List[Formal], cs: List[Formal], phi: Expr) extends Sim
 }
 
