@@ -50,6 +50,14 @@ object ParserTest extends TestSuite {
           Nil)))
   }
 
+  test("Binary functions with other numbers of args") {
+    assertEquals(e"(- x)", App("-", 0, "x"))
+    assertEquals(e"(- x y z)", App("-", "x", App("-", "y", "z")))
+    assertEquals(e"(+ x y z)", App("+", "x", App("+", "y", "z")))
+    assertEquals(e"(* x y z)", App("*", "x", App("*", "y", "z")))
+    assertEquals(e"(/ x y z)", App("/", "x", App("/", "y", "z")))
+  }
+
   test("parse comment") {
     assertEquals(parseCmds("; foo\n; bar"), List())
   }

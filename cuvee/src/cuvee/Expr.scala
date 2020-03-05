@@ -339,9 +339,15 @@ object App {
 
   def apply(fun: Id, args: List[Expr]): App = {
     (fun, args) match {
-      case (Id.minus, List(unary)) =>
-        // This is a hack for allowing parsing unary minus. Internally, minus is a binary function.
-        new App(fun, List(Num(0), unary))
+      // Hacks for parsing non-binary variants of some functions which are internally binary
+      case (Id.minus, multi) if multi.size != 2 =>
+        Minus.nary(multi)
+      case (Id.plus, multi) if multi.size != 2 =>
+        Plus.nary(multi)
+      case (Id.times, multi) if multi.size != 2 =>
+        Times.nary(multi)
+      case (Id.divBy, multi) if multi.size != 2 =>
+        DivBy.nary(multi)
       case _ =>
         new App(fun, args)
     }

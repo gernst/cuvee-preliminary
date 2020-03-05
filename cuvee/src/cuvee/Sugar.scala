@@ -44,10 +44,13 @@ object Sugar {
         List(expr)
     }
 
-    object nary extends (List[Expr] => Expr) {
+    object nary extends (List[Expr] => App) {
       def apply(args: List[Expr]) = (fun, args) match {
         case (Id.minus, List(unary)) =>
           App(fun, List(Num(0), unary))
+        case (_, fst :: snd :: (rest @ (_ :: _))) =>
+          val list: List[Expr] = List(fst, nary(snd :: rest))
+          App(fun, list: List[Expr])
         case _ =>
           App(fun, args)
       }
