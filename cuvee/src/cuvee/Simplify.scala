@@ -253,16 +253,22 @@ object Simplify {
   def linear[T <: Expr](eq: (Expr, Expr) => T, left: Expr, right: Expr): Expr = {
     (norm(left), norm(right)) match {
       case (Plus.nary(lArgs), Plus.nary(rArgs)) =>
-        val common = lArgs.intersect(rArgs)
-        (lArgs.filterNot(common.contains), rArgs.filterNot(common.contains)) match {
-          case (List(Minus.nary(List(lArg: Expr))), List(Minus.nary(List(rArg: Expr)))) =>
-            reverseEq(eq, lArg, rArg)
-          case (left_, right_) => eq(plus(left_), plus(right_))
-        }
+        simplifyPlusEq(eq, lArgs, rArgs)
       case (Minus.nary(List(lArg: Expr)), Minus.nary(List(rArg: Expr))) =>
         reverseEq(eq, lArg, rArg)
       case (left_, right_) if left_ == right_ => True
       case (left_, right_) => eq(left_, right_)
+    }
+  }
+
+  private def simplifyPlusEq[T <: Expr](eq: (Expr, Expr) => T, lArgs: List[Expr], rArgs: List[Expr]) = {
+    val common = lArgs.intersect(rArgs)
+    val lArgs_ = lArgs.filterNot(common.contains)
+    val rArgs_ = rArgs.filterNot(common.contains)
+    (lArgs_, rArgs_) match {
+      case (List(Minus.nary(List(lArg: Expr))), List(Minus.nary(List(rArg: Expr)))) =>
+        reverseEq(eq, lArg, rArg)
+      case (left_, right_) => eq(plus(left_), plus(right_))
     }
   }
 
