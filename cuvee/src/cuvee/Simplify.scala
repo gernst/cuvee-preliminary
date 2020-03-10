@@ -255,7 +255,7 @@ object Simplify {
         simplifyPlusEq(eq, lArgs, rArgs)
       case (Minus.nary(List(lArg: Expr)), Minus.nary(List(rArg: Expr))) =>
         reverseEq(eq, lArg, rArg)
-      case (left_, right_) if left_ == right_ => ??? // True does not hold for < and >
+      case (left_, right_) if left_ == right_ && eq == Eq => True
       case (left_, right_) => eq(left_, right_)
   }
 
