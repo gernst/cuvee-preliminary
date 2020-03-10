@@ -259,7 +259,7 @@ object Simplify {
       case (left_, right_) => eq(left_, right_)
   }
 
-  private def simplifyPlusEq[T <: Expr](eq: (Expr, Expr) => T, lArgs: List[Expr], rArgs: List[Expr]) = {
+  private def simplifyPlusEq(eq: (Expr, Expr) => Expr, lArgs: List[Expr], rArgs: List[Expr]) = {
     val common = lArgs.intersect(rArgs)
     val lArgs_ = lArgs.filterNot(common.contains)
     val rArgs_ = rArgs.filterNot(common.contains)
@@ -287,7 +287,7 @@ object Simplify {
 
   def eliminateBindings(phi: Bind): Expr = phi match {
     case Bind(quant, formals, body) => body match {
-      case And.nary(args) => quant(formals, Or.nary(eliminateBindingsFromNary(formals, args, false)))
+      case And.nary(args) => quant(formals, And.nary(eliminateBindingsFromNary(formals, args, false)))
       case Or.nary(args) => quant(formals, Or.nary(eliminateBindingsFromNary(formals, args, true)))
       case _ => phi
     }
