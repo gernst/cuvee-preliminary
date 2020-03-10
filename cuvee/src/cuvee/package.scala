@@ -134,6 +134,7 @@ package object cuvee {
     def prime = formals map (_.prime)
     def priming = formals map (_.id) map (id => id -> id.prime) toMap
     def ids = toIds(formals)
+    def types = toTypes(formals)
   }
 
   def time[A](f: => A) = {

@@ -20,10 +20,10 @@
             (credit 0)
             (debit 0)))
 
-    (deposit ((amount Int)) ((increased Int)) (block
-            (assign (credit (+ credit amount)))
+    (deposit ((add Int)) ((increased Int)) (block
+            (assign (credit (+ credit add)))
             (assign (increased (- credit debit))))
-        :precondition (> amount 0))
+        :precondition (> add 0))
 
     (withdraw ((amount Int)) ((decreased Int)) (block
             (assign (debit (+ debit amount)))

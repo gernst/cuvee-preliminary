@@ -295,8 +295,7 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     as0: List[Expr], cs0: List[Expr],
     in0: List[Expr]) = {
 
-    // currently, it is necessary that all function arguments are named equally
-    ensure(aproc.in == cproc.in, "incompatible signatures", aproc, cproc)
+    ensure(aproc.in.types == cproc.in.types, "incompatible signatures", aproc, cproc)
     val (apre, asteps) = steps(aproc, as, as0, in0)
     val (cpre, csteps) = steps(cproc, cs, cs0, in0)
 
