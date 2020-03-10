@@ -238,7 +238,7 @@ object And extends Sugar.binary(Id.and) {
   def apply(args: List[Expr]) = args match {
     case List() => True
     case List(arg) => arg
-    case _ => App(fun, args)
+    case _ => nary(args)
   }
 }
 
@@ -246,7 +246,7 @@ object Or extends Sugar.binary(Id.or) {
   def apply(args: List[Expr]) = args match {
     case List() => False
     case List(arg) => arg
-    case _ => App(fun, args)
+    case _ => nary(args)
   }
 }
 
