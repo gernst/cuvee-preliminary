@@ -6,6 +6,11 @@ object Alpha {
     def free: Set[V]
     def rename(re: Map[V, V]): E
     def subst(su: Map[V, E]): E
+    
+    def subst(v: V, e: E): E = {
+      val su = Map(v -> e)
+      subst(su)
+    }
   }
 
   trait x[E, V <: E] extends term[E, V] {
