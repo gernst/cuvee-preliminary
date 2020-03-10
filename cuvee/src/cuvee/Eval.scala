@@ -490,11 +490,11 @@ object Eval {
   }
 
   def paths(proc: Proc, ps: List[Formal], init: List[Expr], in: List[Expr], st: State): (Expr, List[Path]) = {
-    // in is not used?
     val (xi, xo, pre, post, body) = proc call ps
     var env = Env.empty
     env = env bind (ps ++ xi ++ xo)
     env = env assign (ps, init)
+    env = env assign (xi, in)
     val old = Nil
 
     val _pre = Eval.eval(pre, env, old, st)
