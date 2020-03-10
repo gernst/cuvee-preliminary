@@ -195,20 +195,20 @@ object Simplify {
     case Plus.nary(args) => Plus.nary(Plus.flatten(args map norm) map norm)
 
 
-    case Not(Lt(a, b)) => linear(Le, b, a)
-    case Not(Le(a, b)) => linear(Lt, b, a)
-    case Not(Gt(a, b)) => linear(Le, a, b)
-    case Not(Ge(a, b)) => linear(Lt, a, b)
+    case Not(Lt(a, b)) => linear(Le, norm(b), norm(a))
+    case Not(Le(a, b)) => linear(Lt, norm(b), norm(a))
+    case Not(Gt(a, b)) => linear(Le, norm(a), norm(b))
+    case Not(Ge(a, b)) => linear(Lt, norm(a), norm(b))
 
-    case Gt(a, b) => linear(Lt, b, a)
-    case Ge(a, b) => linear(Le, b, a)
+    case Gt(a, b) => linear(Lt, norm(b), norm(a))
+    case Ge(a, b) => linear(Le, norm(b), norm(a))
 
-    case Lt(a, b) => linear(Lt, a, b)
-    case Le(a, b) => linear(Le, a, b)
-    case Eq(a, b) => linear(Eq, a, b)
+    case Lt(a, b) => linear(Lt, norm(a), norm(b))
+    case Le(a, b) => linear(Le, norm(a), norm(b))
+    case Eq(a, b) => linear(Eq, norm(a), norm(b))
 
-    case Head(Cons(x, xs)) => x
-    case Tail(Cons(x, xs)) => xs
+    case Head(Cons(x, xs)) => norm(x)
+    case Tail(Cons(x, xs)) => norm(xs)
 
     case Distinct(List(Cons(_, _), Id.nil)) =>
       True
@@ -250,15 +250,13 @@ object Simplify {
     }
   }
 
-  def linear[T <: Expr](eq: (Expr, Expr) => T, left: Expr, right: Expr): Expr = {
-    (norm(left), norm(right)) match {
+  def linear(eq: (Expr, Expr) => Expr, left: Expr, right: Expr): Expr = (left, right) match {
       case (Plus.nary(lArgs), Plus.nary(rArgs)) =>
         simplifyPlusEq(eq, lArgs, rArgs)
       case (Minus.nary(List(lArg: Expr)), Minus.nary(List(rArg: Expr))) =>
         reverseEq(eq, lArg, rArg)
-      case (left_, right_) if left_ == right_ => True
+      case (left_, right_) if left_ == right_ => ??? // True does not hold for < and >
       case (left_, right_) => eq(left_, right_)
-    }
   }
 
   private def simplifyPlusEq[T <: Expr](eq: (Expr, Expr) => T, lArgs: List[Expr], rArgs: List[Expr]) = {
