@@ -28,7 +28,7 @@
     :precondition (distinct (select fs name) empty))
   (write ((name Name) (file File))
          ()
-    (assign ((select fs name) file))
+    (assign (fs (store fs name file)))
     :precondition (distinct (select fs name) empty)))
 
 (define-class
@@ -37,7 +37,7 @@
    (disk  (Array Address File)))
   (init () ()
     (assign (index index0)
-            ((select disk null) empty)))
+            (disk  (store disk null empty))))
   (read ((name Name))
         ((file File))
     (assign (file (select disk (select index name))))
@@ -51,8 +51,8 @@
     (choose (addr)
       (and (distinct addr null)
            (= (select disk addr) empty)))
-    (assign ((select index name) addr)
-            ((select disk  addr) file))
+    (assign (index (store index name addr))
+            (disk  (store disk  addr file)))
     :precondition (distinct (select index name) null)))
 
 (declare-fun R 
@@ -61,26 +61,8 @@
    (Array Address File))
    Bool)
 
-(push)
-  (assert (forall 
-    ((fs    (Array Name File))
-     (index (Array Name Address))
-     (disk  (Array Address File)))
-    (= (R fs index disk)
-       (forall ((name Name))
-         (=> (distinct (select fs name) empty)
-             (and (distinct (select index name) null)
-                  (= (select fs name)
-                     (select disk (select index name)))))))))
+(verify-refinement
+  AbstractFS FlashFS R :synthesize output)
 
-  (verify-refinement AbstractFS FlashFS R)
-  (set-info :status unsat)
-  (check-sat)
-(pop)
-
-(push)
-  (verify-refinement AbstractFS FlashFS R :synthesize output precondition)
-  (set-info :status unsat)
-  (check-sat)
-(pop)
-
+; (set-info :status unsat)
+(check-sat)

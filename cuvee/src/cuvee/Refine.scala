@@ -16,8 +16,8 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   }
 
   def candidates(recipe: Recipe): List[List[Expr]] = recipe match {
-    case Recipe.output =>
-      outputs()
+    case Recipe.output | Recipe.precondition =>
+      outputs(recipe)
 
     case Recipe.producer | Recipe.consumer =>
       induct(recipe)
@@ -76,7 +76,7 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
    * as0, cs0 are the initial states (left-hand side of definition)
    * consider those operations only that can take as0 resp. cs0 as input (i.e. precondition is not falsified)
    */
-  def outputs(): List[List[Expr]] = {
+  def outputs(recipe: Recipe): List[List[Expr]] = {
     val ops = A.ops zip C.ops
 
     val phis = for (((aname, aproc), (cname, cproc)) <- ops if aproc.out.nonEmpty) yield {
@@ -90,9 +90,12 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
         (step ensures eqs)
       }
 
-      Forall(
-        bound,
-        apre ==> And(cpre :: outs))
+      recipe match {
+        case Recipe.output =>
+          Forall(bound, And(outs))
+        case Recipe.precondition =>
+          Forall(bound, apre ==> cpre)
+      }
     }
 
     val lhs = App(R, ax ++ cx)
@@ -292,7 +295,7 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     as0: List[Expr], cs0: List[Expr],
     in0: List[Expr]) = {
 
-    ensure(aproc.sig == cproc.sig, "incompatible signatures", aproc, cproc)
+    ensure(aproc.in.types == cproc.in.types, "incompatible signatures", aproc, cproc)
     val (apre, asteps) = steps(aproc, as, as0, in0)
     val (cpre, csteps) = steps(cproc, cs, cs0, in0)
 
