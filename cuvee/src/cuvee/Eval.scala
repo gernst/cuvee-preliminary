@@ -4,6 +4,11 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
   def contains(id: Id) = su contains id
   def apply(id: Id) = su apply id
 
+  def now = {
+    val re = Expr.id(su.keys)
+    Env(re, ty)
+  }
+
   def eqs = {
     Eq.zip(su.toList)
   }
@@ -154,7 +159,7 @@ object Eval {
     case Dia(prog, post) =>
       dia(List(prog), None, post, env, old, st)
   }
-  
+
   def wp(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
     case Nil =>
       eval(post, env0, old, st)
@@ -293,6 +298,8 @@ object Eval {
         // ⋀ s'. ¬ test s' ⟹ I s' ⟹ Q s s' ⟹ Q s0 s'
         val _test2 = eval(test, env2, env1 :: old, st)
         val _inv2 = eval(phi, env2, env1 :: old, st)
+        
+        val post1 = eval(post, ???)
         // s0 == env0
         // s  == env1
         // s' == env2
