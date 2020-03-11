@@ -4,6 +4,7 @@ sealed trait Recipe
 
 object Recipe {
   case object output extends Recipe
+  case object precondition extends Recipe
   case object consumer extends Recipe
   case object producer extends Recipe
 }
@@ -78,16 +79,22 @@ case class Synthesize(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   }
 
   def fromOutput(): List[Expr] = {
-    for ((aop, ap) <- A.ops.filterNot(proc => proc._2.out.isEmpty)) yield {
+    val synthesized = for ((aop, ap) <- A.ops.filterNot(proc => proc._2.out.isEmpty)) yield {
       val cp = C op aop
       ensure((ap.in ++ ap.out).map(_.typ) == (cp.in ++ cp.out).map(_.typ))
 
-      val aBody = step(ap, as, ax, ax_, ap.in, ap.out)
-      val insEq = cp.in.prime.zip(ap.in.ids).map(p => p._1.id -> p._2).toMap
-      val cBody = step(cp, cs, cx, cx_, cp.in.prime, cp.out.prime) subst insEq
-      val outsEq: Expr = And(ap.out.ids.zip(cp.out.prime.ids).map(p => Eq(p._1, p._2)))
-      define(as ++ cs, App(R, as ++ cs), Forall(as_ ++ cs_ ++ ap.in ++ ap.out ++ cp.in.prime ++ cp.out.prime, (aBody && cBody) ==> outsEq))
+      val insEq = Expr.subst(cp.in.prime, ap.in.ids)
+      val outsEq = Eq(ap.out.ids, cp.out.prime)
+
+      val (_, aPaths) = paths(ap, as, ax, ax_, ap.in, ap.out)
+      val aBody = Or(aPaths)
+      val (_, cPaths) = paths(cp, cs, cx, cx_, cp.in.prime, cp.out.prime)
+      val cBody = Or(cPaths) subst insEq
+
+      val expr = Forall(as_ ++ cs_ ++ ap.in ++ ap.out ++ cp.in.prime ++ cp.out.prime, (aBody && cBody) ==> outsEq)
+      define(as ++ cs, App(R, as ++ cs), expr)
     }
+    synthesized.distinct
   }
 
   def define(bound: List[Formal], lhs: Expr, rhs: Expr): Expr = {

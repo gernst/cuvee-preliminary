@@ -8,9 +8,12 @@ class Parseable[+A](p: Parser[A]) {
   def from(text: String): A = {
     import Parser.whitespace
     ensure(text != null, "cannot parse the null string")
-    // val withoutComments = text split raw"[\r\n]+" filter (!_.startsWith(";")) mkString "\n"
-    // p.parseAll(withoutComments)
-    p.parseAll(text)
+    try {
+      p.parseAll(text)
+    } catch {
+      case e: arse.Error => throw Error(Seq(e.toString())) initCause e.getCause
+      case any: Throwable => throw any
+    }
   }
 
   def fromFile(path: String): A = {
@@ -175,9 +178,9 @@ object Parser {
 
   val verify_proc_ = P(VerifyProc("verify-proc" ~ id))
 
-  val recipe = Recipe.output("output") | Recipe.consumer("consumer") | Recipe.producer("producer")
-  val synth = ":synthesize" ~ recipe
-  val refine_by_fun_ = VerifyRefinement(sort ~ sort ~ Sim.byFun(id ~ synth.?))
+  val recipe = Recipe.output("output") | Recipe.precondition("precondition") | Recipe.consumer("consumer") | Recipe.producer("producer")
+  val synth = ":synthesize" ~ recipe.*
+  val refine_by_fun_ = VerifyRefinement(sort ~ sort ~ Sim.byFun(id ~ synth.?.map(_.getOrElse(Nil))))
   val refine_by_expr_ = parens(sort ~ formals) ~ parens(sort ~ formals) ~ expr map {
     case (((spec, as), (impl, cs)), phi) =>
       VerifyRefinement(spec, impl, Sim.byExpr(as, cs, phi))

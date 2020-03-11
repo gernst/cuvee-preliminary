@@ -232,13 +232,13 @@ object Not extends Sugar.unary(Id.not) {
   }
 }
 
-object Imp extends Sugar.binary(Id.imp)
+object Imp extends Sugar.binary(Id.imp, false, Right)
 
 object And extends Sugar.binary(Id.and) {
   def apply(args: List[Expr]) = args match {
     case List() => True
     case List(arg) => arg
-    case _ => App(fun, args)
+    case _ => nary(args)
   }
 }
 
@@ -246,14 +246,14 @@ object Or extends Sugar.binary(Id.or) {
   def apply(args: List[Expr]) = args match {
     case List() => False
     case List(arg) => arg
-    case _ => App(fun, args)
+    case _ => nary(args)
   }
 }
 
 object Plus extends Sugar.binary(Id.plus)
-object Minus extends Sugar.binary(Id.minus)
+object Minus extends Sugar.binary(Id.minus, false)
 object Times extends Sugar.binary(Id.times)
-object DivBy extends Sugar.binary(Id.divBy)
+object DivBy extends Sugar.binary(Id.divBy, false)
 
 object Lt extends Sugar.binary(Id.lt)
 object Le extends Sugar.binary(Id.le)
@@ -262,7 +262,7 @@ object Ge extends Sugar.binary(Id.ge)
 
 object Head extends Sugar.unary(Id.head)
 object Tail extends Sugar.unary(Id.tail)
-object Cons extends Sugar.binary(Id.cons)
+object Cons extends Sugar.binary(Id.cons, false, Right)
 
 case class Ite(test: Expr, left: Expr, right: Expr) extends Expr {
   def free = test.free ++ left.free ++ right.free
@@ -335,6 +335,22 @@ case class UnApp(fun: Id, args: List[Id]) extends Pat {
 object App {
   def apply(fun: Id, args: Expr*): App = {
     App(fun, args.toList)
+  }
+
+  def apply(fun: Id, args: List[Expr]): App = {
+    (fun, args) match {
+      // Hacks for parsing non-binary variants of some functions which are internally binary
+      case (Id.minus, multi) if multi.size != 2 =>
+        Minus.nary(multi)
+      case (Id.plus, multi) if multi.size != 2 =>
+        Plus.nary(multi)
+      case (Id.times, multi) if multi.size != 2 =>
+        Times.nary(multi)
+      case (Id.divBy, multi) if multi.size != 2 =>
+        DivBy.nary(multi)
+      case _ =>
+        new App(fun, args)
+    }
   }
 }
 

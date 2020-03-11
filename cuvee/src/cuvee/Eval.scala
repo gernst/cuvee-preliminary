@@ -501,6 +501,7 @@ object Eval {
     var env = Env.empty
     env = env bind (ps ++ xi ++ xo)
     env = env assign (ps, init)
+    env = env assign (xi, in)
     val old = Nil
 
     val _pre = Eval.eval(pre, env, old, st)
