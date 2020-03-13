@@ -24,6 +24,14 @@ object SimplifyTest extends TestSuite {
     assertEquals(Simplify.norm(e"(= (+ balance (- 0 amount)) (+ credit (- 0 (+ debit amount))))"), e"(= (+ balance debit) credit)")
   }
 
+  test("don't replace minus without equation") {
+    assertEquals(Simplify.norm(e"(- a b)"), e"(- a b)")
+  }
+
+  test("don't replace minus in equation when it is an argument to an unknown function") {
+    assertEquals(Simplify.norm(e"(= 0 (f (- a b)))"), e"(= 0 (f (- a b)))")
+  }
+
   private def simplifyInt(phi: Expr): Expr = {
     val formals = phi.free.map(Formal(_, Sort.int)).toList
     simplify(phi, formals)

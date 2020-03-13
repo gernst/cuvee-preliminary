@@ -174,7 +174,10 @@ object Simplify {
     else Or(_args.distinct filter (_ != False))
   }
 
-  def norm(expr: Expr): Expr = expr match {
+  /**
+   * @param mtp minus-to-plus: will convert binary minus to flatten out linear equations
+   */
+  def norm(expr: Expr, mtp: Boolean = false): Expr = expr match {
     // push in negation
     case Not(True) =>
       False
@@ -202,26 +205,25 @@ object Simplify {
     case bind: Bind =>
       normQuant(bind)
 
-    case UMinus(UMinus(arg)) => norm(arg)
-    case UMinus(Plus(args)) => norm(Plus(UMinus(args)))
-    case UMinus(Minus(a, b)) => norm(-a + b)
+    case UMinus(UMinus(arg)) => norm(arg, mtp)
+    case UMinus(Plus(args)) => norm(Plus(UMinus(args)), mtp)
+    case UMinus(Minus(a, b)) => norm(-a + b, mtp)
 
-    case Plus(args) => plus(norm(args))
+    case Plus(args) => plus(args map (norm(_, mtp)))
     
-    // TODO: don't apply this rule outside of arithmetic comparisons
-    case Minus(a, b) => plus(norm(a), norm(-b))
+    case Minus(a, b) if mtp => plus(norm(a, mtp), norm(-b, mtp))
 
-    case Not(Lt(a, b)) => linear(le, norm(b), norm(a))
-    case Not(Le(a, b)) => linear(lt, norm(b), norm(a))
-    case Not(Gt(a, b)) => linear(le, norm(a), norm(b))
-    case Not(Ge(a, b)) => linear(lt, norm(a), norm(b))
+    case Not(Lt(a, b)) => linear(le, norm(b, mtp = true), norm(a, mtp = true))
+    case Not(Le(a, b)) => linear(lt, norm(b, mtp = true), norm(a, mtp = true))
+    case Not(Gt(a, b)) => linear(le, norm(a, mtp = true), norm(b, mtp = true))
+    case Not(Ge(a, b)) => linear(lt, norm(a, mtp = true), norm(b, mtp = true))
 
-    case Gt(a, b) => linear(lt, norm(b), norm(a))
-    case Ge(a, b) => linear(le, norm(b), norm(a))
+    case Gt(a, b) => linear(lt, norm(b, mtp = true), norm(a, mtp = true))
+    case Ge(a, b) => linear(le, norm(b, mtp = true), norm(a, mtp = true))
 
-    case Lt(a, b) => linear(lt, norm(a), norm(b))
-    case Le(a, b) => linear(le, norm(a), norm(b))
-    case Eq(a, b) => maybeLinear(eq, norm(a), norm(b))
+    case Lt(a, b) => linear(lt, norm(a, mtp = true), norm(b, mtp = true))
+    case Le(a, b) => linear(le, norm(a, mtp = true), norm(b, mtp = true))
+    case Eq(a, b) => maybeLinear(eq, norm(a, mtp = true), norm(b, mtp = true))
 
     case Head(Cons(x, xs)) => norm(x)
     case Tail(Cons(x, xs)) => norm(xs)
@@ -300,7 +302,7 @@ object Simplify {
   }
 
   def norm(exprs: List[Expr]): List[Expr] = {
-    exprs map norm
+    exprs map (norm(_))
   }
 
   def eliminateBindings(phi: Bind): Expr = phi match {
