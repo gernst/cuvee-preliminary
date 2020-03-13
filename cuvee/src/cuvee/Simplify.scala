@@ -78,10 +78,10 @@ case class Simplify(backend: Solver) {
       False
     case _ if backend isTrue phi =>
       True
-    case And.nary(args) =>
+    case And(args) =>
       val _args = con(args)
       and(_args)
-    case Or.nary(args) =>
+    case Or(args) =>
       val _args = dis(args)
       or(_args)
     case _ =>
@@ -105,12 +105,12 @@ case class Simplify(backend: Solver) {
       True
     case Imp(phi, psi) =>
       assuming(phi, psi)
-    case And.nary(args) =>
+    case And(args) =>
       and(args map prove)
-    case Or.nary(args) =>
+    case Or(args) =>
       or(args map prove)
     case Forall(bound, body) =>
-     scoped(bound, body)
+      scoped(bound, body)
     case _ =>
       phi
   }
@@ -120,9 +120,19 @@ object Simplify {
   var debug = false
   var qe = true
 
-  def eq(left: Expr, right: Expr) = {
+  def eq(left: Expr, right: Expr) = (left, right) match {
+    case _ if left == right => True
+    case _ => Eq(left, right)
+  }
+
+  def lt(left: Expr, right: Expr) = {
+    if (left == right) False
+    else Lt(left, right)
+  }
+
+  def le(left: Expr, right: Expr) = {
     if (left == right) True
-    else Eq(left, right)
+    else Le(left, right)
   }
 
   def distinct(args: List[Expr]) = args match {
@@ -143,6 +153,15 @@ object Simplify {
     case _ => Not(phi)
   }
 
+  def plus(arg1: Expr, arg2: Expr): Expr = {
+    plus(List(arg1, arg2))
+  }
+
+  def plus(args: List[Expr]): Expr = {
+    val _args = Plus.flatten(args)
+    Plus(_args.distinct filter (_ != Num.zero))
+  }
+
   def and(args: List[Expr]): Expr = {
     val _args = And.flatten(args)
     if (_args contains False) False
@@ -155,7 +174,10 @@ object Simplify {
     else Or(_args.distinct filter (_ != False))
   }
 
-  def norm(expr: Expr): Expr = expr match {
+  /**
+   * @param mtp minus-to-plus: will convert binary minus to flatten out linear equations
+   */
+  def norm(expr: Expr, mtp: Boolean = false): Expr = expr match {
     // push in negation
     case Not(True) =>
       False
@@ -165,9 +187,9 @@ object Simplify {
       norm(phi)
     case Not(Imp(phi, psi)) =>
       norm(phi && !psi)
-    case Not(And.nary(args)) =>
+    case Not(And(args)) =>
       or(norm(Not(args)))
-    case Not(Or.nary(args)) =>
+    case Not(Or(args)) =>
       and(norm(Not(args)))
     case Not(Bind(quant, formals, body)) =>
       Bind(!quant, formals, norm(!body))
@@ -176,36 +198,32 @@ object Simplify {
 
     case Imp(phi, psi) =>
       norm(!phi || psi)
-    case And.nary(args) =>
+    case And(args) =>
       and(norm(args))
-    case Or.nary(args) =>
+    case Or(args) =>
       or(norm(args))
     case bind: Bind =>
       normQuant(bind)
 
-    // eliminate all but unary minuses
-    case Minus.nary(Nil) => 0
-    case Minus.nary(List(Minus.nary(List(single)))) => norm(single)
-    case Minus.nary(List(Plus.nary(args))) => norm(Plus.nary(args.map(arg => Minus.nary(List(arg)))))
-    case Minus.nary(List(single)) => Minus.nary(List(norm(single)))
-    case Minus.nary(head :: tail) => norm(Plus.nary(head :: tail.map(t => Minus.nary(List(t)))))
+    case UMinus(UMinus(arg)) => norm(arg, mtp)
+    case UMinus(Plus(args)) => norm(Plus(UMinus(args)), mtp)
+    case UMinus(Minus(a, b)) => norm(-a + b, mtp)
 
-    case Plus.nary(Nil) => 0
-    case Plus.nary(List(single)) => norm(single)
-    case Plus.nary(args) => Plus.nary(Plus.flatten(args map norm) map norm)
+    case Plus(args) => plus(args map (norm(_, mtp)))
+    
+    case Minus(a, b) if mtp => plus(norm(a, mtp), norm(-b, mtp))
 
+    case Not(Lt(a, b)) => linear(le, norm(b, mtp = true), norm(a, mtp = true))
+    case Not(Le(a, b)) => linear(lt, norm(b, mtp = true), norm(a, mtp = true))
+    case Not(Gt(a, b)) => linear(le, norm(a, mtp = true), norm(b, mtp = true))
+    case Not(Ge(a, b)) => linear(lt, norm(a, mtp = true), norm(b, mtp = true))
 
-    case Not(Lt(a, b)) => linear(Le, norm(b), norm(a))
-    case Not(Le(a, b)) => linear(Lt, norm(b), norm(a))
-    case Not(Gt(a, b)) => linear(Le, norm(a), norm(b))
-    case Not(Ge(a, b)) => linear(Lt, norm(a), norm(b))
+    case Gt(a, b) => linear(lt, norm(b, mtp = true), norm(a, mtp = true))
+    case Ge(a, b) => linear(le, norm(b, mtp = true), norm(a, mtp = true))
 
-    case Gt(a, b) => linear(Lt, norm(b), norm(a))
-    case Ge(a, b) => linear(Le, norm(b), norm(a))
-
-    case Lt(a, b) => linear(Lt, norm(a), norm(b))
-    case Le(a, b) => linear(Le, norm(a), norm(b))
-    case Eq(a, b) => linear(Eq, norm(a), norm(b))
+    case Lt(a, b) => linear(lt, norm(a, mtp = true), norm(b, mtp = true))
+    case Le(a, b) => linear(le, norm(a, mtp = true), norm(b, mtp = true))
+    case Eq(a, b) => maybeLinear(eq, norm(a, mtp = true), norm(b, mtp = true))
 
     case Head(Cons(x, xs)) => norm(x)
     case Tail(Cons(x, xs)) => norm(xs)
@@ -250,45 +268,47 @@ object Simplify {
     }
   }
 
-  def linear(eq: (Expr, Expr) => Expr, left: Expr, right: Expr): Expr = (left, right) match {
-      case (Plus.nary(lArgs), Plus.nary(rArgs)) =>
-        simplifyPlusEq(eq, lArgs, rArgs)
-      case (Minus.nary(List(lArg: Expr)), Minus.nary(List(rArg: Expr))) =>
-        reverseEq(eq, lArg, rArg)
-      case (left_, right_) if left_ == right_ && eq == Eq => True
-      case (left_, right_) => eq(left_, right_)
+  def partitionSum(args: List[Expr]) = partition(args) {
+    // need to qualify fully because of an IntelliJ bug :(
+    case UMinus(arg) => scala.util.Right(arg)
+    case arg => scala.util.Left(arg)
   }
 
-  private def simplifyPlusEq(eq: (Expr, Expr) => Expr, lArgs: List[Expr], rArgs: List[Expr]) = {
-    val common = lArgs.intersect(rArgs)
-    val lArgs_ = lArgs.filterNot(common.contains)
-    val rArgs_ = rArgs.filterNot(common.contains)
-    (lArgs_, rArgs_) match {
-      case (List(Minus.nary(List(lArg: Expr))), List(Minus.nary(List(rArg: Expr)))) =>
-        reverseEq(eq, lArg, rArg)
-      case (left_, right_) => eq(plus(left_), plus(right_))
-    }
+  def maybeLinear(op: (Expr, Expr) => Expr, left: Expr, right: Expr): Expr = (left, right) match {
+    case (App(Id.plus, _), _) => linear(eq, left, right)
+    case (_, App(Id.plus, _)) => linear(eq, left, right)
+    case _ => op(left, right)
   }
 
-  def reverseEq[T](eq: (Expr, Expr) => T, left: Expr, right: Expr): T = eq match {
-    case Eq => eq(left, right)
-    case _ => eq(right, left)
-  }
+  def linear(op: (Expr, Expr) => Expr, left: Expr, right: Expr): Expr = {
+    // Note: don't use val Plus(lefts) = left
+    //       because that requires at least one +
+    val l1 = Plus.flatten(left)
+    val r1 = Plus.flatten(right)
 
-  def plus(args: List[Expr]): Expr = args match {
-    case Nil => 0
-    case single :: Nil => single
-    case more => Plus.nary(more)
+    // Partition into positive and negative terms
+    val (pl, ml) = partitionSum(l1)
+    val (pr, mr) = partitionSum(r1)
+
+    // Swap negative terms to other side
+    val l2 = pl ++ mr
+    val r2 = pr ++ ml
+
+    // Symmetric difference
+    val l3 = l2 filterNot r2.contains
+    val r3 = r2 filterNot l2.contains
+
+    op(plus(l3), plus(r3))
   }
 
   def norm(exprs: List[Expr]): List[Expr] = {
-    exprs map norm
+    exprs map (norm(_))
   }
 
   def eliminateBindings(phi: Bind): Expr = phi match {
     case Bind(quant, formals, body) => body match {
-      case And.nary(args) => quant(formals, And.nary(eliminateBindingsFromNary(formals, args, false)))
-      case Or.nary(args) => quant(formals, Or.nary(eliminateBindingsFromNary(formals, args, true)))
+      case And(args) => quant(formals, And(eliminateBindingsFromNary(formals, args, false)))
+      case Or(args) => quant(formals, Or(eliminateBindingsFromNary(formals, args, true)))
       case _ => phi
     }
   }

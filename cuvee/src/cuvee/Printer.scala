@@ -128,9 +128,9 @@ object Printer {
       indent + "(not\n" + format(phi, indent + "  ") + ")"
     case Imp(phi, psi) =>
       indent + "(=>\n" + format(phi, indent + "  ") + "\n" + format(psi, indent + "  ") + ")"
-    case And.nary(args) =>
+    case And(args) =>
       indent + "(and\n" + format(args, indent + "  ") + ")"
-    case Or.nary(args) =>
+    case Or(args) =>
       indent + "(or\n" + format(args, indent + "  ") + ")"
     case Bind(quant, formals, body) =>
       indent + "(" + quant + "\n" + indent + "  " + sexpr(formals) + "\n" + format(body, indent + "  ") + ")"

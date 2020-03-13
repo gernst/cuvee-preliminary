@@ -35,6 +35,22 @@ package object cuvee {
   implicit def toTypeMap(formals: List[Formal]) = formals map (f => f.id -> f.typ) toMap
   implicit def tpTypeMap(pairs: List[(Id, Type)]) = pairs.map(p => p._1 -> p._2) toMap
 
+  def partition[A, B, C](as: List[A])(f: A => Either[B, C]): (List[B], List[C]) = {
+    import scala.collection.mutable
+    val left = mutable.ListBuffer[B]()
+    val right = mutable.ListBuffer[C]()
+
+    for (a <- as) {
+      f(a) match {
+        // need to qualify fully because of an IntelliJ bug :(
+        case scala.util.Left(b) => left append b
+        case scala.util.Right(c) => right append c
+      }
+    }
+
+    (left.toList, right.toList)
+  }
+
   implicit class IntOps(self: Int) {
     def times(f: => Unit) = {
       for (i <- 0 until self) {
