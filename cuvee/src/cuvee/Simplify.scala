@@ -269,9 +269,8 @@ object Simplify {
   }
 
   def partitionSum(args: List[Expr]) = partition(args) {
-    // need to qualify fully because of an IntelliJ bug :(
-    case UMinus(arg) => scala.util.Right(arg)
-    case arg => scala.util.Left(arg)
+    case UMinus(arg) => Right(arg)
+    case arg => Left(arg)
   }
 
   def maybeLinear(op: (Expr, Expr) => Expr, left: Expr, right: Expr): Expr = (left, right) match {
