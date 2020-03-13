@@ -19,17 +19,6 @@ object Assoc {
 }
 
 object Sugar {
-  /* class nullary(val fun: Id) {
-    def unapply(expr: Expr) = expr match {
-      case App(`fun`, List()) => Some(())
-      case _ => None
-    }
-
-    def apply() = {
-      App(fun, List())
-    }
-  } */
-
   class unary(val fun: Id) extends (Expr => Expr) {
     def unapply(expr: Expr) = expr match {
       case App(`fun`, List(arg)) => Some(arg)
@@ -87,15 +76,4 @@ object Sugar {
         None
     }
   }
-
-  /* class ternary(val fun: Id) extends ((Expr, Expr, Expr) => Expr) {
-    def unapply(expr: Expr) = expr match {
-      case App(`fun`, List(arg1, arg2, arg3)) => Some((arg1, arg2, arg3))
-      case _ => None
-    }
-
-    def apply(arg1: Expr, arg2: Expr, arg3: Expr): Expr = {
-      App(fun, List(arg1, arg2, arg3))
-    }
-  } */
 }

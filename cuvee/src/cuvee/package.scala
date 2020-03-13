@@ -40,8 +40,9 @@ package object cuvee {
 
     for (a <- as) {
       f(a) match {
-        case Left(b) => left append b
-        case Right(c) => right append c
+        // need to qualify fully because of an IntelliJ bug :(
+        case scala.util.Left(b) => left append b
+        case scala.util.Right(c) => right append c
       }
     }
 

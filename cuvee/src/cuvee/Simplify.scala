@@ -120,6 +120,11 @@ object Simplify {
   var debug = false
   var qe = true
 
+  def eq(left: Expr, right: Expr) = (left, right) match {
+    case _ if left == right => True
+    case _ => Eq(left, right)
+  }
+
   def lt(left: Expr, right: Expr) = {
     if (left == right) False
     else Lt(left, right)
@@ -128,11 +133,6 @@ object Simplify {
   def le(left: Expr, right: Expr) = {
     if (left == right) True
     else Le(left, right)
-  }
-
-  def eq(left: Expr, right: Expr) = (left, right) match {
-    case _ if left == right => True
-    case _ => Eq(left, right)
   }
 
   def distinct(args: List[Expr]) = args match {
@@ -267,8 +267,9 @@ object Simplify {
   }
 
   def partitionSum(args: List[Expr]) = partition(args) {
-    case UMinus(arg) => Right(arg)
-    case arg => Left(arg)
+    // need to qualify fully because of an IntelliJ bug :(
+    case UMinus(arg) => scala.util.Right(arg)
+    case arg => scala.util.Left(arg)
   }
 
   def maybeLinear(op: (Expr, Expr) => Expr, left: Expr, right: Expr): Expr = (left, right) match {
