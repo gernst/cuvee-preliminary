@@ -21,10 +21,14 @@ object Check {
     case Note(expr, _) =>
       infer(expr, ty, st)
 
+    case UMinus(arg) =>
+      ensure(infer(arg, ty, st) == Sort.int)
+      Sort.int
+
     case App(id, args) if (st.funs contains id) =>
       val ts1 = args map (infer(_, ty, st))
       val (ts2, tr) = st funs id
-      ensure(ts1 == ts2, "arguments do not match function signature", id, ts1, ts2)
+      ensure(ts1 == ts2, "arguments do not match function signature", expr, id, ts1, ts2)
       tr
 
     case App(id, _) =>
