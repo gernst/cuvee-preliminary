@@ -133,11 +133,8 @@ object Eval {
     case Distinct(args) =>
       Distinct(args map (eval(_, env, old, st)))
 
-    case And.nary(args) =>
-      And(args map (eval(_, env, old, st)))
-
-    case Or.nary(args) =>
-      Or(args map (eval(_, env, old, st)))
+    case UMinus(arg) =>
+      UMinus(eval(arg, env, old, st))
 
     case App(id, args) if (st.funs contains id) =>
       val (types, res) = st funs id
@@ -298,7 +295,7 @@ object Eval {
         // ⋀ s'. ¬ test s' ⟹ I s' ⟹ Q s s' ⟹ Q s0 s'
         val _test2 = eval(test, env2, env1 :: old, st)
         val _inv2 = eval(phi, env2, env1 :: old, st)
-        
+
         val post1 = eval(post, ???)
         // s0 == env0
         // s  == env1

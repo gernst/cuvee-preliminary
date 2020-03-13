@@ -53,7 +53,7 @@ object Parser {
   val list_ = P(Type.list("List" ~ typ))
 
   val pat: Parser[Pat] = P(id | parens(unapp_))
-  val expr: Parser[Expr] = P(id | num | parens(as_ | bind_ | distinct_ | imp_ | and_ | or_ | eq_ | ite_ | let_ | match_ | select_ | store_ | old_ | wp_ | box_ | dia_ | app_))
+  val expr: Parser[Expr] = P(id | num | parens(as_ | bind_ | distinct_ | ite_ | let_ | match_ | select_ | store_ | old_ | wp_ | box_ | dia_ | app_))
 
   val id = P(Id(name | op))
 
@@ -66,11 +66,7 @@ object Parser {
 
   val as_ = P(As("as" ~ id ~ sort))
   val old_ = P(Old("old" ~ expr))
-  val imp_ = P(Imp("=>" ~ expr ~ expr)) // singled out to avoid clash with "="
-  val and_ = P(And.nary("and" ~ expr.*))
-  val or_ = P(Or.nary("or" ~ expr.*))
   val distinct_ = P(Distinct("distinct" ~ expr.*))
-  val eq_ = P(Eq("=" ~ expr ~ expr))
   val ite_ = P(Ite("ite" ~ expr ~ expr ~ expr))
   val let_ = P(Let("let" ~ parens(pairs) ~ expr))
 
