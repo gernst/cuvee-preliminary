@@ -59,6 +59,7 @@ case class State(
   }
 
   def const(id: Id): Formal = {
+    // this is not used
     ensure(funs contains id, "undeclared identifier", id, funs)
     val (args, res) = funs(id)
     ensure(args.isEmpty, "not constant", id)
@@ -87,29 +88,33 @@ case class State(
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr): State = {
     ensure(!(funs contains id), "const already defined", id)
-    copy(
+    val newState = copy(
       funs = funs + (id -> (formals, res)),
       fundefs = fundefs + (id -> (formals, body)))
+    val bodyType = Check.infer(body, formals, newState)
+    ensure(bodyType == res, s"Expected type of $id to be $res but was $bodyType")
+    newState
   }
 
-  def define(id: Id, proc: Proc) = {
+  def define(id: Id, proc: Proc): State = {
     ensure(!(procs contains id), "procedure already defined", id)
-    Check.checkProc(id, proc)
     val ins: List[Type] = proc.in
     val outs: List[Type] = proc.out
-    copy(
+    val newState = copy(
       procs = procs + (id -> (ins, outs)),
       procdefs = procdefs + (id -> proc))
+    Check.checkProc(id, proc, newState)
+    newState
   }
 
   def define(sort: Sort, obj: Obj): State = {
     ensure(!(objects contains sort), "object already defined", sort)
-    Check.checkObj(sort, obj)
+    Check.checkObj(sort, obj, this)
     copy(
       objects = objects + (sort -> obj))
   }
 
-  def declare(sort: Sort, arity: Int, decl: Datatype): State = {
+  private def declare(sort: Sort, arity: Int, decl: Datatype): State = {
     var st = declare(sort, arity)
     ensure(arity == decl.params.length, "arity mismatch", arity, decl.params)
 
@@ -139,6 +144,8 @@ case class State(
   }
 
   def assert(expr: Expr) = {
+    val typ = Check.infer(expr, Map.empty, this);
+    ensure(typ == Sort.bool, s"Expected expression type to be boolean but was $typ")
     copy(
       rasserts = expr :: rasserts)
   }

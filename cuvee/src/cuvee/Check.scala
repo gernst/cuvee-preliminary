@@ -1,5 +1,7 @@
 package cuvee
 
+import cuvee.Type.array
+
 object Check {
   def infer(expr: Expr, ty: Map[Id, Type], st: State): Type = expr match {
     case _: Num =>
@@ -61,9 +63,46 @@ object Check {
       val vars = pairs.map(pair => pair.x -> infer(pair.e, ty, st)).toMap
       infer(body, ty ++ vars, st)
 
-    case Match(expr, cases) => ???
-    case Select(array, index) => ???
-    case Store(array, index, value) => ???
+    case Match(expr, cases) =>
+      infer(expr, ty, st) match {
+        case sort: Sort =>
+          ensure(st.datatypes contains sort, s"trying to match non-datatype $sort")
+          val types = for (Case(pat, expr) <- cases) yield {
+            inferCase(sort, pat, expr, ty, st)
+          }
+          ensure(types.distinct.size == 1, s"match cases must return equal type but found ${types.distinct.mkString(", ")}")
+          types.head
+        case typ => error(s"can only match sorts, found $typ")
+      }
+
+    case Select(arr, index) => infer(arr, ty, st) match {
+      case array(dom, ran) =>
+        val idxType = infer(index, ty, st)
+        ensure(idxType == dom, s"expected index to be of type $dom byt was $idxType", index)
+        ran
+      case other =>
+        error(s"expected array type but got $other", arr)
+    }
+    case Store(arr, index, value) => infer(arr, ty, st) match {
+      case array(dom, ran) =>
+        val idxType = infer(index, ty, st)
+        ensure(idxType == dom, s"expected index to be of type $dom byt was $idxType", index)
+        val valType = infer(value, ty, st)
+        ensure(valType == ran, s"expected value to be stored in array of type $ran but was $valType", value)
+        array(dom, ran)
+      case other =>
+        error(s"expected array type but got $other", arr)
+    }
+  }
+
+  private def inferCase(typ: Type, pat: Pat, expr: Expr, ty: Map[Id, Type], st: State): Type = pat match {
+    case id: Id => infer(expr, ty + (id -> typ), st)
+    case UnApp(fun, args) =>
+      ensure(st.funs contains fun, s"unknown constructor $fun")
+      val (constrTypes, datatype) = st.funs(fun)
+      ensure(typ == datatype, s"trying to match $typ with $datatype-constructor $fun")
+      ensure(args.length == constrTypes.length, s"wrong number of arguments for $fun")
+      infer(expr, ty ++ args.zip(constrTypes), st)
   }
 
   private def inferWpLike(prog: Prog, post: Expr, ty: Map[Id, Type], st: State): Type = {
@@ -85,9 +124,17 @@ object Check {
 
     case Assign(pairs) =>
       for (Pair(id, value) <- pairs) {
-        val expected = ty.getOrElse(id, () => error("undefined variable", id))
+        val expected: Type = if (ty contains id) {
+          ty(id)
+        } else if (st.funs.contains(id) && st.funs(id)._1.isEmpty) {
+          // is this okay tho? it's called a _constant_
+          // this is used in compare.smt2
+          st.funs(id)._2
+        } else {
+          error(s"unknown variable $id")
+        }
         val actual = infer(value, ty, st)
-        ensure(expected == actual, "value type must match variable type in assignment", id, value)
+        ensure(expected == actual, s"expected $value to have type $expected but was $actual", id, value)
       }
 
     case Spec(xs, pre, post) =>
@@ -117,22 +164,29 @@ object Check {
 
     case Call(name, _, _) =>
       error("call to undefined procedure", name)
+
+    case Choose(xs, phi) =>
+      for (x <- xs) {
+        ensure(ty contains x, "unknown variable $x")
+      }
+      val typ = infer(phi, ty, st)
+      ensure(typ == Sort.bool, "condition of choose must be boolean but was $typ")
   }
 
-  def checkObj(sort: Sort, obj: Obj): Unit = {
-    val Obj(state, init, ops) = obj
-    Check.checkProc(Id.init, init, state)
-    ops.foreach(proc => Check.checkProc(proc._1, proc._2, state))
+  def checkObj(sort: Sort, obj: Obj, st: State): Unit = {
+    val Obj(xs, init, ops) = obj
+    Check.checkProc(Id.init, init, st, xs)
+    ops.foreach(proc => Check.checkProc(proc._1, proc._2, st, xs))
   }
 
   /**
    * Does some basic checks on a procedure w.r.t. well-definedness. This exludes anything that requires knowledge about
    * the state.
    *
-   * @param id    name of the procedure for error messages
-   * @param state (optional) state of the surrounding object if this procedure is defined on an object
+   * @param id name of the procedure for error messages
+   * @param xs (optional) state of the surrounding object if this procedure is defined on an object
    */
-  def checkProc(id: Id, proc: Proc, state: List[Formal] = Nil): Unit = {
+  def checkProc(id: Id, proc: Proc, st: State, xs: List[Formal] = Nil): Unit = {
     val Proc(in, out, pre, post, body) = proc
     val inVars: List[Id] = in
     val duplicateInputDeclarations = inVars.groupBy(identity).filter(_._2.size > 1)
@@ -144,22 +198,24 @@ object Check {
     ensure(nonUniqueAgruments.isEmpty, "The method $id declares non-unique type for argument ${nonUniqueAgruments.keys.mkString(", ")}")
 
     for (body <- body) {
-      checkBody(id, body, in, out, state)
+      checkBody(id, body, in, out, st, xs)
     }
   }
 
-  def checkBody(id: Id, body: Body, in: List[Formal], out: List[Formal], state: List[Formal] = Nil): Unit = {
+  def checkBody(id: Id, body: Body, in: List[Formal], out: List[Formal], st: State, xs: List[Formal] = Nil): Unit = {
     val inVars: List[Id] = in
 
-    // procedure must at most modify its output variables
-    val modifiableVariables: List[Id] = (in ++ out ++ state).distinct
+    // procedure must at most modify its own variables
+    val modifiableVariables: List[Id] = (in ++ out ++ xs ++ body.locals).distinct
     val modifiedVariables = body.mod
     val illegallyModifiedVariables = modifiedVariables.filter(!modifiableVariables.contains(_))
-    ensure(illegallyModifiedVariables.isEmpty, s"The method $id modifies undeclared output parameters ${illegallyModifiedVariables.mkString(", ")}")
+    ensure(illegallyModifiedVariables.isEmpty, s"The method $id modifies undeclared variables ${illegallyModifiedVariables.mkString(", ")}")
 
     // procedure must at least modify output variables that are not input variables
     val outputsThatMustBeSet = out.map(_.id).filter(!inVars.contains(_))
     val unsetOutputs = outputsThatMustBeSet.filter(!modifiedVariables.contains(_))
     ensure(unsetOutputs.isEmpty, s"The method $id does not modify its output parameters ${unsetOutputs.mkString(", ")}")
+
+    checkProg(body.prog, in ++ out ++ body.locals ++ xs, st, loop = false)
   }
 }

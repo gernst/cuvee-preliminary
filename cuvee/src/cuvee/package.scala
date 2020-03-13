@@ -32,6 +32,8 @@ package object cuvee {
   implicit def toIds(formals: List[Formal]) = formals map (_.id)
   implicit def toTypes(formals: List[Formal]) = formals map (_.typ)
   implicit def toTyping(formals: List[Formal]) = formals map (f => (f.id, f.typ))
+  implicit def toTypeMap(formals: List[Formal]) = formals map (f => f.id -> f.typ) toMap
+  implicit def tpTypeMap(pairs: List[(Id, Type)]) = pairs.map(p => p._1 -> p._2) toMap
 
   implicit class IntOps(self: Int) {
     def times(f: => Unit) = {
