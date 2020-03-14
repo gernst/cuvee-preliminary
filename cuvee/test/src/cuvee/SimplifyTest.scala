@@ -9,7 +9,7 @@ object SimplifyTest extends TestSuite {
   }
 
   test("remove from minus") {
-    assertEquals(simplifyInt(e"(= (- a b) (- a c))"), e"(= b c)")
+    assertEquals(simplifyInt(e"(= (- a b) (- a c))"), e"(= c b)") // Note: swaps sides
   }
 
   test("remove from gt") {
@@ -21,7 +21,15 @@ object SimplifyTest extends TestSuite {
   }
 
   test("flatten addition") {
-    assertEquals(Simplify.norm(e"(= (+ balance (- 0 amount)) (+ credit (- 0 (+ debit amount))))"), e"(= balance (+ credit (- 0 debit)))")
+    assertEquals(Simplify.norm(e"(= (+ balance (- 0 amount)) (+ credit (- 0 (+ debit amount))))"), e"(= (+ balance debit) credit)")
+  }
+
+  test("don't replace minus without equation") {
+    assertEquals(Simplify.norm(e"(- a b)"), e"(- a b)")
+  }
+
+  test("don't replace minus in equation when it is an argument to an unknown function") {
+    assertEquals(Simplify.norm(e"(= 0 (f (- a b)))"), e"(= 0 (f (- a b)))")
   }
 
   private def simplifyInt(phi: Expr): Expr = {

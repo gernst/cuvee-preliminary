@@ -75,37 +75,34 @@ sealed trait Pat {
 }
 
 sealed trait Expr extends Expr.term {
-  def ?(left: Expr, right: Expr) = App(Id.ite, this, left, right)
+  def ?(left: Expr, right: Expr) = Ite(this, left, right)
 
-  def ^(that: Expr) = App(Id.exp, this, that)
-  def *(that: Expr) = App(Id.times, this, that)
-  def /(that: Expr) = App(Id.divBy, this, that)
-  def %(that: Expr) = App(Id.mod, this, that)
+  def ^(that: Expr) = Exp(this, that)
+  def *(that: Expr) = Times(this, that)
+  def /(that: Expr) = DivBy(this, that)
+  def %(that: Expr) = Mod(this, that)
 
-  def unary_- = App(Id.uminus, this)
-  def +(that: Expr) = App(Id.plus, this, that)
-  def -(that: Expr) = App(Id.minus, this, that)
+  def unary_- = UMinus(this)
+  def +(that: Expr) = Plus(this, that)
+  def -(that: Expr) = Minus(this, that)
   def ===(that: Expr) = Eq(this, that)
   def !==(that: Expr) = !(this === that)
 
-  def <=(that: Expr) = App(Id.le, this, that)
-  def <(that: Expr) = App(Id.lt, this, that)
-  def >=(that: Expr) = App(Id.ge, this, that)
-  def >(that: Expr) = App(Id.gt, this, that)
+  def <=(that: Expr) = Le(this, that)
+  def <(that: Expr) = Lt(this, that)
+  def >=(that: Expr) = Ge(this, that)
+  def >(that: Expr) = Gt(this, that)
 
-  def unary_! = App(Id.not, this)
-  def &&(that: Expr) = App(Id.and, this, that)
-  def ||(that: Expr) = App(Id.or, this, that)
-  def ==>(that: Expr) = App(Id.imp, this, that)
+  def unary_! = Not(this)
+  def &&(that: Expr) = And(this, that)
+  def ||(that: Expr) = Or(this, that)
+  def ==>(that: Expr) = Imp(this, that)
 
-  def isNil = this === App(Id.nil)
-  def ::(that: Expr) = App(Id.cons, that, this)
+  def isNil = this === Id.nil
+  def ::(that: Expr) = Cons(this, that)
 
-  def in(that: Expr) = App(Id.in, this, that)
-  def head = App(Id.head, this)
-  def tail = App(Id.tail, this)
-  def last = App(Id.last, this)
-  def init = App(Id.init, this)
+  def head = Head(this)
+  def tail = Tail(this)
 
   def select(index: Expr) = Select(this, index)
   def store(index: Expr, arg: Expr) = Store(this, index, arg)
@@ -133,8 +130,7 @@ object Id extends (String => Id) {
     Id(name, None)
   }
 
-  val ite = Id("ite")
-
+  val _eq = Id("=")
   val exp = Id("exp")
   val abs = Id("abs")
   val times = Id("*")
@@ -145,7 +141,6 @@ object Id extends (String => Id) {
   val plus = Id("+")
   val minus = Id("-")
 
-  val _eq = Id("=")
   val le = Id("<=")
   val lt = Id("<")
   val ge = Id(">=")
@@ -158,7 +153,6 @@ object Id extends (String => Id) {
 
   val nil = Id("nil")
   val cons = Id("cons")
-  val in = Id("in")
   val head = Id("head")
   val tail = Id("tail")
   val last = Id("last")
@@ -177,6 +171,11 @@ case class Num(value: BigInt) extends Expr {
   def rename(re: Map[Id, Id]) = this
   def subst(su: Map[Id, Expr]) = this
   override def toString = value.toString
+}
+
+object Num extends (BigInt => Num) {
+  val zero = Num(0)
+  val one = Num(1)
 }
 
 case class Attr(name: String, arg: Option[String]) {
@@ -226,34 +225,18 @@ case class Distinct(exprs: List[Expr]) extends Expr {
   override def toString = sexpr("distinct", exprs: _*)
 }
 
-object Not extends Sugar.unary(Id.not) {
-  def apply(args: List[Expr]) = {
-    args map this
-  }
-}
+object Not extends Sugar.unary(Id.not)
+object Imp extends Sugar.binary(Id.imp)
+object And extends Sugar.commutative(Id.and, True, Assoc.left)
+object Or extends Sugar.commutative(Id.or, False, Assoc.left)
 
-object Imp extends Sugar.binary(Id.imp, false, Right)
-
-object And extends Sugar.binary(Id.and) {
-  def apply(args: List[Expr]) = args match {
-    case List() => True
-    case List(arg) => arg
-    case _ => nary(args)
-  }
-}
-
-object Or extends Sugar.binary(Id.or) {
-  def apply(args: List[Expr]) = args match {
-    case List() => False
-    case List(arg) => arg
-    case _ => nary(args)
-  }
-}
-
-object Plus extends Sugar.binary(Id.plus)
-object Minus extends Sugar.binary(Id.minus, false)
-object Times extends Sugar.binary(Id.times)
-object DivBy extends Sugar.binary(Id.divBy, false)
+object UMinus extends Sugar.unary(Id.uminus)
+object Plus extends Sugar.commutative(Id.plus, Num.zero, Assoc.left)
+object Minus extends Sugar.binary(Id.minus)
+object Times extends Sugar.commutative(Id.times, Num.one, Assoc.left)
+object DivBy extends Sugar.binary(Id.divBy)
+object Mod extends Sugar.binary(Id.mod)
+object Exp extends Sugar.binary(Id.exp)
 
 object Lt extends Sugar.binary(Id.lt)
 object Le extends Sugar.binary(Id.le)
@@ -262,7 +245,7 @@ object Ge extends Sugar.binary(Id.ge)
 
 object Head extends Sugar.unary(Id.head)
 object Tail extends Sugar.unary(Id.tail)
-object Cons extends Sugar.binary(Id.cons, false, Right)
+object Cons extends Sugar.binary(Id.cons)
 
 case class Ite(test: Expr, left: Expr, right: Expr) extends Expr {
   def free = test.free ++ left.free ++ right.free
@@ -325,6 +308,13 @@ case class App(fun: Id, args: List[Expr]) extends Expr {
   override def toString = sexpr(fun, args: _*)
 }
 
+object App {
+  // Needed only in Tests
+  def apply(fun: Id, args: Expr*): App = {
+    App(fun, args.toList)
+  }
+}
+
 case class UnApp(fun: Id, args: List[Id]) extends Pat {
   def bound = Set(args: _*)
   def toExpr = App(fun, args)
@@ -332,32 +322,19 @@ case class UnApp(fun: Id, args: List[Id]) extends Pat {
   override def toString = sexpr(fun, args: _*)
 }
 
-object App {
-  def apply(fun: Id, args: Expr*): App = {
-    App(fun, args.toList)
-  }
-
-  def apply(fun: Id, args: List[Expr]): App = {
-    (fun, args) match {
-      // Hacks for parsing non-binary variants of some functions which are internally binary
-      case (Id.minus, multi) if multi.size != 2 =>
-        Minus.nary(multi)
-      case (Id.plus, multi) if multi.size != 2 =>
-        Plus.nary(multi)
-      case (Id.times, multi) if multi.size != 2 =>
-        Times.nary(multi)
-      case (Id.divBy, multi) if multi.size != 2 =>
-        DivBy.nary(multi)
-      case _ =>
-        new App(fun, args)
-    }
-  }
-}
-
 object Apps extends (List[Expr] => Expr) {
   def apply(exprs: List[Expr]): Expr = exprs match {
     case Nil => error("empty application")
     case List(expr) => expr
+    case List(Id.uminus, arg) => UMinus(arg)
+    case List(Id._eq, arg1, arg2) => Eq(arg1, arg2)
+    case Id.plus :: args => Plus(args)
+    case Id.minus :: args => Minus.left(args)
+    case Id.times :: args => Times(args)
+    case Id.divBy :: args => DivBy.left(args)
+    case Id.and :: args => And(args)
+    case Id.or :: args => Or(args)
+    case Id.imp :: args => Imp.right(args)
     case (fun: Id) :: args => App(fun, args)
     case _ => error("higher-order application", exprs)
   }

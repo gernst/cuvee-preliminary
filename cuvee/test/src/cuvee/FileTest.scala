@@ -72,12 +72,12 @@ object FileTest extends TestSuite {
     }
   } */
 
-  private def checkVsReferenceOutput(fileName: String, expected: String) = {
+  private def checkVsReferenceOutput(fileName: String, given: String) = {
     val outFile = new File(fileName.substring(0, fileName.length - 4) + "out.smt2")
     if (outFile.exists()) {
-      val reference = VerifyTest.runUnwrappingErrors(Script.from(outFile))
-      val actual = Script.from(expected)
-      assertEquals(actual, reference)
+      val expected = VerifyTest.runUnwrappingErrors(Script.from(outFile))
+      val actual = Script.from(given)
+      assertEquals(actual, expected)
     }
   }
 }
