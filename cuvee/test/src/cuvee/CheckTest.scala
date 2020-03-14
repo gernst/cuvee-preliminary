@@ -72,6 +72,21 @@ object CheckTest extends TestSuite {
     assertError(checkProg(p"(spec (x) (> x false) (<= x 0))", xDef), "signature")
   }
 
+  test("Infer errors are presented as stack") {
+    assertError(infer(e"(ite (> 0 (and x y)) 1 0)", List("x", "y").map(s => Formal(id(s), Sort.int))),
+      "arguments for and do not match function signature. Expected (Bool, Bool) but was (Int, Int)\n" +
+        "(and x y)\n" +
+        "(> 0 (and x y))\n" +
+        "(ite (> 0 (and x y)) 1 0)")
+  }
+
+  test("Check prog errors are presented as stack") {
+    assertError(checkProg(p"(if (> 0 x) (assign (y true)))", List("x", "y").map(s => Formal(id(s), Sort.int))),
+      "value of type Bool cannot be assigned to variable y of type Int\n" +
+        "(assign ((y true)))\n" +
+        "(if (> 0 x) (assign ((y true))) (block))")
+  }
+
   private def assertError[T](fn: => T, message: String)(implicit pos: SourceLocation): Unit = {
     try {
       fn
