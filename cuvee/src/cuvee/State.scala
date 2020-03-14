@@ -87,10 +87,12 @@ case class State(
   }
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr): State = {
-    ensure(!(funs contains id), "const already defined", id)
+    ensure(!(funs contains id), "function already defined", id)
     val newState = copy(
       funs = funs + (id -> (formals, res)),
       fundefs = fundefs + (id -> (formals, body)))
+
+    // check new state in case function is recursive
     val bodyType = Check.infer(body, formals, newState)
     ensure(bodyType == res, s"Expected type of $id to be $res but was $bodyType")
     newState
@@ -100,15 +102,19 @@ case class State(
     ensure(!(procs contains id), "procedure already defined", id)
     val ins: List[Type] = proc.in
     val outs: List[Type] = proc.out
+
     val newState = copy(
       procs = procs + (id -> (ins, outs)),
       procdefs = procdefs + (id -> proc))
+
+    // check new state in case proc is recursive
     Check.checkProc(id, proc, newState)
     newState
   }
 
   def define(sort: Sort, obj: Obj): State = {
     ensure(!(objects contains sort), "object already defined", sort)
+    // don't put procs in state => can't be recursive
     Check.checkObj(sort, obj, this)
     copy(
       objects = objects + (sort -> obj))
