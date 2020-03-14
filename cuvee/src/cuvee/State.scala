@@ -58,14 +58,6 @@ case class State(
     Env(su, ty)
   }
 
-  def const(id: Id): Formal = {
-    // this is not used
-    ensure(funs contains id, "undeclared identifier", id, funs)
-    val (args, res) = funs(id)
-    ensure(args.isEmpty, "not constant", id)
-    Formal(id, res)
-  }
-
   def declare(sort: Sort, arity: Int): State = {
     ensure(!(sorts contains sort), "sort already defined", sort)
     copy(
