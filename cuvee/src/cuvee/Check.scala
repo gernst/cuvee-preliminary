@@ -12,52 +12,55 @@ object Check {
 
     case id: Id if (st.funs contains id) =>
       val (ts, tr) = st funs id
-      ensure(ts.isEmpty, "not constant", expr, ty)
+      ensure(ts.isEmpty, s"not a constant: $id", expr)
       tr
 
     case _: Id =>
-      error(s"unknown identifier $expr", ty)
+      error(s"unknown identifier $expr")
 
     case Note(expr, _) =>
       infer(expr, ty, st)
 
     case UMinus(arg) =>
       val typ = infer(arg, ty, st)
-      ensure(typ == Sort.int, s"argument for unary minus must be integer but was $typ", arg)
+      ensure(typ == Sort.int, s"argument for unary minus must be integer but was $typ", expr)
       Sort.int
 
     case App(id, args) if (st.funs contains id) =>
       val ts1 = args map (infer(_, ty, st))
       val (ts2, tr) = st funs id
-      ensure(ts1 == ts2, "arguments do not match function signature", expr, id, ts1, ts2)
+      ensure(ts1 == ts2, s"arguments for $id do not match function signature. Expected $ts2 but got $ts1", expr)
       tr
 
     case App(id, _) =>
-      error("unknown function", id, expr, ty, st)
+      error(s"unknown function $id", expr)
 
     case Bind(_, formals, body) =>
       val ts: List[(Id, Type)] = formals
       val tr = infer(body, ty ++ ts, st)
-      ensure(tr == Sort.bool, "body of bind must be boolean", body, tr)
+      ensure(tr == Sort.bool, s"body of bind must be boolean but was $tr", expr)
       tr
 
     case Old(expr) =>
       infer(expr, ty, st)
 
     case Eq(left, right) =>
-      ensure(infer(left, ty, st) == infer(right, ty, st), "types of sides of equals must match")
+      val lt = infer(left, ty, st)
+      val rt = infer(right, ty, st)
+      ensure(lt == rt, s"types of sides of equals must match but were $lt and $rt", expr)
       Sort.bool
 
     case Distinct(exprs) =>
       val types = exprs.map(infer(_, ty, st)).distinct
-      ensure(types.length == 1, "types of arguments of distinct must match")
+      ensure(types.length == 1, s"types of arguments of distinct must match but were ${types mkString " != "}", expr)
       Sort.bool
 
     case Ite(test, left, right) =>
-      ensure(infer(test, ty, st) == Sort.bool, "test of if-then-else expression must be boolean", test)
+      val tt = infer(test, ty, st)
+      ensure(tt == Sort.bool, s"test of if-then-else expression must be boolean but was $tt", expr)
       val lt = infer(left, ty, st)
       val rt = infer(right, ty, st)
-      ensure(lt == rt, "types of then- and else-clause must match", left, lt, right, rt)
+      ensure(lt == rt, s"types of then- and else-clause must match but were $lt != $rt", expr)
       lt
 
     case WP(prog, post) => inferWpLike(prog, post, ty, st)
@@ -71,42 +74,43 @@ object Check {
     case Match(expr, cases) =>
       infer(expr, ty, st) match {
         case sort: Sort =>
-          ensure(st.datatypes contains sort, s"trying to match non-datatype $sort")
+          ensure(st.datatypes contains sort, s"trying to match non-datatype $sort", expr)
           val types = for (Case(pat, expr) <- cases) yield {
             inferCase(sort, pat, expr, ty, st)
           }
-          ensure(types.distinct.size == 1, s"match cases must return equal type but found ${types.distinct.mkString(", ")}")
+          ensure(types.distinct.size == 1, s"match cases must return equal type but found ${types.distinct.mkString(", ")}", expr)
           types.head
-        case typ => error(s"can only match sorts, found $typ")
+        case typ => error(s"can only match sorts, found $typ", expr)
       }
 
     case Select(arr, index) => infer(arr, ty, st) match {
       case array(dom, ran) =>
         val idxType = infer(index, ty, st)
-        ensure(idxType == dom, s"expected index to be of type $dom byt was $idxType", index)
+        ensure(idxType == dom, s"expected index to be of type $dom byt was $idxType", expr)
         ran
       case other =>
-        error(s"expected array type but got $other", arr)
+        error(s"expected array type but got $other", expr)
     }
+
     case Store(arr, index, value) => infer(arr, ty, st) match {
       case array(dom, ran) =>
         val idxType = infer(index, ty, st)
-        ensure(idxType == dom, s"expected index to be of type $dom byt was $idxType", index)
+        ensure(idxType == dom, s"expected index to be of type $dom byt was $idxType", expr)
         val valType = infer(value, ty, st)
-        ensure(valType == ran, s"expected value to be stored in array of type $ran but was $valType", value)
+        ensure(valType == ran, s"expected value to be stored in array of type $ran but was $valType", expr)
         array(dom, ran)
       case other =>
-        error(s"expected array type but got $other", arr)
+        error(s"expected array type but got $other", expr)
     }
   }
 
   private def inferCase(typ: Type, pat: Pat, expr: Expr, ty: Map[Id, Type], st: State): Type = pat match {
     case id: Id => infer(expr, ty + (id -> typ), st)
     case UnApp(fun, args) =>
-      ensure(st.funs contains fun, s"unknown constructor $fun")
+      ensure(st.funs contains fun, s"unknown constructor $fun", pat)
       val (constrTypes, datatype) = st.funs(fun)
-      ensure(typ == datatype, s"trying to match $typ with $datatype-constructor $fun")
-      ensure(args.length == constrTypes.length, s"wrong number of arguments for $fun")
+      ensure(typ == datatype, s"trying to match $typ with $datatype-constructor $fun", pat)
+      ensure(args.length == constrTypes.length, s"wrong number of arguments for $fun", pat)
       infer(expr, ty ++ args.zip(constrTypes), st)
   }
 
