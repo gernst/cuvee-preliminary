@@ -28,14 +28,13 @@
     (deposit ((add Int)) ((increased Int))
             (assign (credit (+ credit add)))
             (assign (increased (- credit debit)))
-        :precondition (> amount 0))
+        :precondition (> add 0))
 
     ; use different argument names here to make sure the right variables names are used
     (withdraw ((remove Int)) ((decreased Int))
             (assign (debit (+ debit remove)))
             (assign (decreased (- credit debit)))
-; BUG BUG BUG "amount" is allowed to refer to the abstract precondition here, lol
-        :precondition (and (> amount 0) (<= amount (+ (- credit debit) overdraft-limit)))))
+        :precondition (and (> remove 0) (<= remove (+ (- credit debit) overdraft-limit)))))
 
 ; we're using aliases for all state variables to make sure that they're renamed in all places
 (verify-refinement (SimpleAccount (b Int)) (DoubleAccount (d Int) (c Int))

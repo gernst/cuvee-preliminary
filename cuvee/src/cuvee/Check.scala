@@ -16,7 +16,7 @@ object Check {
       tr
 
     case _: Id =>
-      error("unknown identifier", expr, ty)
+      error(s"unknown identifier $expr", ty)
 
     case Note(expr, _) =>
       infer(expr, ty, st)
@@ -200,6 +200,9 @@ object Check {
     // outputs may overlap with inputs but, again, the type must be equal
     val nonUniqueAgruments = (in ++ out).groupBy(_.id).filter(_._2.map(_.typ).distinct.size > 1)
     ensure(nonUniqueAgruments.isEmpty, "The method $id declares non-unique type for argument ${nonUniqueAgruments.keys.mkString(", ")}")
+
+    ensure(infer(pre, xs ++ in, st) == Sort.bool, "precondition must be boolean")
+    ensure(infer(post, xs ++ in ++ out, st) == Sort.bool, "postcondition must be boolean")
 
     for (body <- body) {
       checkBody(id, body, in, out, st, xs)
