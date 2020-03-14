@@ -12,8 +12,8 @@ object Assoc {
     def fold[A](xs: Iterable[A], z: A, f: (A, A) => A): A = xs.foldLeft(z)(f)
   }
 
-  case object light extends Assoc {
-    def reduce[A](xs: Iterable[A], f: (A, A) => A): A = xs.reduceLeft(f)
+  case object right extends Assoc {
+    def reduce[A](xs: Iterable[A], f: (A, A) => A): A = xs.reduceRight(f)
     def fold[A](xs: Iterable[A], z: A, f: (A, A) => A): A = xs.foldRight(z)(f)
   }
 }
@@ -49,7 +49,7 @@ object Sugar {
     }
   }
 
-  case class nary(val fun: Id, val neutral: Expr, val assoc: Assoc) extends (List[Expr] => Expr) {
+  case class commutative(val fun: Id, val neutral: Expr, val assoc: Assoc) extends (List[Expr] => Expr) {
     def flatten(exprs: List[Expr]): List[Expr] = {
       exprs flatMap flatten
     }

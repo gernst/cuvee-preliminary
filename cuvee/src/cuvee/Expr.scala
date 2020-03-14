@@ -225,25 +225,15 @@ case class Distinct(exprs: List[Expr]) extends Expr {
   override def toString = sexpr("distinct", exprs: _*)
 }
 
-object Not extends Sugar.unary(Id.not) {
-  def apply(args: List[Expr]) = {
-    args map this
-  }
-}
-
+object Not extends Sugar.unary(Id.not)
 object Imp extends Sugar.binary(Id.imp)
-object And extends Sugar.nary(Id.and, True, Assoc.left)
-object Or extends Sugar.nary(Id.or, False, Assoc.left)
+object And extends Sugar.commutative(Id.and, True, Assoc.left)
+object Or extends Sugar.commutative(Id.or, False, Assoc.left)
 
-object UMinus extends Sugar.unary(Id.uminus) {
-    def apply(args: List[Expr]) = {
-    args map this
-  }
-}
-
-object Plus extends Sugar.nary(Id.plus, Num.zero, Assoc.left)
+object UMinus extends Sugar.unary(Id.uminus)
+object Plus extends Sugar.commutative(Id.plus, Num.zero, Assoc.left)
 object Minus extends Sugar.binary(Id.minus)
-object Times extends Sugar.nary(Id.times, Num.one, Assoc.left)
+object Times extends Sugar.commutative(Id.times, Num.one, Assoc.left)
 object DivBy extends Sugar.binary(Id.divBy)
 object Mod extends Sugar.binary(Id.mod)
 object Exp extends Sugar.binary(Id.exp)

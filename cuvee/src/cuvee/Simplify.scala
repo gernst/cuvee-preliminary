@@ -174,10 +174,7 @@ object Simplify {
     else Or(_args.distinct filter (_ != False))
   }
 
-  /**
-   * @param mtp minus-to-plus: will convert binary minus to flatten out linear equations
-   */
-  def norm(expr: Expr, mtp: Boolean = false): Expr = expr match {
+  def norm(expr: Expr): Expr = expr match {
     // push in negation
     case Not(True) =>
       False
@@ -188,9 +185,9 @@ object Simplify {
     case Not(Imp(phi, psi)) =>
       norm(phi && !psi)
     case Not(And(args)) =>
-      or(norm(Not(args)))
+      or(norm(args map (!_)))
     case Not(Or(args)) =>
-      and(norm(Not(args)))
+      and(norm(args map (!_)))
     case Not(Bind(quant, formals, body)) =>
       Bind(!quant, formals, norm(!body))
     case Not(Distinct(List(left, right))) =>
@@ -205,25 +202,23 @@ object Simplify {
     case bind: Bind =>
       normQuant(bind)
 
-    case UMinus(UMinus(arg)) => norm(arg, mtp)
-    case UMinus(Plus(args)) => norm(Plus(UMinus(args)), mtp)
-    case UMinus(Minus(a, b)) => norm(-a + b, mtp)
+    case UMinus(UMinus(arg)) => norm(arg)
+    case UMinus(Plus(args)) => norm(Plus(args map (-_)))
+    case UMinus(Minus(a, b)) => norm(-a + b)
 
-    case Plus(args) => plus(args map (norm(_, mtp)))
-    
-    case Minus(a, b) if mtp => plus(norm(a, mtp), norm(-b, mtp))
+    case Plus(args) => plus(norm(args))
 
-    case Not(Lt(a, b)) => linear(le, norm(b, mtp = true), norm(a, mtp = true))
-    case Not(Le(a, b)) => linear(lt, norm(b, mtp = true), norm(a, mtp = true))
-    case Not(Gt(a, b)) => linear(le, norm(a, mtp = true), norm(b, mtp = true))
-    case Not(Ge(a, b)) => linear(lt, norm(a, mtp = true), norm(b, mtp = true))
+    case Not(Lt(a, b)) => linear(le, poly(b), poly(a))
+    case Not(Le(a, b)) => linear(lt, poly(b), poly(a))
+    case Not(Gt(a, b)) => linear(le, poly(a), poly(b))
+    case Not(Ge(a, b)) => linear(lt, poly(a), poly(b))
 
-    case Gt(a, b) => linear(lt, norm(b, mtp = true), norm(a, mtp = true))
-    case Ge(a, b) => linear(le, norm(b, mtp = true), norm(a, mtp = true))
+    case Gt(a, b) => linear(lt, poly(b), poly(a))
+    case Ge(a, b) => linear(le, poly(b), poly(a))
 
-    case Lt(a, b) => linear(lt, norm(a, mtp = true), norm(b, mtp = true))
-    case Le(a, b) => linear(le, norm(a, mtp = true), norm(b, mtp = true))
-    case Eq(a, b) => maybeLinear(eq, norm(a, mtp = true), norm(b, mtp = true))
+    case Lt(a, b) => linear(lt, poly(a), poly(b))
+    case Le(a, b) => linear(le, poly(a), poly(b))
+    case Eq(a, b) => maybeLinear(eq, poly(a), poly(b))
 
     case Head(Cons(x, xs)) => norm(x)
     case Tail(Cons(x, xs)) => norm(xs)
@@ -241,6 +236,25 @@ object Simplify {
 
     case _ =>
       expr
+  }
+
+  /** Normalize into polynomial form (in the context of an (dis)equality */
+  def poly(expr: Expr): Expr = expr match {
+    // New case here
+    case Minus(a, b) => plus(poly(a), poly(-b))
+
+    // Same as in norm but recurse with poly
+    case UMinus(UMinus(arg)) => poly(arg)
+    case UMinus(Plus(args)) => poly(Plus(args map (-_)))
+    case UMinus(Minus(a, b)) => poly(-a + b)
+
+    case Plus(args) => plus(args map poly)
+
+    case _ => norm(expr)
+  }
+
+  def norm(exprs: List[Expr]): List[Expr] = {
+    exprs map (norm(_))
   }
 
   private def normQuant(bind: Bind): Expr = {
@@ -298,10 +312,6 @@ object Simplify {
     val r3 = r2 filterNot l2.contains
 
     op(plus(l3), plus(r3))
-  }
-
-  def norm(exprs: List[Expr]): List[Expr] = {
-    exprs map (norm(_))
   }
 
   def eliminateBindings(phi: Bind): Expr = phi match {
