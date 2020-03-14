@@ -22,7 +22,8 @@ object Check {
       infer(expr, ty, st)
 
     case UMinus(arg) =>
-      ensure(infer(arg, ty, st) == Sort.int)
+      val typ = infer(arg, ty, st)
+      ensure(typ == Sort.int, s"argument for unary minus must be integer but was $typ", arg)
       Sort.int
 
     case App(id, args) if (st.funs contains id) =>
