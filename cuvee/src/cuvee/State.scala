@@ -58,13 +58,6 @@ case class State(
     Env(su, ty)
   }
 
-  def const(id: Id): Formal = {
-    ensure(funs contains id, "undeclared identifier", id, funs)
-    val (args, res) = funs(id)
-    ensure(args.isEmpty, "not constant", id)
-    Formal(id, res)
-  }
-
   def declare(sort: Sort, arity: Int): State = {
     ensure(!(sorts contains sort), "sort already defined", sort)
     copy(
@@ -86,30 +79,40 @@ case class State(
   }
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr): State = {
-    ensure(!(funs contains id), "const already defined", id)
-    copy(
+    ensure(!(funs contains id), "function already defined", id)
+    val newState = copy(
       funs = funs + (id -> (formals, res)),
       fundefs = fundefs + (id -> (formals, body)))
+
+    // check new state in case function is recursive
+    val bodyType = Check.infer(body, formals, newState)
+    ensure(bodyType == res, s"Expected type of $id to be $res but was $bodyType")
+    newState
   }
 
-  def define(id: Id, proc: Proc) = {
+  def define(id: Id, proc: Proc): State = {
     ensure(!(procs contains id), "procedure already defined", id)
-    Check.checkProc(id, proc)
     val ins: List[Type] = proc.in
     val outs: List[Type] = proc.out
-    copy(
+
+    val newState = copy(
       procs = procs + (id -> (ins, outs)),
       procdefs = procdefs + (id -> proc))
+
+    // check new state in case proc is recursive
+    Check.checkProc(id, proc, newState)
+    newState
   }
 
   def define(sort: Sort, obj: Obj): State = {
     ensure(!(objects contains sort), "object already defined", sort)
-    Check.checkObj(sort, obj)
+    // don't put procs in state => can't be recursive
+    Check.checkObj(sort, obj, this)
     copy(
       objects = objects + (sort -> obj))
   }
 
-  def declare(sort: Sort, arity: Int, decl: Datatype): State = {
+  private def declare(sort: Sort, arity: Int, decl: Datatype): State = {
     var st = declare(sort, arity)
     ensure(arity == decl.params.length, "arity mismatch", arity, decl.params)
 
@@ -139,6 +142,8 @@ case class State(
   }
 
   def assert(expr: Expr) = {
+    val typ = Check.infer(expr, Map.empty, this);
+    ensure(typ == Sort.bool, s"Expected expression type to be boolean but was $typ")
     copy(
       rasserts = expr :: rasserts)
   }

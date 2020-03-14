@@ -32,6 +32,8 @@ package object cuvee {
   implicit def toIds(formals: List[Formal]) = formals map (_.id)
   implicit def toTypes(formals: List[Formal]) = formals map (_.typ)
   implicit def toTyping(formals: List[Formal]) = formals map (f => (f.id, f.typ))
+  implicit def toTypeMap(formals: List[Formal]) = formals map (f => f.id -> f.typ) toMap
+  implicit def tpTypeMap(pairs: List[(Id, Type)]) = pairs.map(p => p._1 -> p._2) toMap
 
   def partition[A, B, C](as: List[A])(f: A => Either[B, C]): (List[B], List[C]) = {
     import scala.collection.mutable

@@ -14,9 +14,22 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
 
   val (backend, solver) = sink match {
     case solver: Solver =>
+      /*
+       * If the sink is a solver, we don't need to preserve any relation between
+       * input and output, so we can use it to check everything. Anything that is
+       * done by auxiliary tools like the Simplifier is scoped.
+       */
       (solver, solver)
     case _ =>
       val solver = Solver.default
+      /*
+       * If we use a dedicated solver for auxiliary tools like the simplifier,
+       * declarations will still need to be visible to the simplifier. As the
+       * second argument of the tee sink, everything is also passed to the auxiliary
+       * solver, but the result is ignored. Assertions are collected by Cuvee and only checked
+       * within a local scope and will not interfere with anything else that is done
+       * in the auxiliary solver.
+       */
       val backend = Sink.tee(sink, solver)
       (backend, solver)
   }
