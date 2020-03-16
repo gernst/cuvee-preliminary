@@ -36,16 +36,23 @@ object Sugar {
       case _ => None
     }
 
-    def apply(arg1: Expr, arg2: Expr) = {
+    def apply(arg1: Expr, arg2: Expr): Expr = {
       App(fun, List(arg1, arg2))
     }
+  }
 
-    def left(args: List[Expr]) = {
-      args reduceLeft this
+  class associative(fun: Id, val assoc: Assoc) extends binary(fun) {
+    def apply(args: List[Expr]): Expr = {
+      assoc.reduce(args, this)
     }
 
-    def right(args: List[Expr]) = {
-      args reduceRight this
+    def flatten(expr: Expr): List[Expr] = expr match {
+      case App(`fun`, List(arg1, arg2)) if assoc == Assoc.left =>
+        flatten(arg1) ++ List(arg2)
+      case App(`fun`, List(arg1, arg2)) if assoc == Assoc.right =>
+        List(arg1) ++ flatten(arg2)
+      case _ =>
+        List(expr)
     }
   }
 

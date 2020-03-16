@@ -226,17 +226,28 @@ case class Distinct(exprs: List[Expr]) extends Expr {
 }
 
 object Not extends Sugar.unary(Id.not)
-object Imp extends Sugar.binary(Id.imp)
+
+object Imp extends Sugar.associative(Id.imp, Assoc.right) {
+  def flat(phis: List[Expr]): Expr = {
+    flat(Nil, phis)
+  }
+
+  def flat(assms: List[Expr], phis: List[Expr]): Expr = phis match {
+    case phi :: Nil => Imp(And(assms), phi)
+    case phi :: rest => flat(phi :: assms, rest)
+  }
+}
+
 object And extends Sugar.commutative(Id.and, True, Assoc.left)
 object Or extends Sugar.commutative(Id.or, False, Assoc.left)
 
 object UMinus extends Sugar.unary(Id.uminus)
 object Plus extends Sugar.commutative(Id.plus, Num.zero, Assoc.left)
-object Minus extends Sugar.binary(Id.minus)
+object Minus extends Sugar.associative(Id.minus, Assoc.left)
 object Times extends Sugar.commutative(Id.times, Num.one, Assoc.left)
-object DivBy extends Sugar.binary(Id.divBy)
-object Mod extends Sugar.binary(Id.mod)
-object Exp extends Sugar.binary(Id.exp)
+object DivBy extends Sugar.associative(Id.divBy, Assoc.left)
+object Mod extends Sugar.associative(Id.mod, Assoc.left)
+object Exp extends Sugar.associative(Id.exp, Assoc.right)
 
 object Lt extends Sugar.binary(Id.lt)
 object Le extends Sugar.binary(Id.le)
@@ -329,12 +340,12 @@ object Apps extends (List[Expr] => Expr) {
     case List(Id.uminus, arg) => UMinus(arg)
     case List(Id._eq, arg1, arg2) => Eq(arg1, arg2)
     case Id.plus :: args => Plus(args)
-    case Id.minus :: args => Minus.left(args)
+    case Id.minus :: args => Minus(args)
     case Id.times :: args => Times(args)
-    case Id.divBy :: args => DivBy.left(args)
+    case Id.divBy :: args => DivBy(args)
     case Id.and :: args => And(args)
     case Id.or :: args => Or(args)
-    case Id.imp :: args => Imp.right(args)
+    case Id.imp :: args => Imp(args)
     case (fun: Id) :: args => App(fun, args)
     case _ => error("higher-order application", exprs)
   }

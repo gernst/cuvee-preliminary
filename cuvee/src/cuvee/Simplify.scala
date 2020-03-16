@@ -173,6 +173,14 @@ object Simplify {
     if (_args contains True) True
     else Or(_args.distinct filter (_ != False))
   }
+  
+  // Flatten A => (B => C) to (A and B) ==> C
+  def imp(phi: Expr, psi: Expr): Expr = {
+    /* val phis = And.flatten(phi)
+    val psis = Imp.flatten(psi)
+    Imp.flat(phis ++ psis) */
+    Imp(phi, psi)
+  }
 
   def norm(expr: Expr): Expr = expr match {
     // push in negation
@@ -194,7 +202,7 @@ object Simplify {
       eq(norm(left), norm(right))
 
     case Imp(phi, psi) =>
-      norm(!phi || psi)
+      imp(norm(phi), norm(psi))
     case And(args) =>
       and(norm(args))
     case Or(args) =>
