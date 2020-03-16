@@ -202,7 +202,8 @@ object Simplify {
       eq(norm(left), norm(right))
 
     case Imp(phi, psi) =>
-      imp(norm(phi), norm(psi))
+      norm(!phi || psi)
+      // imp(norm(phi), norm(psi))
     case And(args) =>
       and(norm(args))
     case Or(args) =>
