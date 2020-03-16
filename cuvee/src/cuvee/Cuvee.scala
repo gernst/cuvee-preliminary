@@ -124,20 +124,26 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
   def check() = backend.scoped {
     val rasserts = top.rasserts map eval
 
-    rasserts match {
-      case Not(phi) :: rest if false =>
+    val actual = rasserts match {
+      case Not(phi) :: rest if config.prove =>
         var _asserts = rest.reverse
 
         for (expr <- _asserts) {
           backend.assert(expr)
         }
-        
-        if(config.simplify) {
-          val simplify = Simplify(solver)
-          val res = simplify.prove(phi)
-          backend.assert(Not(res))
+
+        val _phi = Simplify.norm(phi)
+        val conj = And.flatten(_phi)
+
+        val unknown = conj filterNot solver.isTrue
+
+        if (unknown.isEmpty) {
+          Unsat
         } else {
-          backend.assert(Not(phi))
+          val res = And(unknown)
+          backend.assert(Not(res))
+
+          sink.check()
         }
 
       case _ =>
@@ -151,9 +157,11 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
         for (expr <- _asserts) {
           backend.assert(expr)
         }
-    }
 
-    val actual = backend.check()
+        // Make sure not to go through the simplifier backend
+        // unless we're actually solving something.
+        sink.check()
+    }
 
     for (expected <- top.status if config.test) {
       ensure(expected == actual, "check-sat command returned unexpected result", actual, expected)
@@ -243,6 +251,7 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
 }
 
 class Config {
+  var prove = false
   var simplify = false
   var test = false
   var printSuccess = false
@@ -289,6 +298,10 @@ class Task extends Runnable { /* because why not */
 
     case "-test" :: rest =>
       config.test = true
+      configure(rest)
+
+    case "-prove" :: rest =>
+      config.prove = true
       configure(rest)
 
     case "-simplify" :: rest =>
