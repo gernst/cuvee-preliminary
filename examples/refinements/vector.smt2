@@ -10,7 +10,7 @@
 (declare-fun insert (Int Elem Lst) Lst)
 
 ; definition of list length
-(assert (forall ((xs Lst)) (= (len nil) 0))) ;  using forall just to parse
+(assert (= (len nil) 0))
 (assert (forall ((x Elem) (xs Lst)) (= (len (cons x xs)) (+ 1 (len xs)))))
 
 ; lemma: len is positive
@@ -56,13 +56,13 @@
     (assign (xs nil)))
   (lookup ((i Int)) ((o Elem))
     (assign (o (get i xs)))
-    :precondition (< i (len xs)))
+    :precondition (and (<= 0 i) (< i (len xs))))
   (insert ((i Int) (z Elem)) ()
     (assign (xs (insert i z xs)))
-    :precondition (<= i (len xs)))
+    :precondition (and (<= 0 i) (<= i (len xs))))
   (remove ((i Int)) ()
     (assign (xs (remove i xs)))
-    :precondition (< i (len xs))))
+    :precondition (and (<= 0 i) (< i (len xs)))))
 
 (define-class
   ArrayVector
@@ -71,7 +71,7 @@
     (assign (size 0)))
   (lookup ((i Int)) ((o Elem))
     (assign (o (select values i)))
-    :precondition (< i size))
+    :precondition (and (<= 0 i) (< i size)))
   (insert ((i Int) (z Elem)) ()
     (spec (values)
       true
@@ -88,10 +88,10 @@
         (forall ((k Int))
             (=> (and (<= i k) (< k size))
                     (= (select values (+ k 1)) (select (old values) k))))))
-    :precondition (<= i (len xs)))
+    :precondition (and (<= 0 i) (<= i size)))
   (remove ((i Int)) ()
     (spec () true false)
-    :precondition (< i (len xs))))
+    :precondition (and (<= 0 i) (< i size))))
 
 (declare-fun R (Lst Int (Array Int Elem)) Bool)
 
@@ -99,8 +99,9 @@
     (= (R xs n A)
        (and (= (len xs) n)
             (forall ((i Int))
-                (=> (< i n) (= (select A i) (get i xs))))))))
+                (=> (and (<= 0 i) (< i n))
+                    (= (select A i) (get i xs))))))))
 
 (verify-refinement
-  ListVector ArrayVector R)
+ListVector ArrayVector R)
 (check-sat)
