@@ -87,33 +87,6 @@ case class Simplify(backend: Solver) {
     case _ =>
       phi
   }
-
-  def assuming(pre: Expr, post: Expr): Expr = backend.scoped {
-    backend assert pre
-    prove(post)
-  }
-
-  def scoped(bound: List[Formal], post: Expr): Expr = backend.scoped {
-    backend bind bound
-    prove(post)
-  }
-
-  def prove(phi: Expr): Expr = phi match {
-    case _ if backend isFalse phi =>
-      False
-    case _ if backend isTrue phi =>
-      True
-    case Imp(phi, psi) =>
-      assuming(phi, psi)
-    case And(args) =>
-      and(args map prove)
-    case Or(args) =>
-      or(args map prove)
-    case Forall(bound, body) =>
-      scoped(bound, body)
-    case _ =>
-      phi
-  }
 }
 
 object Simplify {
@@ -173,13 +146,28 @@ object Simplify {
     if (_args contains True) True
     else Or(_args.distinct filter (_ != False))
   }
-  
-  // Flatten A => (B => C) to (A and B) ==> C
-  def imp(phi: Expr, psi: Expr): Expr = {
-    /* val phis = And.flatten(phi)
-    val psis = Imp.flatten(psi)
-    Imp.flat(phis ++ psis) */
-    Imp(phi, psi)
+
+  def forall(bound: List[Formal], body: Expr) = {
+    bind(Forall, bound, body)
+  }
+
+  def exists(bound: List[Formal], body: Expr) = {
+    bind(Exists, bound, body)
+  }
+
+  def bind(quant: Quant, bound: List[Formal], body: Expr): Expr = body match {
+    case Bind(`quant`, bound_, body_) =>
+      bind(quant, bound ++ bound_, body_)
+    case _ =>
+      quant(bound, body)
+  }
+
+  def imp(phi: Expr, psi: Expr): Expr = (phi, psi) match {
+    case (False, _) => True
+    case (_, True) => True
+    case (_, False) => phi
+    case (True, _) => psi
+    case _ => Imp(phi, psi)
   }
 
   def norm(expr: Expr): Expr = expr match {
@@ -203,7 +191,7 @@ object Simplify {
 
     case Imp(phi, psi) =>
       norm(!phi || psi)
-      // imp(norm(phi), norm(psi))
+    // imp(norm(phi), norm(psi))
     case And(args) =>
       and(norm(args))
     case Or(args) =>
@@ -247,7 +235,7 @@ object Simplify {
       expr
   }
 
-  /** Normalize into polynomial form (in the context of an (dis)equality */
+  /** Normalize into polynomial form (in the context of an (in-)equality */
   def poly(expr: Expr): Expr = expr match {
     // New case here
     case Minus(a, b) => plus(poly(a), poly(-b))

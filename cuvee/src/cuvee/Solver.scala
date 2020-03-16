@@ -35,6 +35,16 @@ trait Solver extends Sink {
       declare(id, typ)
     }
   }
+
+  def binding[A](formals: List[Formal])(thunk: => A) = scoped {
+    bind(formals)
+    thunk
+  }
+
+  def asserting[A](expr: Expr)(thunk: => A) = scoped {
+    assert(expr)
+    thunk
+  }
 }
 
 object Solver {

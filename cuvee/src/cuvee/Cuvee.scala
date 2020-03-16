@@ -132,16 +132,17 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
           backend.assert(expr)
         }
 
-        val _phi = Simplify.norm(phi)
-        val conj = And.flatten(_phi)
+        // val _phi = Simplify.norm(phi)
+        // val conj = And.flatten(_phi)
+        // val unknown = conj filterNot solver.isTrue
 
-        val unknown = conj filterNot solver.isTrue
+        val prove = Prove(solver)
+        val _phi = prove(phi)
 
-        if (unknown.isEmpty) {
+        if (_phi == True) {
           Unsat
         } else {
-          val res = And(unknown)
-          backend.assert(Not(res))
+          backend.assert(Not(_phi))
 
           sink.check()
         }
