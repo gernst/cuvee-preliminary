@@ -243,8 +243,16 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
     val C = top objects impl
 
     val (defs, phi) = Verify.refinement(A, C, sim, top, solver)
-    for (df <- defs) assert(df)
-    assert(!phi)
+    assert(defs)
+
+    config.logic match {
+      case Some("HORN") =>
+        val conds = And.flatten(phi)
+        assert(conds)
+        Success
+      case _ =>
+        assert(!phi)
+    }
   }
 
   def verify(id: Id): Ack = {
