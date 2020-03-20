@@ -58,7 +58,7 @@ object Solver {
   case class process(args: String*) extends Solver {
     val pb = new ProcessBuilder(args: _*)
     val pr = pb.start()
-    val pid = pr.pid
+    def pid = pr.pid
     val stdout = new BufferedReader(new InputStreamReader(pr.getInputStream))
     val stdin = new PrintStream(pr.getOutputStream)
 

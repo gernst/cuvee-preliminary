@@ -36,8 +36,16 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
 
   def top = states.head
 
-  def setLogic(logic: String) = {
+  for (logic <- config.logic) {
     backend.setLogic(logic)
+  }
+
+  def setLogic(logic: String) = config.logic match {
+    case Some(logic) =>
+      error(s"logic already set to ${logic}")
+    case None =>
+      config.logic = Some(logic)
+      backend.setLogic(logic)
   }
 
   def setOption(args: List[String]) = args match {
@@ -252,6 +260,7 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
 }
 
 class Config {
+  var logic = None: Option[String]
   var prove = false
   var simplify = false
   var test = false
@@ -299,6 +308,10 @@ class Task extends Runnable { /* because why not */
 
     case "-test" :: rest =>
       config.test = true
+      configure(rest)
+
+    case "-logic" :: logic :: rest =>
+      config.logic = Some(logic)
       configure(rest)
 
     case "-prove" :: rest =>
