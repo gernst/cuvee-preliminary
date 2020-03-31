@@ -9,6 +9,11 @@
 (declare-fun post  (Elem Elem Elem) Bool)
 (declare-fun fin   (Elem Elem Elem) Bool)
 
+
+(define-fun inv ((x0 Elem) (x Elem) (y Elem)) Bool
+  (and (pre x y)
+       (forall ((z Elem)) (=> (post x z y) (post x0 z y)))))
+
 (define-const ok1 Bool
   (forall ((x Elem) (y Elem))
     (=> (init x y)
@@ -54,7 +59,24 @@
                (post x0 x y))
           (fin x0 x y)))))
 
+(define-const ok4 Bool
+  (and
+    (forall ((x Elem) (y Elem))
+      (=> (init x y)
+          (inv  x x y)))
+    (forall ((x0 Elem) (x Elem) (y Elem) (z Elem))
+      (=> (and (init x0 y)
+               (inv  x0 x y)
+               (guard x y))
+          (and (inv x0 (body x y) y))))
+    (forall ((x0 Elem) (x Elem) (y Elem))
+      (=> (and (init x0 y)
+               (inv  x0 x y))
+          (fin x0 x y)))))
+
 (assert (not
-    (and (= ok1 ok2)
-         (= ok2 ok3))))
+    (and (=  ok1 ok2)
+         (=  ok1 ok3)
+         ;; (=> ok4 ok1)
+         )))
 (check-sat)
