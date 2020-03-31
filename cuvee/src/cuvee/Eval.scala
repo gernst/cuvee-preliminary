@@ -147,6 +147,9 @@ object Eval {
     case expr @ Bind(quant, formals, body) =>
       Bind(quant, formals, eval(body, env bind formals, old, st))
 
+    case expr @ Match(arg, cases) =>
+      ???
+
     case WP(prog, post) =>
       wp(List(prog), None, post, env, old, st)
 

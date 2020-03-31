@@ -10,10 +10,10 @@
 (declare-const dash Elem)
 
 (define-fun-rec rmdash ((xs Lst)) Lst
-	(match xs
-		(nil nil)
-		((cons x ys) (ite (= x dash) (rmdash ys)
-                                     (cons x (rmdash ys))))))
+	(ite (= xs nil) nil
+		 (ite (= (head xs) dash)
+              (rmdash (tail xs))
+              (cons (head xs) (rmdash (tail xs))))))
 
 (declare-fun tolist ((Array Int Elem) Int Int) Lst)
 (assert (forall ((a (Array Int Elem)) (n Int))
