@@ -205,7 +205,7 @@ object Eval {
       val _test = eval(test, env1, env1 :: old, st)
       val decrease = test ==> (0 <= term && term < Old(term))
 
-      val hyp = Spec(mod_, decrease && phi, !test && psi)
+      val hyp = Spec(mod_, decrease && phi, /* !test && */ psi)
 
       val _phi0 = eval(phi, env0, old, st)
       val _psi0 = eval(psi, env1, env0 :: old, st)
@@ -280,7 +280,7 @@ object Eval {
       val _right = !_test ==> box(right :: rest, break, post, env0, old, st)
       _left && _right
 
-    case While(test, body, Skip, term, phi, True) :: rest =>
+    /* case While(test, body, Skip, term, phi, True) :: rest =>
       val mod = body.mod
       val mod_ = mod.toList
 
@@ -311,7 +311,7 @@ object Eval {
       val init = Forall(formals, (!_test1 && _inv1) ==> box(rest, break, post, env1, env1 :: old, st))
       val step = Forall(formals, (_test1 && _inv1) ==> box(List(body), Some(inv), inv, env1, env1 :: old, st))
 
-      _inv0 && init && step
+      _inv0 && init && step */
 
     case While(test, body, after, term, phi, psi) :: rest =>
       val mod = body.mod
@@ -321,7 +321,7 @@ object Eval {
 
       val _test = eval(test, env1, env1 :: old, st)
 
-      val hyp = Spec(mod_, phi, !test && psi)
+      val hyp = Spec(mod_, phi, /* !test && */ psi)
 
       val _phi0 = eval(phi, env0, old, st)
       val _psi0 = eval(psi, env1, env0 :: old, st)
@@ -391,7 +391,7 @@ object Eval {
       val _test = eval(test, env1, env1 :: old, st)
       val decrease = test ==> (0 <= term && term < Old(term))
 
-      val hyp = Spec(mod_, decrease && phi, !test && psi)
+      val hyp = Spec(mod_, decrease && phi, /* !test && */ psi)
 
       val _phi0 = eval(phi, env0, old, st)
       val _psi0 = eval(psi, env1, env0 :: old, st)
@@ -461,7 +461,7 @@ object Eval {
     case While(test, body, after, term, phi, psi) :: rest =>
       val mod = body.mod ++ after.mod
       val mod_ = mod.toList
-      val spec = Spec(mod_, phi, !test && psi)
+      val spec = Spec(mod_, phi, /* !test && */ psi)
       rel(spec :: rest, env0, old, st)
 
     case Call(name, in, out) :: rest if st.procdefs contains name =>

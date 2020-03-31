@@ -90,7 +90,8 @@ object Parser {
   val prog_ : Parser[Prog] = P(break_ | assign_ | asm_ | asrt_ | spec_ | choose_ | call_ | if_ | while_ | block_)
   val prog: Parser[Prog] = P(parens(prog_))
   val progs = P(prog.*)
-  val block_ = P(Block("block" ~ progs))
+  val with_old = (":save-old" ~ ret(true)) | ret(false)
+  val block_ = P(Block("block" ~ progs ~ with_old))
 
   val wp_ = P(WP("wp" ~ prog ~ expr))
   val box_ = P(Box("box" ~ prog ~ expr))
@@ -114,7 +115,7 @@ object Parser {
   val while_ = P(While("while" ~ expr ~ prog ~ prog.? ~ term.? ~ pre.? ~ post.?))
 
   val cmd_ : Parser[Cmd] = P(set_logic_ | set_option_ | set_info_ | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
-    declare_sort_ | declare_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_ |
+    declare_sort_ | declare_const_ | define_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_ |
     define_proc_ | define_class_ | verify_proc_ | verify_refinement_)
 
   val cmd: Parser[Cmd] = P(parens(cmd_))
@@ -153,6 +154,7 @@ object Parser {
   val get_assertions_ = P(GetAssertions("get-assertions"))
 
   val declare_sort_ = P(DeclareSort("declare-sort" ~ sort ~ int_0))
+  val define_const_ = P(DefineFun("define-const" ~ id ~ ret(Nil) ~ typ ~ expr))
   val declare_const_ = P(DeclareFun("declare-const" ~ id ~ ret(Nil) ~ typ))
   val declare_fun_ = P(DeclareFun("declare-fun" ~ id ~ parens(types) ~ typ))
   val define_fun_ = P(DefineFun("define-fun" ~ id ~ parens(formals) ~ typ ~ expr))

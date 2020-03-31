@@ -472,19 +472,19 @@ sealed trait Prog {
 
 object Prog extends Parseable(Parser.prog)
 
-case class Block(progs: List[Prog], withOld: Boolean) extends Prog {
+case class Block(progs: List[Prog], withOld: Boolean = false) extends Prog {
   def mod = Set(progs flatMap (_.mod): _*)
   def read = Set(progs flatMap (_.read): _*)
-  def replace(re: Map[Id, Id]) = Block(progs map (_ replace re))
-  def ++(that: Block) = Block(this.progs ++ that.progs)
+  def replace(re: Map[Id, Id]) = Block(progs map (_ replace re), withOld)
+  def ++(that: Block) = Block(this.progs ++ that.progs, withOld)
   override def toString = sexpr("block", progs: _*)
 }
 
-object Block extends (List[Prog] => Block) {
+/* object Block extends (List[Prog] => Block) {
   def apply(progs: List[Prog]): Block = {
     Block(progs, false)
   }
-}
+} */
 
 case object Break extends Prog {
   def mod = Set()

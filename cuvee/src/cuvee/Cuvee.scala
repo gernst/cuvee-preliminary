@@ -129,6 +129,12 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
     Eval.eval(expr, env, old, top)
   }
 
+  def eval(formals: List[Formal], expr: Expr): Expr = {
+    val env = top.env
+    val old = Nil
+    Eval.eval(expr, env bind formals, old, top)
+  }
+
   def check() = backend.scoped {
     val rasserts = top.rasserts map eval
 
@@ -214,7 +220,8 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
     map(_ define (id, formals, res, body))
-    backend.define(id, formals, res, body, rec)
+    val _body = eval(formals, body)
+    backend.define(id, formals, res, _body, rec)
   }
 
   def define(id: Id, proc: Proc): Ack = {
