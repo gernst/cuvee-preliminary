@@ -9,17 +9,15 @@
 (assert
   (not
     (and
-      (forall
-        ((counter Int) (neg Int))
-        (=>
-          (and
-            true
-            true
-            true)
-          (and
-            true
-            true
-            (R 0 0))))
+      (=>
+        (and
+          true
+          true
+          true)
+        (and
+          true
+          true
+          (R 0 0)))
       (forall
         ((counter Int) (neg Int))
         (=>
@@ -32,7 +30,7 @@
             true
             (R (+ counter 1) (- neg 1)))))
       (forall
-        ((counter Int) (count Int) (neg Int) (|count'| Int))
+        ((counter Int) (neg Int))
         (=>
           (and
             true
@@ -40,7 +38,7 @@
             (R counter neg))
           (and
             true
-            (= counter (- 0 neg))
+            (= (- 0 neg) counter)
             (R counter neg)))))))
 (check-sat)
 (pop 1)

@@ -6,40 +6,38 @@
 (assert
   (not
     (and
+      (=>
+        (and
+          true
+          true
+          true)
+        (and
+          true
+          true
+          (= 0 (- 0 0))))
       (forall
-        ((b Int) (d Int) (c Int))
+        ((b Int) (amount Int) (d Int) (c Int) (|add'| Int))
         (=>
           (and
-            true
-            true
-            true)
-          (and
-            true
-            true
-            (= 0 (- 0 0)))))
-      (forall
-        ((b Int) (amount Int) (new-balance Int) (d Int) (c Int) (|add'| Int) (|increased'| Int))
-        (=>
-          (and
-            (= amount |add'|)
+            (= |add'| amount)
             (> amount 0)
             (= b (- c d)))
           (and
             (> |add'| 0)
-            (= (+ b amount) (- (+ c |add'|) d))
+            (= (- (+ c |add'|) d) (+ b amount))
             (= (+ b amount) (- (+ c |add'|) d)))))
       (forall
-        ((b Int) (amount Int) (new-balance Int) (d Int) (c Int) (|remove'| Int) (|decreased'| Int))
+        ((b Int) (amount Int) (d Int) (c Int) (|remove'| Int))
         (=>
           (and
-            (= amount |remove'|)
+            (= |remove'| amount)
             (> amount 0)
             (<= amount b)
             (= b (- c d)))
           (and
             (> |remove'| 0)
             (<= |remove'| (+ (- c d) overdraft-limit))
-            (= (- b amount) (- c (+ d |remove'|)))
+            (= (- c (+ d |remove'|)) (- b amount))
             (= (- b amount) (- c (+ d |remove'|)))))))))
 (check-sat)
 (pop 1)

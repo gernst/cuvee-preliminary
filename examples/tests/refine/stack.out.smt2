@@ -31,7 +31,7 @@
   (not
     (and
       (forall
-        ((xs Lst) (size Int) (values (Array Int Elem)))
+        ((values (Array Int Elem)))
         (=>
           (and
             true
@@ -45,7 +45,7 @@
         ((xs Lst) (x Elem) (size Int) (values (Array Int Elem)) (|x'| Elem))
         (=>
           (and
-            (= x |x'|)
+            (= |x'| x)
             true
             (R xs size values))
           (and
@@ -53,7 +53,7 @@
             true
             (R (cons x xs) (+ size 1) (store values size |x'|)))))
       (forall
-        ((xs Lst) (x Elem) (size Int) (values (Array Int Elem)) (|x'| Elem))
+        ((xs Lst) (size Int) (values (Array Int Elem)))
         (=>
           (and
             true
@@ -61,7 +61,7 @@
             (R xs size values))
           (and
             (> size 0)
-            (= (head xs) (select values (- size 1)))
+            (= (select values (- size 1)) (head xs))
             (R (tail xs) (- size 1) values)))))))
 (check-sat)
 (pop 1)
@@ -95,7 +95,7 @@
   (not
     (and
       (forall
-        ((xs Lst) (size Int) (values (Array Int Elem)))
+        ((values (Array Int Elem)))
         (=>
           (and
             true
@@ -109,7 +109,7 @@
         ((xs Lst) (x Elem) (size Int) (values (Array Int Elem)) (|x'| Elem))
         (=>
           (and
-            (= x |x'|)
+            (= |x'| x)
             true
             (R xs size values))
           (and
@@ -117,7 +117,7 @@
             true
             (R (cons x xs) (+ size 1) (store values size |x'|)))))
       (forall
-        ((xs Lst) (x Elem) (size Int) (values (Array Int Elem)) (|x'| Elem))
+        ((xs Lst) (size Int) (values (Array Int Elem)))
         (=>
           (and
             true
@@ -125,7 +125,7 @@
             (R xs size values))
           (and
             (> size 0)
-            (= (head xs) (select values (- size 1)))
+            (= (select values (- size 1)) (head xs))
             (R (tail xs) (- size 1) values)))))))
 (check-sat)
 (pop 1)

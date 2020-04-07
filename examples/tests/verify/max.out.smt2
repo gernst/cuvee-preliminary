@@ -3,7 +3,7 @@
 (assert
   (not
     (forall
-      ((x Int) (y Int) (z Int))
+      ((x Int) (y Int))
       (=>
         true
         (and

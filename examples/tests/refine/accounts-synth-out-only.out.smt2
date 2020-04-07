@@ -10,40 +10,38 @@
 (assert
   (not
     (and
+      (=>
+        (and
+          true
+          true
+          true)
+        (and
+          true
+          true
+          (R 0 0 0)))
       (forall
-        ((balance Int) (debit Int) (credit Int))
+        ((balance Int) (amount Int) (debit Int) (credit Int) (|add'| Int))
         (=>
           (and
-            true
-            true
-            true)
-          (and
-            true
-            true
-            (R 0 0 0))))
-      (forall
-        ((balance Int) (amount Int) (new-balance Int) (debit Int) (credit Int) (|add'| Int) (|increased'| Int))
-        (=>
-          (and
-            (= amount |add'|)
+            (= |add'| amount)
             (> amount 0)
             (R balance debit credit))
           (and
             (> |add'| 0)
-            (= (+ balance amount) (- (+ credit |add'|) debit))
+            (= (- (+ credit |add'|) debit) (+ balance amount))
             (R (+ balance amount) debit (+ credit |add'|)))))
       (forall
-        ((balance Int) (amount Int) (new-balance Int) (debit Int) (credit Int) (|amount'| Int) (|decreased'| Int))
+        ((balance Int) (amount Int) (debit Int) (credit Int) (|amount'| Int))
         (=>
           (and
-            (= amount |amount'|)
+            (= |amount'| amount)
             (> amount 0)
             (<= amount balance)
             (R balance debit credit))
           (and
             (> |amount'| 0)
             (<= |amount'| (- credit debit))
-            (= (- balance amount) (- credit (+ debit |amount'|)))
+            (= (- credit (+ debit |amount'|)) (- balance amount))
             (R (- balance amount) (+ debit |amount'|) credit)))))))
 (check-sat)
 (pop 1)
