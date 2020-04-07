@@ -1,4 +1,4 @@
-;! Cuvee -z3
+;! Cuvee -format -z3
 
 (define-proc
   with-locals ((x Int)) ((y Int))

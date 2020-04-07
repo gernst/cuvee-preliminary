@@ -1,4 +1,4 @@
-;! Cuvee -z3
+;! Cuvee -format -z3
 
 (declare-sort Name)
 (declare-sort File)

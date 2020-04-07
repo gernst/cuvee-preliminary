@@ -1,4 +1,4 @@
-;! Cuvee -z3
+;! Cuvee -format -z3
 
 (define-class Counter ((counter Int))
     (init () () (assign (counter 0)))

@@ -1,4 +1,4 @@
-;! Cuvee -z3
+;! Cuvee -format -z3
 ; Works like counters.smt2 but the postcondition cannot be inlined because we use spec instead of assign.
 ; This forces renaming of the variables.
 
