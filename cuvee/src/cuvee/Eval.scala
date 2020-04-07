@@ -145,7 +145,7 @@ object Eval {
       error("unknown function", id, expr, env, st)
 
     case expr @ Bind(quant, formals, body) =>
-      Bind(quant, formals, eval(body, env bind formals, old, st))
+      quant(formals, eval(body, env bind formals, old, st))
 
     case expr @ Match(arg, cases) =>
       ???

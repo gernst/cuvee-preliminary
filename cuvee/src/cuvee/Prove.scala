@@ -32,9 +32,6 @@ case class Prove(backend: Solver) {
     case And(args) =>
       val _args = prove(args, neg = false)
       and(_args)
-    case Or(args) =>
-      val _args = prove(args, neg = false)
-      or(_args)
     case Forall(bound, body) =>
       val _body = backend.binding(bound) { prove(body) }
       forall(bound, _body)

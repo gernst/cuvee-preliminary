@@ -165,7 +165,7 @@ object Simplify {
   def imp(phi: Expr, psi: Expr): Expr = (phi, psi) match {
     case (False, _) => True
     case (_, True) => True
-    case (_, False) => phi
+    case (_, False) => !phi
     case (True, _) => psi
     case _ => Imp(phi, psi)
   }
@@ -185,7 +185,7 @@ object Simplify {
     case Not(Or(args)) =>
       and(norm(args map (!_)))
     case Not(Bind(quant, formals, body)) =>
-      Bind(!quant, formals, norm(!body))
+      normQuant(Bind(!quant, formals, !body))
     case Not(Distinct(List(left, right))) =>
       eq(norm(left), norm(right))
 
@@ -267,13 +267,13 @@ object Simplify {
           case boolean @ App(id @ (Id.and | Id.or), args) => {
             val unbound = args.filter(_.free.disjoint(bind.bound))
             if (unbound.isEmpty) {
-              Bind(quant, formals, boolean)
+              quant(formals, boolean)
             } else {
               val bound = args.filterNot(_.free.disjoint(bind.bound))
               App(id, quant(formals, App(id, bound)) :: unbound)
             }
           }
-          case other => Bind(quant, formals, other)
+          case other => Simplify.bind(quant, formals, other)
         }
       case other => norm(other)
     }
