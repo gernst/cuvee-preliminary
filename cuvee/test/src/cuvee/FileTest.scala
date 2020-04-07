@@ -20,6 +20,7 @@ object FileTest extends TestSuite {
 
   def run(fileName: String) = {
     Expr._index = 0 // reset because we have reference output
+    Printer.format = false // reset because this can be set by the .smt2 file and affects output
     assert(fileName endsWith ".smt2", "file name must end with .smt2")
     val capture = new Sink.capture
     val task = configureCuvee(fileName)
