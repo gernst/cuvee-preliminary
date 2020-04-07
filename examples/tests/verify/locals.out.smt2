@@ -2,7 +2,7 @@
 (assert
   (not
     (forall
-      ((x Int) (y Int) (z Int))
+      ((x Int))
       (=>
         true
         (= x x)))))
@@ -12,14 +12,14 @@
 (assert
   (not
     (forall
-      ((x Int) (y Int) (z Int))
+      ((x Int))
       (=>
         true
         (= x x)))))
 (assert
   (not
     (forall
-      ((x Int) (y Int) (z Int))
+      ((z Int))
       (=>
         true
         (and

@@ -2,17 +2,15 @@
 (assert
   (not
     (and
-      (forall
-        ((c Int) (n Int))
-        (=>
-          (and
-            true
-            true
-            true)
-          (and
-            true
-            true
-            (= 0 (- 0 0)))))
+      (=>
+        (and
+          true
+          true
+          true)
+        (and
+          true
+          true
+          (= 0 (- 0 0))))
       (forall
         ((c Int) (n Int))
         (=>
@@ -31,7 +29,7 @@
                   true
                   (= (+ c 1) (- 0 n1))))))))
       (forall
-        ((c Int) (count Int) (n Int) (|count'| Int))
+        ((c Int) (n Int))
         (=>
           (and
             true
@@ -39,7 +37,7 @@
             (= c (- 0 n)))
           (and
             true
-            (= c (- 0 n))
+            (= (- 0 n) c)
             (= c (- 0 n))))))))
 (check-sat)
 (pop 1)

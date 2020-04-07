@@ -81,8 +81,9 @@ object Verify {
     val (apre, _, abody) = ap.call(A.state, as, ai, ao)
     val (cpre, _, cbody) = cp.call(C.state, cs, ci_, co_)
 
-    val in = Eq(ai, ci_)
-    val out = Eq(ao, co_)
+    // declare as primed := unprimed so that simplification will removed primed variables
+    val in = Eq(ci_, ai)
+    val out = Eq(co_, ao)
 
     val phi =
       ((in && apre && R0) ==>

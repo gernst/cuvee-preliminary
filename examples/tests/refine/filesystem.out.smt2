@@ -36,7 +36,7 @@
   (not
     (and
       (forall
-        ((fs (Array Name File)) (index (Array Name Address)) (disk (Array Address File)))
+        ((disk (Array Address File)))
         (=>
           (and
             true
@@ -47,51 +47,48 @@
             true
             (R fs0 index0 (store disk null empty)))))
       (forall
-        ((fs (Array Name File)) (name Name) (file File) (index (Array Name Address)) (disk (Array Address File)) (|name'| Name) (|file'| File))
+        ((fs (Array Name File)) (name Name) (index (Array Name Address)) (disk (Array Address File)) (|name'| Name))
         (=>
           (and
-            (= name |name'|)
+            (= |name'| name)
             (distinct (select fs name) empty)
             (R fs index disk))
           (and
             (distinct (select index |name'|) null)
-            (= (select fs name) (select disk (select index |name'|)))
+            (= (select disk (select index |name'|)) (select fs name))
             (R fs index disk))))
       (forall
         ((fs (Array Name File)) (name Name) (file File) (index (Array Name Address)) (disk (Array Address File)) (|name'| Name) (|file'| File))
         (=>
           (and
-            (= name |name'|)
-            (= file |file'|)
+            (= |name'| name)
+            (= |file'| file)
             (distinct (select fs name) empty)
             (R fs index disk))
           (and
             (distinct (select index |name'|) null)
-            (forall
-              ((addr Address))
+            true
+            (=>
+              (exists
+                ((addr Address))
+                (and
+                  (distinct addr null)
+                  (= (select disk addr) empty)))
               (and
-                true
-                (=>
-                  (exists
-                    ((addr Address))
-                    (and
-                      (distinct addr null)
-                      (= (select disk addr) empty)))
+                (exists
+                  ((addr1 Address))
                   (and
-                    (exists
-                      ((addr1 Address))
-                      (and
-                        (distinct addr1 null)
-                        (= (select disk addr1) empty)))
-                    (forall
-                      ((addr1 Address))
-                      (=>
-                        (and
-                          (distinct addr1 null)
-                          (= (select disk addr1) empty))
-                        (and
-                          true
-                          (R (store fs name file) (store index |name'| addr1) (store disk addr1 |file'|)))))))))))))))
+                    (distinct addr1 null)
+                    (= (select disk addr1) empty)))
+                (forall
+                  ((addr1 Address))
+                  (=>
+                    (and
+                      (distinct addr1 null)
+                      (= (select disk addr1) empty))
+                    (and
+                      true
+                      (R (store fs name file) (store index |name'| addr1) (store disk addr1 |file'|)))))))))))))
 (check-sat)
 (pop 1)
 (pop 1)
@@ -131,7 +128,7 @@
   (not
     (and
       (forall
-        ((fs (Array Name File)) (index (Array Name Address)) (disk (Array Address File)))
+        ((disk (Array Address File)))
         (=>
           (and
             true
@@ -142,51 +139,48 @@
             true
             (R fs0 index0 (store disk null empty)))))
       (forall
-        ((fs (Array Name File)) (name Name) (file File) (index (Array Name Address)) (disk (Array Address File)) (|name'| Name) (|file'| File))
+        ((fs (Array Name File)) (name Name) (index (Array Name Address)) (disk (Array Address File)) (|name'| Name))
         (=>
           (and
-            (= name |name'|)
+            (= |name'| name)
             (distinct (select fs name) empty)
             (R fs index disk))
           (and
             (distinct (select index |name'|) null)
-            (= (select fs name) (select disk (select index |name'|)))
+            (= (select disk (select index |name'|)) (select fs name))
             (R fs index disk))))
       (forall
         ((fs (Array Name File)) (name Name) (file File) (index (Array Name Address)) (disk (Array Address File)) (|name'| Name) (|file'| File))
         (=>
           (and
-            (= name |name'|)
-            (= file |file'|)
+            (= |name'| name)
+            (= |file'| file)
             (distinct (select fs name) empty)
             (R fs index disk))
           (and
             (distinct (select index |name'|) null)
-            (forall
-              ((addr Address))
+            true
+            (=>
+              (exists
+                ((addr Address))
+                (and
+                  (distinct addr null)
+                  (= (select disk addr) empty)))
               (and
-                true
-                (=>
-                  (exists
-                    ((addr Address))
-                    (and
-                      (distinct addr null)
-                      (= (select disk addr) empty)))
+                (exists
+                  ((addr2 Address))
                   (and
-                    (exists
-                      ((addr2 Address))
-                      (and
-                        (distinct addr2 null)
-                        (= (select disk addr2) empty)))
-                    (forall
-                      ((addr2 Address))
-                      (=>
-                        (and
-                          (distinct addr2 null)
-                          (= (select disk addr2) empty))
-                        (and
-                          true
-                          (R (store fs name file) (store index |name'| addr2) (store disk addr2 |file'|)))))))))))))))
+                    (distinct addr2 null)
+                    (= (select disk addr2) empty)))
+                (forall
+                  ((addr2 Address))
+                  (=>
+                    (and
+                      (distinct addr2 null)
+                      (= (select disk addr2) empty))
+                    (and
+                      true
+                      (R (store fs name file) (store index |name'| addr2) (store disk addr2 |file'|)))))))))))))
 (check-sat)
 (pop 1)
 (pop 1)
