@@ -36,7 +36,6 @@ object FileTest extends TestSuite {
 
     task.run()
 
-    // runAndCheckResults(fileName, cuvee)
     checkVsReferenceOutput(fileName, capture.toString)
   }
 
@@ -55,23 +54,6 @@ object FileTest extends TestSuite {
       reader.close()
     }
   }
-
-  /* private def runAndCheckResults(task: Task) = {
-    val cmds = VerifyTest.runUnwrappingErrors(Source.fromFile(fileName))
-    for (cmd <- cmds) {
-      cuvee.exec(cmd) match {
-        case Some(res) => cmd match {
-          case CheckSat(Some(expected)) => assertEquals(res, expected)
-          case _ => res match {
-            case _: IsSat =>
-              assertEquals(Unsat, res)
-            case _: Ack =>
-              assertEquals(Success, res)
-          }
-        }
-      }
-    }
-  } */
 
   private def checkVsReferenceOutput(fileName: String, given: String) = {
     val outFile = new File(fileName.substring(0, fileName.length - 4) + "out.smt2")
