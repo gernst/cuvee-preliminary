@@ -135,18 +135,6 @@ package object cuvee {
     args.mkString("(", " ", ")")
   }
 
-  implicit class ProcessOps(process: Process) {
-    def pid: Long = {
-      val klass = process.getClass
-      // assert(klass.getName == "java.lang.UNIXProcess")
-      val field = klass.getDeclaredField("pid");
-      field.setAccessible(true)
-      val res = field.getLong(process)
-      field.setAccessible(false)
-      res
-    }
-  }
-
   implicit class FormalList(formals: List[Formal]) {
     def prime = formals map (_.prime)
     def priming = formals map (_.id) map (id => id -> id.prime) toMap
