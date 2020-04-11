@@ -3,7 +3,7 @@ import mill.scalalib._
 import mill.scalalib.publish._
 
 object cuvee extends ScalaModule {
-  def scalaVersion = "2.12.8"
+  def scalaVersion = "2.12.11"
   def forkArgs = Seq("-Xss32m")
 
   def mainClass = Some("cuvee.Cuvee")
