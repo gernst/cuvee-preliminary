@@ -20,7 +20,8 @@ jobs:
               - all-{{ checksum ".circleci/config.yml" }}-{{ checksum "mill" }}-{{ checksum "build.sc" }}
       - run: "if [ ! -f lib/cvc4 ]; then wget https://github.com/CVC4/CVC4/releases/download/1.7/cvc4-1.7-x86_64-linux-opt && cp cvc4-1.7-x86_64-linux-opt lib/cvc4 && chmod u+x lib/cvc4; fi"
       - run: "if [ ! -f lib/z3 ]; then wget https://github.com/Z3Prover/z3/releases/download/z3-4.8.7/z3-4.8.7-x64-ubuntu-16.04.zip && unzip z3-4.8.7-x64-ubuntu-16.04.zip && cp z3-4.8.7-x64-ubuntu-16.04/bin/z3 lib && chmod u+x lib/z3; fi"
-      - run: PATH="$PWD/lib:$PATH" ./mill cuvee.test
+      - run: "if [ ! -d lib/jdk-11.0.6+10 ]; then wget https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.6%2B10/OpenJDK11U-jdk_x64_linux_hotspot_11.0.6_10.tar.gz && tar xvzf OpenJDK11U-jdk_x64_linux_hotspot_11.0.6_10.tar.gz && mv jdk-11.0.6+10 lib/jdk-11.0.6+10; fi"
+      - run: PATH="$PWD/lib:$PATH" JAVA_HOME="lib/jdk-11.0.6+10" ./mill cuvee.test
       - save_cache:
           key: all-{{ checksum ".circleci/config.yml" }}-{{ checksum "mill" }}-{{ checksum "build.sc" }}
           paths:
