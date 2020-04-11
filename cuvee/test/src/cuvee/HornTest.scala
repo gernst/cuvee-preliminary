@@ -151,6 +151,7 @@ object HornTest extends TestSuite {
   }
 
   def test[S](initial: Expr, expected: Option[List[Horn]], env: Sink => S): Unit = {
+    Expr._index = 0; // reset because we have reference output
     val actual = Horn.split(initial)
     expected.foreach(assertEquals(actual, _))
 
