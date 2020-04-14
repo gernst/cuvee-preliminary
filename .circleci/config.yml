@@ -30,4 +30,4 @@ jobs:
             - "~/.ivy2"
             - "out/mill"
             - "out/cuvee"
-            - "~/.cache/coursier/v1"
+            - "~/.cache"
