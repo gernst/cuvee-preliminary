@@ -142,6 +142,10 @@ package object cuvee {
     def types = toTypes(formals)
   }
 
+  implicit class ExprList(exprs: List[Expr]) {
+    def free: Set[Id] = exprs.flatMap(_.free).toSet
+  }
+
   def time[A](f: => A) = {
     val start = System.currentTimeMillis
     val a = f

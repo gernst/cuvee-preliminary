@@ -254,7 +254,7 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
 
     config.logic match {
       case Some("HORN") =>
-        val conds = And.flatten(phi)
+        val conds = Horn.split(eval(phi)) map (_.toExpr)
         assert(conds)
         Success
       case _ =>
