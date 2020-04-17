@@ -88,7 +88,8 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   def outputs(recipe: Recipe): List[List[Expr]] = {
     val ops = A.ops zip C.ops
 
-    val phis = for (((aname, aproc), (cname, cproc)) <- ops if aproc.out.nonEmpty) yield {
+    val phis = for (((aname, aproc), (cname, cproc)) <- ops
+                    if recipe != Recipe.output || aproc.out.nonEmpty) yield {
       ensure(aname == cname, "operations must occur in same order", A.ops, C.ops, aname, cname)
       val in: List[Id] = aproc.in
       val bound = aproc.in
