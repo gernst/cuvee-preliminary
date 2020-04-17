@@ -52,6 +52,9 @@ object Horn {
   }
 
   def removeExists(formals: List[Formal], ant: List[Expr], free: Set[Id]): (List[Formal], List[Expr]) = {
+    // Why is this so complicated?
+    // We need to make sure that we're not accidentally pushing variables from the Exists to the surrounding Forall that are already there.
+    // The surrounding Forall changes every time that we remove an Exists.
     ant match {
       case Nil => (formals, Nil)
       case (e@Exists(_, _)) :: rest =>
