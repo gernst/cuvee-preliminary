@@ -21,7 +21,7 @@ object Verify {
           (as, cs, Nil, phi)
         case recipes =>
           val synth = Refine(A, C, fun, st, solver)
-          val defs = recipes.flatMap(synth(_))
+          val defs = synth(recipes)
           (as, cs, defs, phi)
       }
     case Sim.byExpr(as, cs, phi) =>

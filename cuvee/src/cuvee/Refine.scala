@@ -18,6 +18,35 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   val ax: List[Id] = as
   val cx: List[Id] = cs
 
+  def apply(recipes: List[Recipe]): List[Expr] = {
+    val defs = recipes map apply
+    combineDefs(defs.flatten)
+  }
+
+  /**
+   * If multiple recipes are run and multiple recipes produce "R = ..." definitions,
+   * those need to be combined into a single "R = And(...)" definition.
+   */
+  private def combineDefs(defs: List[Expr]): List[Expr] = {
+    val bound = as ++ cs
+    val vars = bound.ids
+
+    val (rhss, other) = partition(defs) {
+      case Forall(`bound`, Eq(App(R, `vars`), rhs)) => Left(rhs)
+      case other => Right(other)
+    }
+
+    val iff = if (rhss.nonEmpty) {
+      val rhs = And(And.flatten(rhss))
+      val def_ = Forall(bound, Eq(App(R, bound), rhs))
+      List(def_)
+    } else {
+      Nil
+    }
+
+    iff ++ other
+  }
+
   def apply(recipe: Recipe): List[Expr] = {
     val cs = candidates(recipe)
     ensure(cs.nonEmpty, "no candidates")
@@ -95,13 +124,11 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       val bound = aproc.in
       val (apre, cpre, steps) = locksteps(aproc, cproc, as, cs, in)
 
-      val outs = for (step <- steps) yield {
-        val eqs = step.outputsEq
-        (step ensures eqs)
-      }
-
       recipe match {
         case Recipe.output =>
+          val outs = for (step <- steps) yield {
+            step ensures step.outputsEq
+          }
           Forall(bound, And(outs))
         case Recipe.precondition =>
           Forall(bound, apre ==> cpre)
