@@ -65,23 +65,21 @@ case class State(
   }
 
   def define(sort: Sort, args: List[Sort], body: Type): State = {
-    ensure(!(sorts contains sort), "sort already defined", sort)
-    val arity = args.length
-    copy(
-      sorts = sorts + (sort -> arity),
+    Check.checkType(body, this)
+    declare(sort, args.length).copy(
       sortdefs = sortdefs + (sort -> (args, body)))
   }
 
   def declare(id: Id, args: List[Type], res: Type): State = {
     ensure(!(funs contains id), "function already defined", id)
+    args.foreach(Check.checkType(_, this))
+    Check.checkType(res, this)
     copy(
       funs = funs + (id -> (args, res)))
   }
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr): State = {
-    ensure(!(funs contains id), "function already defined", id)
-    val newState = copy(
-      funs = funs + (id -> (formals, res)),
+    val newState = declare(id, formals, res).copy(
       fundefs = fundefs + (id -> (formals, body)))
 
     // check new state in case function is recursive
@@ -142,7 +140,7 @@ case class State(
   }
 
   def assert(expr: Expr) = {
-    val typ = Check.infer(expr, Map.empty, this);
+    val typ = Check.infer(expr, Map.empty, this, Some(Sort.bool));
     ensure(typ == Sort.bool, s"Expected expression type to be boolean but was $typ")
     copy(
       rasserts = expr :: rasserts)

@@ -117,6 +117,11 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
     try {
       _push(action(st.clearModel))
     } catch {
+      case SuggestedDeclarationError(suggestion, _) if config.declareImplied =>
+        _push(st)
+        suggestion(this)
+        // then retry
+        map(action)
       case e: Throwable =>
         _push(st)
         throw e
@@ -272,6 +277,7 @@ class Config {
   var test = false
   var printSuccess = false
   var produceModels = false
+  var declareImplied = false
 }
 
 object Task {
@@ -330,6 +336,10 @@ class Task extends Runnable { /* because why not */
 
     case "-no-simplify" :: rest =>
       config.simplify = false
+      configure(rest)
+
+    case "-declare-implied" :: rest =>
+      config.declareImplied = true
       configure(rest)
 
     case "-qe" :: rest =>

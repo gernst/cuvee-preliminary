@@ -1,8 +1,8 @@
-(declare-sort Name 0)
 (declare-sort File 0)
-(declare-sort Address 0)
 (declare-fun empty () File)
+(declare-sort Address 0)
 (declare-fun null () Address)
+(declare-sort Name 0)
 (declare-fun fs0 () (Array Name File))
 (declare-fun index0 () (Array Name Address))
 (declare-fun R ((Array Name File) (Array Name Address) (Array Address File)) Bool)
@@ -168,19 +168,19 @@
                   (= (select disk addr) empty)))
               (and
                 (exists
-                  ((addr2 Address))
+                  ((addr3 Address))
                   (and
-                    (distinct addr2 null)
-                    (= (select disk addr2) empty)))
+                    (distinct addr3 null)
+                    (= (select disk addr3) empty)))
                 (forall
-                  ((addr2 Address))
+                  ((addr3 Address))
                   (=>
                     (and
-                      (distinct addr2 null)
-                      (= (select disk addr2) empty))
+                      (distinct addr3 null)
+                      (= (select disk addr3) empty))
                     (and
                       true
-                      (R (store fs name file) (store index |name'| addr2) (store disk addr2 |file'|)))))))))))))
+                      (R (store fs name file) (store index |name'| addr3) (store disk addr3 |file'|)))))))))))))
 (check-sat)
 (pop 1)
 (pop 1)

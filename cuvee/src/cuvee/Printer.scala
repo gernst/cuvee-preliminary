@@ -30,7 +30,11 @@ object Printer {
   def id(id: Id) = mangle(id)
 
   def declare(sort: Sort, arity: Int) = {
-    sexpr("declare-sort", sort, arity)
+    if (arity > 0) {
+      sexpr("declare-sort", sort, arity)
+    } else {
+      sexpr("declare-sort", sort)
+    }
   }
 
   def define(sort: Sort, args: List[Sort], body: Type) = {
