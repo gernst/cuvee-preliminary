@@ -236,15 +236,6 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
     Success
   }
 
-  /* def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
-    val xs = formals map (_.id)
-    val args = formals map (_.typ)
-    val axiom = Forall(formals, App(id, xs) === body)
-    map(_ declare (id, args, res))
-    map(_ assert axiom)
-    backend.declare(id, args, res)
-  } */
-
   def verify(spec: Sort, impl: Sort, sim: Sim): Ack = {
     val A = top objects spec
     val C = top objects impl
