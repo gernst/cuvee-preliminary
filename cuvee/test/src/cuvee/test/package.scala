@@ -14,5 +14,13 @@ package object test {
           assertEquals(res, Success)
       }
     }
+
+    def withSolver[T](s: Solver, action: Solver => T): T = {
+      try {
+        action(s)
+      } finally {
+        s.exit()
+      }
+    }
   }
 }

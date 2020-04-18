@@ -87,7 +87,9 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
 
   def exit() = {
     val ack = backend.exit()
-    System.exit(0)
+    if (config.exitJvm) {
+      System.exit(0)
+    }
     ack // ignored
   }
 
@@ -278,6 +280,7 @@ class Config {
   var printSuccess = false
   var produceModels = false
   var declareImplied = false
+  var exitJvm = false
 }
 
 object Task {
@@ -409,7 +412,11 @@ class Task extends Runnable { /* because why not */
 
   def run() = {
     val cuvee = Cuvee(sink, config)
-    source.run(cuvee, report)
+    try {
+      source.run(cuvee, report)
+    } finally {
+      cuvee.exit();
+    }
   }
 }
 
@@ -421,6 +428,7 @@ object Cuvee {
 
   def run(args: List[String]): Unit = {
     val task = Task(args)
+    task.config.exitJvm = true
     task.run()
   }
 

@@ -38,11 +38,12 @@ object SimplifyTest extends TestSuite {
   }
 
   private def simplify(phi: Expr, formals: List[Formal]) = {
-    val solver = Solver.z3()
-    solver.bind(formals)
-    val simplifier = Simplify(solver)
-    val simplified = simplifier(List(phi))
-    assertEquals(simplified.size, 1)
-    simplified.head
+    withSolver(Solver.z3(), solver => {
+      solver.bind(formals)
+      val simplifier = Simplify(solver)
+      val simplified = simplifier(List(phi))
+      assertEquals(simplified.size, 1)
+      simplified.head
+    })
   }
 }

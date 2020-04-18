@@ -223,10 +223,17 @@ object Sink {
     def stream = System.err
   }
 
-  class capture extends print {
+  class capture(captureExit: Boolean = false) extends print {
     val buffer = new ByteArrayOutputStream
     val stream = new PrintStream(buffer)
     override def toString = buffer.toString
+    override def exit() = {
+      if (captureExit) {
+        super.exit()
+      } else {
+        Success
+      }
+    }
   }
 
   abstract class print extends Sink {

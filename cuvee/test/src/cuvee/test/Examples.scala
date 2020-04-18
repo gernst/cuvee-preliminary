@@ -24,19 +24,14 @@ object Examples extends TestSuite {
     val report = prove_!
 
     test(path + " (z3)") {
-      val solver = Solver.z3()
-      Cuvee.run(source, solver, report)
+      withSolver(Solver.z3(), solver =>
+        Cuvee.run(source, solver, report))
     }
 
     test(path + " (cvc4)") {
-      val solver = Solver.cvc4()
-      Cuvee.run(source, solver, report)
+      withSolver(Solver.cvc4(), solver =>
+        Cuvee.run(source, solver, report))
     }
-
-    /* test(path + " (princess)") {
-        val solver = Solver.princess()
-        Cuvee.run(source, solver, report)
-    } */
   }
 
   def main(args: Array[String]) {
