@@ -1,4 +1,4 @@
-;! Cuvee -simplify
+;! Cuvee -simplify -z3
 
 (set-logic ALL)
 
@@ -9,5 +9,5 @@
 (assert (and p (and p q r)))
 (assert (=> (or p q) (=> p q)))
 
-(set-info :status unknown)
+(set-info :status sat)
 (check-sat)

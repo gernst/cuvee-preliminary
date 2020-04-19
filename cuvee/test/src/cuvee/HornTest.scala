@@ -61,7 +61,6 @@ object HornTest extends TestSuite {
                       true
                       (R (store fs name file) (store index |name'| addr1) (store disk addr1 |file'|)))))))))))"""
     Printer.format = true
-    Horn.split(expr).foreach(println)
     test(expr, None, s => {
       s.declare("Name", 0)
       s.declare("File", 0)
