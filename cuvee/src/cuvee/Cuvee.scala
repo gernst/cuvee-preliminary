@@ -86,11 +86,7 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
   }
 
   def exit() = {
-    val ack = backend.exit()
-    if (config.exitJvm) {
-      System.exit(0)
-    }
-    ack // ignored
+    backend.exit()
   }
 
   def _pop() = {
@@ -280,7 +276,6 @@ class Config {
   var printSuccess = false
   var produceModels = false
   var declareImplied = false
-  var exitJvm = false
 }
 
 object Task {
@@ -428,7 +423,6 @@ object Cuvee {
 
   def run(args: List[String]): Unit = {
     val task = Task(args)
-    task.config.exitJvm = true
     task.run()
   }
 

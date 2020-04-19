@@ -158,9 +158,15 @@ object Source {
         line = readLine()
         if (line != null) {
           val cmd = Cmd.from(line)
-          safe(cmd, solver, report)
+          if (cmd == Exit) {
+            // end loop and exit
+            line = null
+          } else {
+            safe(cmd, solver, report)
+          }
         }
       } while (line != null)
+      solver.exit()
     }
   }
 
@@ -172,10 +178,11 @@ object Source {
 
   case class file(in: File) extends Source {
     def run(solver: Solver, report: Report) {
-      val cmds = Script.from(in)
+      val cmds = Script.from(in).takeWhile(_ != Exit)
       for (cmd <- cmds) {
         safe(cmd, solver, report)
       }
+      solver.exit()
     }
   }
 }
