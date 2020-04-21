@@ -53,14 +53,14 @@
     :precondition (and (= (select index name) null)
                        (distinct file empty))))
 
-(declare-fun R
-  ((Array Name File)
-   (Array Name Address)
-   (Array Address File))
-   Bool)
-
 (push)
-  (assert (forall 
+  (declare-fun R
+    ((Array Name File)
+     (Array Name Address)
+     (Array Address File))
+     Bool)
+
+  (assert (forall
     ((fs    (Array Name File))
      (index (Array Name Address))
      (disk  (Array Address File)))
@@ -83,4 +83,3 @@
   (set-info :status unsat)
   (check-sat)
 (pop)
-

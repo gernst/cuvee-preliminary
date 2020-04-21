@@ -5,8 +5,8 @@
 (declare-sort Name 0)
 (declare-fun fs0 () (Array Name File))
 (declare-fun index0 () (Array Name Address))
-(declare-fun R ((Array Name File) (Array Name Address) (Array Address File)) Bool)
 (push 1)
+(declare-fun R ((Array Name File) (Array Name Address) (Array Address File)) Bool)
 (push 1)
 (assert
   (forall
@@ -27,11 +27,13 @@
       (R fs index disk)
       (forall
         ((name Name))
-        (=>
-          (distinct (select fs name) empty)
           (and
-            (distinct (select index name) null)
-            (= (select fs name) (select disk (select index name)))))))))
+             (=> (distinct (select fs name) empty)
+                 (and (distinct (select index name) null)
+                    (= (select fs name)
+                    (select disk (select index name)))))
+             (=> (= (select fs name) empty)
+                 (= (select index name) null)))))))
 (assert
   (not
     (and
@@ -63,10 +65,12 @@
           (and
             (= |name'| name)
             (= |file'| file)
-            (distinct (select fs name) empty)
+            (= (select fs name) empty)
+            (distinct file empty)
             (R fs index disk))
           (and
-            (distinct (select index |name'|) null)
+            (= (select index |name'|) null)
+            (distinct |file'| empty)
             true
             (=>
               (exists
@@ -93,6 +97,25 @@
 (pop 1)
 (pop 1)
 (push 1)
+(define-fun R ((fs (Array Name File)) (index (Array Name Address)) (disk (Array Address File))) Bool
+  (and
+    (forall
+      ((name Name))
+      (= (select fs name) (select disk (select index name))))
+    (forall
+      ((name Name))
+      (or
+        (= (select fs name) empty)
+        (distinct (select index name) null)))
+    (forall
+      ((name Name) (file File))
+      (or
+        (not
+          (= (select fs name) empty))
+        (= file empty)
+        (and
+          (= (select index name) null)
+          (distinct file empty))))))
 (push 1)
 (assert
   (forall
@@ -106,24 +129,6 @@
     (=
       (select index0 name)
       null)))
-(assert
-  (forall
-    ((fs (Array Name File)) (index (Array Name Address)) (disk (Array Address File)))
-    (=
-      (R fs index disk)
-      (forall
-        ((name Name))
-        (= (select fs name) (select disk (select index name)))))))
-(assert
-  (forall
-    ((fs (Array Name File)) (index (Array Name Address)) (disk (Array Address File)))
-    (=
-      (R fs index disk)
-      (forall
-        ((name Name))
-        (or
-          (= (select fs name) empty)
-          (distinct (select index name) null))))))
 (assert
   (not
     (and
@@ -155,10 +160,12 @@
           (and
             (= |name'| name)
             (= |file'| file)
-            (distinct (select fs name) empty)
+            (= (select fs name) empty)
+            (distinct file empty)
             (R fs index disk))
           (and
-            (distinct (select index |name'|) null)
+            (= (select index |name'|) null)
+            (distinct |file'| empty)
             true
             (=>
               (exists

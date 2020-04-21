@@ -242,7 +242,12 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
     val C = top objects impl
 
     val (defs, phi) = Verify.refinement(A, C, sim, top, solver)
-    assert(defs)
+    (defs, sim) match {
+      case (List(Forall(formals, Eq(App(r, args), deff))), Sim.byFun(r_, _)) if r == r_ && formals.ids == args =>
+        define(r, formals, Sort.bool, deff, false)
+      case _ =>
+        assert(defs)
+    }
 
     config.logic match {
       case Some("HORN") =>

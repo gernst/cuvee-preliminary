@@ -1,11 +1,6 @@
-(declare-fun R (Int Int) Bool)
+(define-fun R ((counter Int) (neg Int)) Bool
+  (= counter (- neg)))
 (push 1)
-(assert
-  (forall
-    ((counter Int) (neg Int))
-    (=
-      (R counter neg)
-      (= counter (- neg)))))
 (assert
   (not
     (and
