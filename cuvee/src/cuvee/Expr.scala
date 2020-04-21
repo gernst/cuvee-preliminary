@@ -227,16 +227,7 @@ case class Distinct(exprs: List[Expr]) extends Expr {
 
 object Not extends Sugar.unary(Id.not)
 
-object Imp extends Sugar.associative(Id.imp, Assoc.right) {
-  def flat(phis: List[Expr]): Expr = {
-    flat(Nil, phis)
-  }
-
-  def flat(assms: List[Expr], phis: List[Expr]): Expr = phis match {
-    case phi :: Nil => Imp(And(assms), phi)
-    case phi :: rest => flat(phi :: assms, rest)
-  }
-}
+object Imp extends Sugar.associative(Id.imp, Assoc.right)
 
 object And extends Sugar.commutative(Id.and, True, Assoc.left)
 object Or extends Sugar.commutative(Id.or, False, Assoc.left)
@@ -579,4 +570,15 @@ case class Call(name: Id, in: List[Expr], out: List[Id]) extends Prog {
   def read = in.flatMap(_.free).distinct.toSet
   def replace(re: Map[Id, Id]) = Call(name, in map (_ rename re), out map (_ rename re))
   override def toString = sexpr("call", sexpr(in), sexpr(out))
+}
+
+case class VerificationCondition(a: Sort, c: Sort, r: Id) extends Expr {
+  override def free: Set[Id] = Set.empty
+  override def rename(re: Map[Id, Id]): Expr = VerificationCondition(a, c, r rename re)
+  override def subst(su: Map[Id, Expr]): Expr = VerificationCondition(a, c, su get r match {
+    case Some(n: Id) => n
+    case None => r
+    case _ => error("Cannot substitute expression into verification condition")
+  })
+  override def toString: String = sexpr("verification-condition", a, c, mangle(r))
 }

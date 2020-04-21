@@ -229,13 +229,11 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
 
   def define(id: Id, proc: Proc): Ack = {
     map(_ define (id, proc))
-    // backend.define(id, proc)
     Success
   }
 
   def define(sort: Sort, obj: Obj): Ack = {
     map(_ define (sort, obj))
-    // backend.define(sort, obj)
     Success
   }
 
