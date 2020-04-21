@@ -86,9 +86,7 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
   }
 
   def exit() = {
-    val ack = backend.exit()
-    System.exit(0)
-    ack // ignored
+    backend.exit()
   }
 
   def _pop() = {
@@ -117,6 +115,11 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
     try {
       _push(action(st.clearModel))
     } catch {
+      case SuggestedDeclarationError(suggestion, _) if config.declareImplied =>
+        _push(st)
+        suggestion(this)
+        // then retry
+        map(action)
       case e: Throwable =>
         _push(st)
         throw e
@@ -236,15 +239,6 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
     Success
   }
 
-  /* def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
-    val xs = formals map (_.id)
-    val args = formals map (_.typ)
-    val axiom = Forall(formals, App(id, xs) === body)
-    map(_ declare (id, args, res))
-    map(_ assert axiom)
-    backend.declare(id, args, res)
-  } */
-
   def verify(spec: Sort, impl: Sort, sim: Sim): Ack = {
     val A = top objects spec
     val C = top objects impl
@@ -281,6 +275,7 @@ class Config {
   var test = false
   var printSuccess = false
   var produceModels = false
+  var declareImplied = false
 }
 
 object Task {
@@ -339,6 +334,10 @@ class Task extends Runnable { /* because why not */
 
     case "-no-simplify" :: rest =>
       config.simplify = false
+      configure(rest)
+
+    case "-declare-implied" :: rest =>
+      config.declareImplied = true
       configure(rest)
 
     case "-qe" :: rest =>
@@ -408,7 +407,11 @@ class Task extends Runnable { /* because why not */
 
   def run() = {
     val cuvee = Cuvee(sink, config)
-    source.run(cuvee, report)
+    try {
+      source.run(cuvee, report)
+    } finally {
+      cuvee.exit();
+    }
   }
 }
 

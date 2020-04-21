@@ -1,8 +1,4 @@
-;! Cuvee -format -z3
-
-(declare-sort Name)
-(declare-sort File)
-(declare-sort Address)
+;! Cuvee -format -declare-implied -z3
 
 (declare-const empty File)
 (declare-const null  Address)
@@ -55,7 +51,7 @@
             ((select disk  addr) file))
     :precondition (distinct (select index name) null)))
 
-(declare-fun R 
+(declare-fun R
   ((Array Name File)
    (Array Name Address)
    (Array Address File))

@@ -30,6 +30,7 @@ object Printer {
   def id(id: Id) = mangle(id)
 
   def declare(sort: Sort, arity: Int) = {
+    // Arity is not optional in CVC4. It will freeze if omitted.
     sexpr("declare-sort", sort, arity)
   }
 

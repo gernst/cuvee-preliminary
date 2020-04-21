@@ -61,7 +61,6 @@ object HornTest extends TestSuite {
                       true
                       (R (store fs name file) (store index |name'| addr1) (store disk addr1 |file'|)))))))))))"""
     Printer.format = true
-    Horn.split(expr).foreach(println)
     test(expr, None, s => {
       s.declare("Name", 0)
       s.declare("File", 0)
@@ -159,9 +158,10 @@ object HornTest extends TestSuite {
     val allowedFree = initial.free + True + False
     assert(actualExpr.free.subsetOf(allowedFree), "no new free variables")
 
-    val solver = Solver.z3()
-    env(solver)
-    // prove that expression is equal
-    assertEquals(solver.check(actualExpr !== initial), Unsat)
+    withSolver(Solver.z3(), solver => {
+      env(solver)
+      // prove that expression is equal
+      assertEquals(solver.check(actualExpr !== initial), Unsat)
+    })
   }
 }

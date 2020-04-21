@@ -98,7 +98,13 @@ object Solver {
 
     def exit() = {
       write(Printer.exit())
-      Ack.from(read())
+      val line = read()
+      if (line != null) {
+        Ack.from(line)
+      } else {
+        // looks like it has exited :)
+        Success
+      }
     }
 
     def check() = {
