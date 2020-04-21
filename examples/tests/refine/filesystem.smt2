@@ -25,7 +25,8 @@
   (write ((name Name) (file File))
          ()
     (assign ((select fs name) file))
-    :precondition (distinct (select fs name) empty)))
+    :precondition (and (= (select fs name) empty)
+                       (distinct file empty))))
 
 (define-class
   FlashFS
@@ -49,7 +50,8 @@
            (= (select disk addr) empty)))
     (assign ((select index name) addr)
             ((select disk  addr) file))
-    :precondition (distinct (select index name) null)))
+    :precondition (and (= (select index name) null)
+                       (distinct file empty))))
 
 (declare-fun R
   ((Array Name File)
@@ -63,11 +65,13 @@
      (index (Array Name Address))
      (disk  (Array Address File)))
     (= (R fs index disk)
-       (forall ((name Name))
+       (forall ((name Name)) (and
          (=> (distinct (select fs name) empty)
              (and (distinct (select index name) null)
                   (= (select fs name)
-                     (select disk (select index name)))))))))
+                     (select disk (select index name)))))
+         (=> (= (select fs name) empty)
+             (= (select index name) null)))))))
 
   (verify-refinement AbstractFS FlashFS R)
   (set-info :status unsat)
