@@ -244,6 +244,8 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
     val (defs, phi) = Verify.refinement(A, C, sim, top, solver)
     (defs, sim) match {
       case (List(Forall(formals, Eq(App(r, args), deff))), Sim.byFun(r_, _)) if r == r_ && formals.ids == args =>
+        // This is a simple R = ... definition which we can use define-fun for.
+        // This is more convenient for the backend and allows us to prove more complicated examples.
         define(r, formals, Sort.bool, deff, false)
       case _ =>
         assert(defs)
