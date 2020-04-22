@@ -143,7 +143,7 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
 
     val actual = rasserts match {
       case Not(phi) :: rest if config.prove =>
-        var _asserts = rest.reverse
+        val _asserts = rest.reverse
 
         for (expr <- _asserts) {
           backend.assert(expr)
@@ -154,7 +154,7 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
         // val unknown = conj filterNot solver.isTrue
 
         val prove = Prove(solver)
-        val _phi = prove(phi)
+        val _phi = prove(phi, top)
 
         if (_phi == True) {
           Unsat
