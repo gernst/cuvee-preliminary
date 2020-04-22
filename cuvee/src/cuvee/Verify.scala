@@ -5,7 +5,7 @@ object Verify {
 
   def refinement(A: Obj, C: Obj, sim: Sim, st: State, solver: Solver): (List[Expr], Expr) = {
     val (as, cs, defs, phi) = R(A, C, sim, st, solver)
-    val cond = verificationCondition(A, C, as, cs, phi)
+    val cond = refinementCondition(A, C, as, cs, phi)
     (defs, cond)
   }
 
@@ -26,11 +26,11 @@ object Verify {
       (as, cs, Nil, phi)
   }
 
-  def verificationCondition(A: Obj, C: Obj, R: Id): Expr = {
-    verificationCondition(A, C, A.state, C.state, App(R, A.state ++ C.state))
+  def refinementCondition(A: Obj, C: Obj, R: Id): Expr = {
+    refinementCondition(A, C, A.state, C.state, App(R, A.state ++ C.state))
   }
 
-  private def verificationCondition(A: Obj, C: Obj, as: List[Formal], cs: List[Formal], phi: Expr): Expr = {
+  private def refinementCondition(A: Obj, C: Obj, as: List[Formal], cs: List[Formal], phi: Expr): Expr = {
     val (init, ops) = refine(A, as, C, cs, phi)
     val diag = init :: ops
     val (_, conds) = diag.unzip

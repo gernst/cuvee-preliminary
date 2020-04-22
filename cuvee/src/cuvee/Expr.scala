@@ -572,10 +572,10 @@ case class Call(name: Id, in: List[Expr], out: List[Id]) extends Prog {
   override def toString = sexpr("call", sexpr(in), sexpr(out))
 }
 
-case class VerificationCondition(a: Sort, c: Sort, r: Id) extends Expr {
+case class Refines(a: Sort, c: Sort, r: Id) extends Expr {
   override def free: Set[Id] = Set.empty
-  override def rename(re: Map[Id, Id]): Expr = VerificationCondition(a, c, r rename re)
-  override def subst(su: Map[Id, Expr]): Expr = VerificationCondition(a, c, su get r match {
+  override def rename(re: Map[Id, Id]): Expr = Refines(a, c, r rename re)
+  override def subst(su: Map[Id, Expr]): Expr = Refines(a, c, su get r match {
     case Some(n: Id) => n
     case None => r
     case _ => error("Cannot substitute expression into verification condition")

@@ -62,6 +62,10 @@ object ParserTest extends TestSuite {
     assertEquals(parseCmds("; foo\n; bar"), List())
   }
 
+  test("Windows") {
+    assertEquals(parseCmds((";!Cuvee -z3\r\n(set-logic ALL)\r\n(assert false)")).size, 2)
+  }
+
   /* test("parse expectation of check-sat") {
     val parseable = new Parseable[CheckSat](Parser.check_sat_)
     val parse: String => CheckSat = str => VerifyTest.runUnwrappingErrors(parseable.from(str))

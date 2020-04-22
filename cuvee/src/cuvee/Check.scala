@@ -122,7 +122,7 @@ object Check {
         error(s"expected array type but got $other")
     }
 
-    case VerificationCondition(a, c, r) =>
+    case Refines(a, c, r) =>
       (st.objects get a, st.objects get c) match {
         case (Some(ao), Some(co)) =>
           val locals: Map[Id, Type] = ao.state ++ co.state

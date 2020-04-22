@@ -39,7 +39,7 @@
     :precondition (Cthroughpre c in)
     :postcondition (Cthroughpost c out)))
 
-(assert (not (= (verification-condition A C R)
+(assert (not (= (refines A C R)
   (forall ((a As) (in In) (c Cs) (in In)) (and
     (R a0 c0)
     (=> (R a c) (and

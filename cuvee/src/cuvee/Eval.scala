@@ -159,8 +159,8 @@ object Eval {
     case Dia(prog, post) =>
       dia(List(prog), None, post, env, old, st)
 
-    case VerificationCondition(a, c, r) =>
-      eval(Verify.verificationCondition(st.objects(a), st.objects(c), r), env, old, st)
+    case Refines(a, c, r) =>
+      eval(Verify.refinementCondition(st.objects(a), st.objects(c), r), env, old, st)
   }
 
   def wp(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
