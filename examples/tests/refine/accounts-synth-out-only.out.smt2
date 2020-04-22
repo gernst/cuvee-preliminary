@@ -1,12 +1,7 @@
 (set-logic ALL)
-(declare-fun R (Int Int Int) Bool)
+(define-fun R  ((balance Int) (debit Int) (credit Int)) Bool
+  (= (+ balance debit) credit))
 (push 1)
-(assert
-  (forall
-    ((balance Int) (debit Int) (credit Int))
-    (=
-      (R balance debit credit)
-      (= (+ balance debit) credit))))
 (assert
   (not
     (and

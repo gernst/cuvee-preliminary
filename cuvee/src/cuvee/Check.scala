@@ -121,6 +121,19 @@ object Check {
       case other =>
         error(s"expected array type but got $other")
     }
+
+    case Refines(a, c, r) =>
+      (st.objects get a, st.objects get c) match {
+        case (Some(ao), Some(co)) =>
+          val locals: Map[Id, Type] = ao.state ++ co.state
+          val t = infer(App(r, ao.state ++ co.state), ty ++ locals, st, Some(bool))
+          ensure(t == bool, s"Refinement $r must be boolean but was $t")
+          bool
+        case (None, _) =>
+          error(s"Unknown object $a")
+        case (_, None) =>
+          error(s"Unknown object $c")
+      }
   }
 
   private def inferTwoSides(ty: Map[Id, Type], st: State, left: Expr, right: Expr) = {

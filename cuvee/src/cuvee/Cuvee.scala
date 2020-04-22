@@ -229,13 +229,11 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
 
   def define(id: Id, proc: Proc): Ack = {
     map(_ define (id, proc))
-    // backend.define(id, proc)
     Success
   }
 
   def define(sort: Sort, obj: Obj): Ack = {
     map(_ define (sort, obj))
-    // backend.define(sort, obj)
     Success
   }
 
@@ -244,7 +242,14 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
     val C = top objects impl
 
     val (defs, phi) = Verify.refinement(A, C, sim, top, solver)
-    assert(defs)
+    (defs, sim) match {
+      case (List(Forall(formals, Eq(App(r, args), deff))), Sim.byFun(r_, _)) if r == r_ && formals.ids == args =>
+        // This is a simple R = ... definition which we can use define-fun for.
+        // This is more convenient for the backend and allows us to prove more complicated examples.
+        define(r, formals, Sort.bool, deff, false)
+      case _ =>
+        assert(defs)
+    }
 
     config.logic match {
       case Some("HORN") =>

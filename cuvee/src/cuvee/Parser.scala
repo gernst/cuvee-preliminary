@@ -21,13 +21,15 @@ class Parseable[+A](p: Parser[A]) {
   }
 
   def from(file: File): A = {
-    from(file.text)
+    from(file.text())
   }
 }
 
 object Parser {
+  val reservedWords = Set("par", "NUMERAL", "DECIMAL", "STRING", "_", "!", "as", "let", "forall", "exists")
+
   implicit val whitespace: Whitespace = {
-    new Whitespace("(\\s|(\\s*;.*(\\n|$)))*")
+    new Whitespace("(\\s|(\\s*;.*(\\n|\\r\\n|$)))*")
   }
 
   def parens[A](p: Parser[A]) = {
@@ -37,6 +39,7 @@ object Parser {
   // https://github.com/smtlib/jSMTLIB
   // SMT/src/org/smtlib/sexpr/Lexer.java
   val simple = S("[a-zA-Z_~!@$%^&*+=<>.?/\\-][0-9a-zA-Z_~!@$%^&*+=<>.?/\\-]*")
+    .filterNot(reservedWords)
   val quoted = S("\\|[0-9a-zA-Z_~!@$%^&*+=<>.?/\"'(),:;{}#`\\[\\] \t\r\n\\-]*\\|") map {
     str => str.substring(1, str.length - 1)
   }
@@ -53,7 +56,8 @@ object Parser {
   val list_ = P(Type.list("List" ~ typ))
 
   val pat: Parser[Pat] = P(id | parens(unapp_))
-  val expr: Parser[Expr] = P(id | num | parens(as_ | bind_ | distinct_ | ite_ | let_ | match_ | select_ | store_ | old_ | wp_ | box_ | dia_ | app_))
+  val expr: Parser[Expr] = P(id | num | parens(as_ | bind_ | distinct_ | ite_ | let_ | match_ | select_ | store_ | old_
+    | wp_ | box_ | dia_ | refines_ | app_))
 
   val id = P(Id(name | op))
 
@@ -86,6 +90,8 @@ object Parser {
   val formal = P(Formal(parens(id ~ typ)))
   val formals = P(formal.*)
   val bind_ = P(Bind(quant ~ parens(formals) ~ expr))
+
+  val refines_ = P(Refines("refines" ~ sort ~ sort ~ id))
 
   val prog_ : Parser[Prog] = P(break_ | assign_ | asm_ | asrt_ | spec_ | choose_ | call_ | if_ | while_ | block_)
   val prog: Parser[Prog] = P(parens(prog_))

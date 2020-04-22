@@ -30,8 +30,6 @@
             (assign (decreased (- credit debit))))
         :precondition (and (> amount 0) (<= amount (- credit debit)))))
 
-(declare-fun R (Int Int Int) Bool)
-
 (verify-refinement SimpleAccount DoubleAccount R :synthesize output)
 
 (set-info :status unsat)

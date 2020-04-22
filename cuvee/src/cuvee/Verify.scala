@@ -5,10 +5,8 @@ object Verify {
 
   def refinement(A: Obj, C: Obj, sim: Sim, st: State, solver: Solver): (List[Expr], Expr) = {
     val (as, cs, defs, phi) = R(A, C, sim, st, solver)
-    val (init, ops) = refine(A, as, C, cs, phi)
-    val diag = init :: ops
-    val (_, conds) = diag.unzip
-    (defs, And(conds))
+    val cond = refinementCondition(A, C, as, cs, phi)
+    (defs, cond)
   }
 
   def R(A: Obj, C: Obj, sim: Sim, st: State, solver: Solver) = sim match {
@@ -21,11 +19,22 @@ object Verify {
           (as, cs, Nil, phi)
         case recipes =>
           val synth = Refine(A, C, fun, st, solver)
-          val defs = recipes.flatMap(synth(_))
+          val defs = synth(recipes)
           (as, cs, defs, phi)
       }
     case Sim.byExpr(as, cs, phi) =>
       (as, cs, Nil, phi)
+  }
+
+  def refinementCondition(A: Obj, C: Obj, R: Id): Expr = {
+    refinementCondition(A, C, A.state, C.state, App(R, A.state ++ C.state))
+  }
+
+  private def refinementCondition(A: Obj, C: Obj, as: List[Formal], cs: List[Formal], phi: Expr): Expr = {
+    val (init, ops) = refine(A, as, C, cs, phi)
+    val diag = init :: ops
+    val (_, conds) = diag.unzip
+    And(conds)
   }
 
   def contract(proc: Proc) = {
@@ -59,7 +68,7 @@ object Verify {
         R, R)
     }
 
-    (init, ops.toList)
+    (init, ops)
   }
 
   def diagram(

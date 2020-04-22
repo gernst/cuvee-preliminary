@@ -10,8 +10,6 @@
     (increment () () (assign (neg (- neg 1))))
     (get-count () ((count Int)) (assign (count (- 0 neg)))))
 
-(declare-fun R (Int Int) Bool)
-
 (verify-refinement Counter NegativeCounter R :synthesize output)
 
 (set-info :status unsat)

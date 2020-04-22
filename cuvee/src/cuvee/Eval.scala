@@ -98,7 +98,7 @@ object Eval {
       ensure(args.isEmpty, "not constant", expr, env)
       id
 
-    case id: Id =>
+    case _: Id =>
       error("unknown identifier", expr, env)
 
     case Old(inner) =>
@@ -158,6 +158,9 @@ object Eval {
 
     case Dia(prog, post) =>
       dia(List(prog), None, post, env, old, st)
+
+    case Refines(a, c, r) =>
+      eval(Verify.refinementCondition(st.objects(a), st.objects(c), r), env, old, st)
   }
 
   def wp(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {

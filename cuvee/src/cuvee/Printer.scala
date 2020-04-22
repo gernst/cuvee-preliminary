@@ -43,7 +43,13 @@ object Printer {
   }
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr, rec: Boolean) = {
-    if (!rec) sexpr("define-fun", id, sexpr(formals), res, body)
+    if (!rec) {
+      if (format) {
+        sexpr("define-fun", id, sexpr(formals), res, "\n" + format(body, "  "))
+      } else {
+        sexpr("define-fun", id, sexpr(formals), res, body)
+      }
+    }
     else sexpr("define-fun-rec", id, sexpr(formals), res, body)
   }
 
