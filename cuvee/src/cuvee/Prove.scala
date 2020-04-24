@@ -1,11 +1,5 @@
 package cuvee
 
-sealed trait Tactic
-
-object Tactic {
-  case object split extends Tactic
-}
-
 case class Prove(backend: Solver) {
   import Simplify._
 
@@ -41,12 +35,21 @@ case class Prove(backend: Solver) {
         prove(body_, st.declareConstants(bound_))
       }
       forall(bound_, _body)
+
+    case Eq(left, right)
+      // since we never have local variables, we do a type check based on globals
+      if Check.infer(left, Map.empty, st, None) == Sort.bool
+        && Check.infer(right, Map.empty, st, None) == Sort.bool =>
+      prove(And(left ==> right, right ==> left), st)
     case App(Id("iff", None), List(left, right)) =>
       prove(And(left ==> right, right ==> left), st)
-    case App(r, args) if st.fundefs contains r =>
-      // a recursive function will cause a stackoverflow here :3
+
+    case App(r, args) if (st.fundefs contains r)
+      // do not substitute recursive functions
+      && !((st.fundefs(r)._2.free) contains r) =>
       val (formals, body) = st.fundefs(r)
       prove(body.subst(Expr.subst(formals, args)), st)
+
     case _ if backend isTrue phi =>
       True
     case _ =>
