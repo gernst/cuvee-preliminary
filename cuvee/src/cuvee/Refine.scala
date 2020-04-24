@@ -129,7 +129,7 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
           val outs = for (step <- steps) yield {
             step ensures step.outputsEq
           }
-          Forall(bound, And(outs))
+          Forall(bound, apre ==> And(outs))
         case Recipe.precondition =>
           Forall(bound, apre ==> cpre)
       }
