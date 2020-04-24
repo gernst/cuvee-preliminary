@@ -27,6 +27,7 @@ object ProveTest extends TestSuite {
     val st = State.default.define("R", List(("x", "Int"), ("y", "Int")), "Bool",
       "x" === "y" && App("R", "x", "y"))
     withSolver(Solver.default, solver => {
+      solver.declare("R", List("Int","Int"), "Bool")
       val initial = Forall(List(("x", "Int"), ("y", "Int")), App("R", "x", "y"))
       val expr = Prove(solver).prove(initial, st)
       assertEquals(expr, initial)

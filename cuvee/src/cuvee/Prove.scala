@@ -46,7 +46,7 @@ case class Prove(backend: Solver) {
 
     case App(r, args) if (st.fundefs contains r)
       // do not substitute recursive functions
-      && !((st.fundefs(r)._2.free) contains r) =>
+      && !(evaluations(st.fundefs(r)._2) contains r) =>
       val (formals, body) = st.fundefs(r)
       prove(body.subst(Expr.subst(formals, args)), st)
 
@@ -54,5 +54,31 @@ case class Prove(backend: Solver) {
       True
     case _ =>
       phi
+  }
+
+  /**
+   * Finds the ids of all evaluated functions
+   */
+  def evaluations(expr: Expr): Set[Id] = expr match {
+    // function evaluation
+    case App(fun, args) => Set(fun) ++ args.toSet.flatMap(evaluations)
+
+    // no function evaluation
+    case Id(_, _) | Num(_) | Note(_, _) | As(_, _) => Set.empty
+
+    // collect from parts
+    case Eq(left, right) => evaluations(left) ++ evaluations(right)
+    case Distinct(exprs) => exprs.toSet.flatMap(evaluations)
+    case Ite(test, left, right) => Set(test, left, right).flatMap(evaluations)
+    case Let(pairs, body) => evaluations(body) ++ pairs.map(_.e).toSet.flatMap(evaluations)
+    case Match(expr, cases) => evaluations(expr) ++ cases.map(_.expr).toSet.flatMap(evaluations)
+    case Select(array, index) => evaluations(array) ++ evaluations(index)
+    case Store(array, index, value) => Set(array, index, value).flatMap(evaluations)
+    case Old(expr) => evaluations(expr)
+    case Bind(_, _, body) => evaluations(body)
+
+    // we'll assume for now that these don't turn up in function definitions:
+    case Post(_, _, _) => ??? // we're not gonna get into programs
+    case Refines(_, _, _) => ??? // we'd have to evaluate this to know
   }
 }
