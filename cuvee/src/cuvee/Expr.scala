@@ -108,7 +108,7 @@ sealed trait Expr extends Expr.term {
   def store(index: Expr, arg: Expr) = Store(this, index, arg)
 }
 
-object Expr extends Parseable[Expr](Parser.expr) with Alpha[Expr, Id] {
+object Expr extends Parsable[Expr](Parser.expr) with Alpha[Expr, Id] {
 
   def fresh(name: String) = {
     Id(name, Some(nextIndex))
@@ -467,7 +467,7 @@ sealed trait Prog {
   def replace(re: Map[Id, Id]): Prog
 }
 
-object Prog extends Parseable(Parser.prog)
+object Prog extends Parsable(Parser.prog)
 
 case class Block(progs: List[Prog], withOld: Boolean = false) extends Prog {
   def mod = Set(progs flatMap (_.mod): _*)

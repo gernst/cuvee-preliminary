@@ -4,7 +4,7 @@ import arse._
 import arse.implicits._
 import java.io.File
 
-class Parseable[+A](p: Parser[A]) {
+class Parsable[+A](p: Parser[A]) {
   def from(text: String): A = {
     import Parser.whitespace
     ensure(text != null, "cannot parse the null string")

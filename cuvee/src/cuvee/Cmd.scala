@@ -4,8 +4,8 @@ sealed trait Cmd
 sealed trait Decl extends Cmd
 sealed trait Def extends Cmd
 
-object Cmd extends Parseable(Parser.cmd)
-object Script extends Parseable(Parser.script)
+object Cmd extends Parsable(Parser.cmd)
+object Script extends Parsable(Parser.script)
 
 case class SetLogic(logic: String) extends Cmd {
   override def toString = Printer.setLogic(logic)
@@ -135,12 +135,12 @@ sealed trait Res
 sealed trait IsSat extends Res
 sealed trait Ack extends Res
 
-object Res extends Parseable(Parser.res)
-object IsSat extends Parseable(Parser.is_sat)
-object Ack extends Parseable(Parser.ack)
+object Res extends Parsable(Parser.res)
+object IsSat extends Parsable(Parser.is_sat)
+object Ack extends Parsable(Parser.ack)
 
-object Assertions extends Parseable(Parser.assertions) with (List[Expr] => Assertions)
-object Model extends Parseable(Parser.model) with (List[Def] => Model)
+object Assertions extends Parsable(Parser.assertions) with (List[Expr] => Assertions)
+object Model extends Parsable(Parser.model) with (List[Def] => Model)
 
 case object Success extends Ack {
   override def toString = "success"

@@ -1,6 +1,6 @@
 package cuvee.testutils
 
-import cuvee.{Expr, Formal, Id, Parseable, Parser, Prog, Sort, VerifyTest}
+import cuvee.{Expr, Formal, Id, Parsable, Parser, Prog, Sort, VerifyTest}
 
 /**
  * Little helpers to swiftly write formal expressions and cuvee programs in tests:
