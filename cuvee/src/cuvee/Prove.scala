@@ -1,43 +1,84 @@
 package cuvee
 
-sealed trait Tactic
-
-object Tactic {
-  case object split extends Tactic
-}
-
 case class Prove(backend: Solver) {
   import Simplify._
 
-  def apply(phi: Expr): Expr = {
-    prove(phi)
+  def apply(phi: Expr, st: State): Expr = {
+    prove(phi, st)
   }
 
-  def prove(todo: List[Expr], neg: Boolean): List[Expr] = todo match {
+  def prove(todo: List[Expr], neg: Boolean, st: State): List[Expr] = todo match {
     case Nil =>
       Nil
     case phi :: rest =>
-      val _phi = prove(phi)
+      val _phi = prove(phi, st)
       val __phi = if (neg) !_phi else _phi
-      val _rest = backend.asserting(__phi) { prove(rest, neg) }
+      val _rest = backend.asserting(__phi) { prove(rest, neg, st) }
       _phi :: _rest
   }
 
-  def prove(phi: Expr): Expr = phi match {
-    /* case _ if backend isFalse phi =>
-      False */
+  def prove(phi: Expr, st: State): Expr = phi match {
+    case t@(True | False) => t
     case Imp(phi, psi) =>
-      val _psi = backend.asserting(phi) { prove(psi) }
+      val _psi = backend.asserting(phi) {
+        prove(psi, st)
+      }
       imp(phi, _psi)
     case And(args) =>
-      val _args = prove(args, neg = false)
+      val _args = prove(args, neg = false, st)
       and(_args)
-    case Forall(bound, body) =>
-      val _body = backend.binding(bound) { prove(body) }
-      forall(bound, _body)
+    case f@Forall(bound, _) =>
+      // we only want to get fresh names for unused variable names or this turns unreadable
+      val fresh = Expr.fresh(bound.ids.toSet & st.constants.ids.toSet)
+      val Forall(bound_, body_) = f.rename(fresh, fresh)
+      val _body = backend.binding(bound_) {
+        prove(body_, st.declareConstants(bound_))
+      }
+      forall(bound_, _body)
+
+    case Eq(left, right)
+      // since we never have local variables, we do a type check based on globals
+      if Check.infer(left, Map.empty, st, None) == Sort.bool
+        && Check.infer(right, Map.empty, st, None) == Sort.bool =>
+      prove(And(left ==> right, right ==> left), st)
+    case App(Id("iff", None), List(left, right)) =>
+      prove(And(left ==> right, right ==> left), st)
+
+    case App(r, args) if (st.fundefs contains r)
+      // do not substitute recursive functions
+      && !(evaluations(st.fundefs(r)._2) contains r) =>
+      val (formals, body) = st.fundefs(r)
+      prove(body.subst(Expr.subst(formals, args)), st)
+
     case _ if backend isTrue phi =>
       True
     case _ =>
       phi
+  }
+
+  /**
+   * Finds the ids of all evaluated functions
+   */
+  def evaluations(expr: Expr): Set[Id] = expr match {
+    // function evaluation
+    case App(fun, args) => Set(fun) ++ args.toSet.flatMap(evaluations)
+
+    // no function evaluation
+    case Id(_, _) | Num(_) | Note(_, _) | As(_, _) => Set.empty
+
+    // collect from parts
+    case Eq(left, right) => evaluations(left) ++ evaluations(right)
+    case Distinct(exprs) => exprs.toSet.flatMap(evaluations)
+    case Ite(test, left, right) => Set(test, left, right).flatMap(evaluations)
+    case Let(pairs, body) => evaluations(body) ++ pairs.map(_.e).toSet.flatMap(evaluations)
+    case Match(expr, cases) => evaluations(expr) ++ cases.map(_.expr).toSet.flatMap(evaluations)
+    case Select(array, index) => evaluations(array) ++ evaluations(index)
+    case Store(array, index, value) => Set(array, index, value).flatMap(evaluations)
+    case Old(expr) => evaluations(expr)
+    case Bind(_, _, body) => evaluations(body)
+
+    // we'll assume for now that these don't turn up in function definitions:
+    case Post(_, _, _) => ??? // we're not gonna get into programs
+    case Refines(_, _, _) => ??? // we'd have to evaluate this to know
   }
 }

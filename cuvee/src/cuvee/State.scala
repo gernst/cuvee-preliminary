@@ -58,6 +58,13 @@ case class State(
     Env(su, ty)
   }
 
+  def constants = {
+    funs flatMap {
+      case (id, (Nil, t)) => List(Formal(id, t))
+      case _ => Nil
+    } toList
+  }
+
   def declare(sort: Sort, arity: Int): State = {
     ensure(!(sorts contains sort), "sort already defined", sort)
     copy(
@@ -76,6 +83,15 @@ case class State(
     Check.checkType(res, this)
     copy(
       funs = funs + (id -> (args, res)))
+  }
+
+  def declareConstants(formals: List[Formal]): State = {
+    for (Formal(id, res) <- formals) {
+      ensure(!(funs contains id), "function already defined", id)
+      Check.checkType(res, this)
+    }
+    copy(
+      funs = funs ++ formals.map(f => f.id -> (Nil, f.typ)))
   }
 
   def define(id: Id, formals: List[Formal], res: Type, body: Expr): State = {
