@@ -305,8 +305,14 @@ case class Store(array: Expr, index: Expr, value: Expr) extends Expr {
 case class App(fun: Id, args: List[Expr]) extends Expr {
   ensure(!args.isEmpty, "no arguments to application", this)
   def free = Set(args flatMap (_.free): _*)
-  def rename(re: Map[Id, Id]) = App(fun, args map (_ rename re))
-  def subst(su: Map[Id, Expr]) = App(fun, args map (_ subst su))
+  def rename(re: Map[Id, Id]) = {
+    ensure(!(re contains fun), "Cannot rename function")
+    App(fun, args map (_ rename re))
+  }
+  def subst(su: Map[Id, Expr]) = {
+    ensure(!(su contains fun), "Cannot substitute for function identifier")
+    App(fun, args map (_ subst su))
+  }
   override def toString = sexpr(fun, args: _*)
 }
 
@@ -574,11 +580,13 @@ case class Call(name: Id, in: List[Expr], out: List[Id]) extends Prog {
 
 case class Refines(a: Sort, c: Sort, r: Id) extends Expr {
   override def free: Set[Id] = Set.empty
-  override def rename(re: Map[Id, Id]): Expr = Refines(a, c, r rename re)
-  override def subst(su: Map[Id, Expr]): Expr = Refines(a, c, su get r match {
-    case Some(n: Id) => n
-    case None => r
-    case _ => error("Cannot substitute expression into verification condition")
-  })
+  override def rename(re: Map[Id, Id]): Expr = {
+    ensure(!(re contains r), "Cannot rename refinement")
+    this
+  }
+  override def subst(su: Map[Id, Expr]): Expr = {
+    ensure(!(su contains r), "Cannot substitute for refinement identifier")
+    this
+  }
   override def toString: String = sexpr("verification-condition", a, c, mangle(r))
 }
