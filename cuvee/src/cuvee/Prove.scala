@@ -1,6 +1,7 @@
 package cuvee
 
 case class Prove(backend: Solver) {
+
   import Simplify._
 
   def apply(phi: Expr, st: State): Expr = {
@@ -13,20 +14,25 @@ case class Prove(backend: Solver) {
     case phi :: rest =>
       val _phi = prove(phi, st)
       val __phi = if (neg) !_phi else _phi
-      val _rest = backend.asserting(__phi) { prove(rest, neg, st) }
+      val _rest = backend.asserting(__phi) {
+        prove(rest, neg, st)
+      }
       _phi :: _rest
   }
 
   def prove(phi: Expr, st: State): Expr = phi match {
     case t@(True | False) => t
+
     case Imp(phi, psi) =>
       val _psi = backend.asserting(phi) {
         prove(psi, st)
       }
       imp(phi, _psi)
+
     case And(args) =>
       val _args = prove(args, neg = false, st)
       and(_args)
+
     case f@Forall(bound, _) =>
       // we only want to get fresh names for unused variable names or this turns unreadable
       val fresh = Expr.fresh(bound.ids.toSet & st.constants.ids.toSet)
@@ -41,6 +47,10 @@ case class Prove(backend: Solver) {
       if Check.infer(left, Map.empty, st, None) == Sort.bool
         && Check.infer(right, Map.empty, st, None) == Sort.bool =>
       prove(And(left ==> right, right ==> left), st)
+
+    case Ite(test, left, right) =>
+      prove(And(test ==> left, !test ==> right), st)
+
     case App(Id("iff", None), List(left, right)) =>
       prove(And(left ==> right, right ==> left), st)
 
@@ -50,10 +60,25 @@ case class Prove(backend: Solver) {
       val (formals, body) = st.fundefs(r)
       prove(body.subst(Expr.subst(formals, args)), st)
 
+    case _ =>
+      val cs = cases(phi)
+      qualify(cs.distinct, phi, st)
+  }
+
+  def qualify(cs: List[Expr], phi: Expr, st: State): Expr = cs match {
     case _ if backend isTrue phi =>
       True
-    case _ =>
+    case Nil =>
       phi
+    case pre :: rest =>
+      println("qualifying: " + pre + "==> " + phi)
+      val phi1 = backend.asserting(pre) {
+        imp(pre, qualify(rest, phi, st))
+      }
+      val phi2 = backend.asserting(!pre) {
+        imp(not(pre), qualify(rest, phi, st))
+      }
+      and(List(phi1, phi2))
   }
 
   /**
@@ -80,5 +105,15 @@ case class Prove(backend: Solver) {
     // we'll assume for now that these don't turn up in function definitions:
     case Post(_, _, _) => ??? // we're not gonna get into programs
     case Refines(_, _, _) => ??? // we'd have to evaluate this to know
+  }
+
+  def cases(expr: Expr): List[Expr] = expr match {
+    case Ite(test, left, right) =>
+      List(test) ++ cases(left) ++ cases(right)
+    case Select(Store(array, index, value), index_) =>
+      List(index === index_) ++ cases(array)
+    case Eq(left, right) => cases(left) ++ cases(right)
+    case App(fun, args) => args flatMap cases
+    case _ => List()
   }
 }

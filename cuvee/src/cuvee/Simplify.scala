@@ -1,6 +1,7 @@
 package cuvee
 
 case class Simplify(backend: Solver) {
+
   import Simplify._
 
   def apply(phi: Expr): Expr = {
@@ -48,7 +49,7 @@ case class Simplify(backend: Solver) {
       else done
 
     // don't simplify top-level axioms (rarely useful)
-    case (phi @ Forall(_, _)) :: rest if top =>
+    case (phi@Forall(_, _)) :: rest if top =>
       assert(!neg)
       nary(rest, phi :: rdone, neg, top, changed)
 
@@ -123,6 +124,7 @@ object Simplify {
     case True => False
     case False => True
     case Not(psi) => psi
+    case Eq(left, right) => Distinct(List(left, right))
     case _ => Not(phi)
   }
 
@@ -133,6 +135,13 @@ object Simplify {
   def plus(args: List[Expr]): Expr = {
     val _args = Plus.flatten(args)
     Plus(_args.distinct filter (_ != Num.zero))
+  }
+
+
+  def ite(test: Expr, left: Expr, right: Expr): Expr = (test, left, right) match {
+    case (True, left, right) => left
+    case (False, left, right) => right
+    case _ => Ite(test, left, right)
   }
 
   def and(args: List[Expr]): Expr = {
@@ -264,7 +273,7 @@ object Simplify {
           return norm(quant(formals, body_))
         }
         body_ match {
-          case boolean @ App(id @ (Id.and | Id.or), args) => {
+          case boolean@App(id@(Id.and | Id.or), args) => {
             val unbound = args.filter(_.free.disjoint(bind.bound))
             if (unbound.isEmpty) {
               quant(formals, boolean)
