@@ -354,14 +354,14 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
    *  Simplify right hand side and build a quantified equation
    */
   def define(bound: List[Formal], lhs: Expr, rhs: Expr): Expr = {
-    /* val simplify = Simplify(solver)
+    val simplify = Simplify(solver)
     solver.scoped {
       solver.bind(bound)
       val _rhs = simplify(rhs)
       Forall(bound, lhs === _rhs)
-    } */
+    }
 
-    Forall(bound, lhs === norm(rhs))
+//    Forall(bound, lhs === norm(rhs))
   }
 
   /**
