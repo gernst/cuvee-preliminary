@@ -129,13 +129,13 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
   def eval(expr: Expr): Expr = {
     val env = top.env
     val old = Nil
-    Eval.eval(expr, env, old, top)
+    Eval(top).eval(expr, env, old)
   }
 
   def eval(formals: List[Formal], expr: Expr): Expr = {
     val env = top.env
     val old = Nil
-    Eval.eval(expr, env bind formals, old, top)
+    Eval(top).eval(expr, env bind formals, old)
   }
 
   def check() = backend.scoped {

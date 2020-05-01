@@ -18,7 +18,7 @@ object EvalTest extends TestSuite {
     val wp = WP(code, y === Old(x) * 2 * 2)
 
     val env = Env.empty.bind(List(Formal(x, int), Formal(y, int)))
-    val evald = Eval.eval(wp, env, List(env), State.default).asInstanceOf[Eq]
+    val evald = Eval(State.default).eval(wp, env, List(env)).asInstanceOf[Eq]
 
     assertEquals(evald.left, x * 2 * 2)
     assertEquals(evald.left, evald.right)
@@ -30,7 +30,7 @@ object EvalTest extends TestSuite {
     val env = Env.empty.bind(formal(x, int) ++ formal(y, int))
     val code = Call(Id("forward"), List(x * 2), List(y))
     val wp = WP(code, y === Old(x) * 2)
-    val evald = Eval.eval(wp, env, List(env), state)
+    val evald = Eval(state).eval(wp, env, List(env))
   }
 
   test("access form") {

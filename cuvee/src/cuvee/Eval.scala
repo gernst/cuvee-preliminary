@@ -75,18 +75,20 @@ object Path {
 
 object Eval {
   var inferInvariants = false
+}
 
-  def eval(expr: Expr, st: State): Expr = {
+case class Eval(st: State) {
+  def eval(expr: Expr): Expr = {
     val old = Nil
     val env = st.env
-    eval(expr, env, old, st)
+    eval(expr, env, old)
   }
 
-  def eval(let: Pair, env: Env, old: List[Env], st: State): (Id, Expr) = let match {
-    case Pair(x, e) => (x, eval(e, env, old, st))
+  def eval(let: Pair, env: Env, old: List[Env]): (Id, Expr) = let match {
+    case Pair(x, e) => (x, eval(e, env, old))
   }
 
-  def eval(expr: Expr, env: Env, old: List[Env], st: State): Expr = expr match {
+  def eval(expr: Expr, env: Env, old: List[Env]): Expr = expr match {
     case num: Num =>
       num
 
@@ -106,100 +108,100 @@ object Eval {
         case Nil =>
           error("no old state", expr, env)
         case env :: old =>
-          eval(inner, env, old, st)
+          eval(inner, env, old)
       }
 
     case Note(expr, attrs) =>
-      val _expr = eval(expr, env, old, st)
+      val _expr = eval(expr, env, old)
       Note(_expr, attrs)
 
     case Eq(left, right) =>
-      Eq(eval(left, env, old, st), eval(right, env, old, st))
+      Eq(eval(left, env, old), eval(right, env, old))
 
     case Ite(test, left, right) =>
-      Ite(eval(test, env, old, st), eval(left, env, old, st), eval(right, env, old, st))
+      Ite(eval(test, env, old), eval(left, env, old), eval(right, env, old))
 
     /* case Let(lets, body) =>
-      val pairs = lets map (eval(_, env, old, st))
+      val pairs = lets map (eval(_, env, old))
       val (xs, _es) = pairs.unzip
-      eval(body, env assignUnchecked (xs, _es), old, st) */
+      eval(body, env assignUnchecked (xs, _es), old) */
 
     case Select(array, index) =>
-      Select(eval(array, env, old, st), eval(index, env, old, st))
+      Select(eval(array, env, old), eval(index, env, old))
 
     case Store(array, index, value) =>
-      Store(eval(array, env, old, st), eval(index, env, old, st), eval(value, env, old, st))
+      Store(eval(array, env, old), eval(index, env, old), eval(value, env, old))
 
     case Distinct(args) =>
-      Distinct(args map (eval(_, env, old, st)))
+      Distinct(args map (eval(_, env, old)))
 
     case UMinus(arg) =>
-      UMinus(eval(arg, env, old, st))
+      UMinus(eval(arg, env, old))
 
     case App(id, args) if (st.funs contains id) =>
       val (types, res) = st funs id
-      ensure(args.length == types.length, "wrong number of arguments", expr, env, st)
-      App(id, args map (eval(_, env, old, st)))
+      ensure(args.length == types.length, "wrong number of arguments", expr, env)
+      App(id, args map (eval(_, env, old)))
 
     case App(id, args) =>
-      error("unknown function", id, expr, env, st)
+      error("unknown function", id, expr, env)
 
     case expr @ Bind(quant, formals, body) =>
-      quant(formals, eval(body, env bind formals, old, st))
+      quant(formals, eval(body, env bind formals, old))
 
     case expr @ Match(arg, cases) =>
       ???
 
     case WP(prog, post) =>
-      wp(List(prog), None, post, env, old, st)
+      wp(List(prog), None, post, env, old)
 
     case Box(prog, post) =>
-      box(List(prog), None, post, env, old, st)
+      box(List(prog), None, post, env, old)
 
     case Dia(prog, post) =>
-      dia(List(prog), None, post, env, old, st)
+      dia(List(prog), None, post, env, old)
 
     case Refines(a, c, r) =>
-      eval(Verify.refinementCondition(st.objects(a), st.objects(c), r), env, old, st)
+      eval(Verify.refinementCondition(st.objects(a), st.objects(c), r), env, old)
   }
 
-  def wp(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
+  def wp(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env]): Expr = progs match {
     case Nil =>
-      eval(post, env0, old, st)
+      eval(post, env0, old)
 
     case Break :: rest =>
       break match {
         case Some(post) =>
-          eval(post, env0, old, st)
+          eval(post, env0, old)
         case None =>
-          error("break not within while", break, env0, st)
+          error("break not within while", break, env0)
       }
 
     case Block(progs, withOld) :: rest =>
       val old_ = if (withOld) env0 :: old else old
-      wp(progs ++ rest, break, post, env0, old_, st)
+      wp(progs ++ rest, break, post, env0, old_)
 
     case Assign(lets) :: rest =>
-      val pairs = lets map (eval(_, env0, old, st))
+      val pairs = lets map (eval(_, env0, old))
       val (xs, _es) = pairs.unzip
       val env1 = env0 assign (xs, _es)
-      wp(rest, break, post, env1, old, st)
+      wp(rest, break, post, env1, old)
 
     case Spec(xs, phi, psi) :: rest =>
       val (formals, env1) = env0 havoc xs
-      val _phi = eval(phi, env0, old, st)
-      val _psi = eval(psi, env1, env0 :: old, st)
-      _phi && Forall(formals, _psi ==> wp(rest, break, post, env1, old, st))
+      val _phi = eval(phi, env0, old)
+      val _psi = eval(psi, env1, env0 :: old)
+      _phi && Forall(formals, _psi ==> wp(rest, break, post, env1, old))
 
     case Choose(xs, phi) :: rest =>
       val (formals, env1) = env0 havoc xs
-      val _phi = eval(phi, env1, env0 :: old, st)
-      Exists(formals, _phi) && Forall(formals, _phi ==> wp(rest, break, post, env1, old, st))
+      val _phi = eval(phi, env1, env0 :: old)
+      Exists(formals, _phi) && Forall(formals, _phi ==> wp(rest, break, post, env1, old))
 
     case If(test, left, right) :: rest =>
-      val _test = eval(test, env0, old, st)
-      val _left = _test ==> wp(left :: rest, break, post, env0, old, st)
-      val _right = !_test ==> wp(right :: rest, break, post, env0, old, st)
+      val _test = eval(test, env0, old)
+      val _left = _test ==> wp(left :: rest, break, post, env0, old)
+      val _right = !_test ==> wp(right :: rest, break, post, env0, old)
       _left && _right
 
     case While(test, body, after, term, phi, psi) :: rest =>
@@ -208,32 +210,32 @@ object Eval {
 
       val (formals, env1) = env0 havoc mod
 
-      val _test = eval(test, env1, env1 :: old, st)
+      val _test = eval(test, env1, env1 :: old)
       val decrease = test ==> (0 <= term && term < Old(term))
 
       val hyp = Spec(mod_, decrease && phi, /* !test && */ psi)
 
-      val _phi0 = eval(phi, env0, old, st)
-      val _psi0 = eval(psi, env1, env0 :: old, st)
+      val _phi0 = eval(phi, env0, old)
+      val _psi0 = eval(psi, env1, env0 :: old)
 
-      val _phi1 = eval(phi, env1, old, st)
-      val _psi1 = eval(psi, env1, env1 :: old, st)
+      val _phi1 = eval(phi, env1, old)
+      val _psi1 = eval(psi, env1, env1 :: old)
 
-      val use = _phi0 && Forall(formals, _psi0 ==> wp(rest, break, post, env1, old, st))
-      val base = Forall(formals, (!_test && _phi1) ==> wp(List(after), break, psi, env1, env1 :: old, st))
-      val step = Forall(formals, (_test && _phi1) ==> wp(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
+      val use = _phi0 && Forall(formals, _psi0 ==> wp(rest, break, post, env1, old))
+      val base = Forall(formals, (!_test && _phi1) ==> wp(List(after), break, psi, env1, env1 :: old))
+      val step = Forall(formals, (_test && _phi1) ==> wp(List(body, hyp), Some(psi), psi, env1, env1 :: old))
 
       use && base && step
 
     case Call(name, in, out) :: rest if st.procdefs contains name =>
-      val spec = contract(name, out, in, st)
-      wp(spec :: rest, break, post, env0, old, st)
+      val spec = contract(name, out, in)
+      wp(spec :: rest, break, post, env0, old)
 
-    case Call(name, _, _) :: rest =>
+    case Call(name, _, _) :: _ =>
       error("unknown procedure", name)
   }
 
-  def contract(name: Id, out: List[Id], in: List[Expr], st: State): Spec = {
+  def contract(name: Id, out: List[Id], in: List[Expr]): Spec = {
     val Proc(xs, ys, pre, post, body) = st procdefs name
 
     ensure(in.length == xs.length, "wrong number of inputs", name, xs, in)
@@ -247,43 +249,43 @@ object Eval {
     Spec(out, _pre, _post)
   }
 
-  def box(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
+  def box(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env]): Expr = progs match {
     case Nil =>
-      eval(post, env0, old, st)
+      eval(post, env0, old)
 
     case Break :: rest =>
       break match {
         case Some(post) =>
-          eval(post, env0, old, st)
+          eval(post, env0, old)
         case None =>
-          error("break not within while", break, env0, st)
+          error("break not within while", break, env0)
       }
 
     case Block(progs, withOld) :: rest =>
       val old_ = if (withOld) env0 :: old else old
-      box(progs ++ rest, break, post, env0, old_, st)
+      box(progs ++ rest, break, post, env0, old_)
 
     case Assign(lets) :: rest =>
-      val pairs = lets map (eval(_, env0, old, st))
+      val pairs = lets map (eval(_, env0, old))
       val (xs, _es) = pairs.unzip
       val env1 = env0 assign (xs, _es)
-      box(rest, break, post, env1, old, st)
+      box(rest, break, post, env1, old)
 
     case Spec(mod, phi, psi) :: rest =>
       val (formals, env1) = env0 havoc mod
-      val _phi = eval(phi, env0, old, st)
-      val _psi = eval(psi, env1, env0 :: old, st)
-      _phi && Forall(formals, _psi ==> box(rest, break, post, env1, old, st))
+      val _phi = eval(phi, env0, old)
+      val _psi = eval(psi, env1, env0 :: old)
+      _phi && Forall(formals, _psi ==> box(rest, break, post, env1, old))
 
     case Choose(xs, phi) :: rest =>
       val (formals, env1) = env0 havoc xs
-      val _phi = eval(phi, env1, env0 :: old, st)
-      Forall(formals, _phi ==> box(rest, break, post, env1, old, st))
+      val _phi = eval(phi, env1, env0 :: old)
+      Forall(formals, _phi ==> box(rest, break, post, env1, old))
 
     case If(test, left, right) :: rest =>
-      val _test = eval(test, env0, old, st)
-      val _left = _test ==> box(left :: rest, break, post, env0, old, st)
-      val _right = !_test ==> box(right :: rest, break, post, env0, old, st)
+      val _test = eval(test, env0, old)
+      val _left = _test ==> box(left :: rest, break, post, env0, old)
+      val _right = !_test ==> box(right :: rest, break, post, env0, old)
       _left && _right
 
     /* case While(test, body, Skip, term, phi, True) :: rest =>
@@ -294,13 +296,13 @@ object Eval {
 
       val (formals, env1) = env0 havoc mod
 
-      val _test1 = eval(test, env1, env1 :: old, st)
+      val _test1 = eval(test, env1, env1 :: old)
 
       if (inferInvariants) {
         val (others, env2) = env0 havoc mod
         // ⋀ s'. ¬ test s' ⟹ I s' ⟹ Q s s' ⟹ Q s0 s'
-        val _test2 = eval(test, env2, env1 :: old, st)
-        val _inv2 = eval(phi, env2, env1 :: old, st)
+        val _test2 = eval(test, env2, env1 :: old)
+        val _inv2 = eval(phi, env2, env1 :: old)
 
         val post1 = eval(post, ???)
         // s0 == env0
@@ -311,11 +313,11 @@ object Eval {
           */
       }
 
-      val _inv0 = eval(inv, env0, old, st)
-      val _inv1 = eval(inv, env1, old, st)
+      val _inv0 = eval(inv, env0, old)
+      val _inv1 = eval(inv, env1, old)
 
-      val init = Forall(formals, (!_test1 && _inv1) ==> box(rest, break, post, env1, env1 :: old, st))
-      val step = Forall(formals, (_test1 && _inv1) ==> box(List(body), Some(inv), inv, env1, env1 :: old, st))
+      val init = Forall(formals, (!_test1 && _inv1) ==> box(rest, break, post, env1, env1 :: old))
+      val step = Forall(formals, (_test1 && _inv1) ==> box(List(body), Some(inv), inv, env1, env1 :: old))
 
       _inv0 && init && step */
 
@@ -325,67 +327,67 @@ object Eval {
 
       val (formals, env1) = env0 havoc mod
 
-      val _test = eval(test, env1, env1 :: old, st)
+      val _test = eval(test, env1, env1 :: old)
 
       val hyp = Spec(mod_, phi, /* !test && */ psi)
 
-      val _phi0 = eval(phi, env0, old, st)
-      val _psi0 = eval(psi, env1, env0 :: old, st)
+      val _phi0 = eval(phi, env0, old)
+      val _psi0 = eval(psi, env1, env0 :: old)
 
-      val _phi1 = eval(phi, env1, old, st)
-      val _psi1 = eval(psi, env1, env1 :: old, st)
+      val _phi1 = eval(phi, env1, old)
+      val _psi1 = eval(psi, env1, env1 :: old)
 
-      val use = _phi0 && Forall(formals, _psi0 ==> box(rest, break, post, env1, old, st))
-      val base = Forall(formals, (!_test && _phi1) ==> box(List(after), break, psi, env1, env1 :: old, st))
-      val step = Forall(formals, (_test && _phi1) ==> box(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
+      val use = _phi0 && Forall(formals, _psi0 ==> box(rest, break, post, env1, old))
+      val base = Forall(formals, (!_test && _phi1) ==> box(List(after), break, psi, env1, env1 :: old))
+      val step = Forall(formals, (_test && _phi1) ==> box(List(body, hyp), Some(psi), psi, env1, env1 :: old))
 
       use && base && step
 
     case Call(name, in, out) :: rest if st.procdefs contains name =>
-      val spec = contract(name, out, in, st)
-      box(spec :: rest, break, post, env0, old, st)
+      val spec = contract(name, out, in)
+      box(spec :: rest, break, post, env0, old)
 
     case Call(name, _, _) :: rest =>
       error("unknown procedure", name)
   }
 
-  def dia(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env], st: State): Expr = progs match {
+  def dia(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env]): Expr = progs match {
     case Nil =>
-      eval(post, env0, old, st)
+      eval(post, env0, old)
 
     case Break :: rest =>
       break match {
         case Some(post) =>
-          eval(post, env0, old, st)
+          eval(post, env0, old)
         case None =>
-          error("break not within while", break, env0, st)
+          error("break not within while", break, env0)
       }
 
     case Block(progs, withOld) :: rest =>
       val old_ = if (withOld) env0 :: old else old
-      dia(progs ++ rest, break, post, env0, old_, st)
+      dia(progs ++ rest, break, post, env0, old_)
 
     case Assign(lets) :: rest =>
-      val pairs = lets map (eval(_, env0, old, st))
+      val pairs = lets map (eval(_, env0, old))
       val (xs, _es) = pairs.unzip
       val env1 = env0 assign (xs, _es)
-      dia(rest, break, post, env1, old, st)
+      dia(rest, break, post, env1, old)
 
     case Spec(mod, phi, psi) :: rest =>
       val (formals, env1) = env0 havoc mod
-      val _phi = eval(phi, env0, old, st)
-      val _psi = eval(psi, env1, env0 :: old, st)
-      _phi && Exists(formals, _psi && dia(rest, break, post, env1, old, st))
+      val _phi = eval(phi, env0, old)
+      val _psi = eval(psi, env1, env0 :: old)
+      _phi && Exists(formals, _psi && dia(rest, break, post, env1, old))
 
     case Choose(xs, phi) :: rest =>
       val (formals, env1) = env0 havoc xs
-      val _phi = eval(phi, env1, env0 :: old, st)
-      Exists(formals, _phi && dia(rest, break, post, env1, old, st))
+      val _phi = eval(phi, env1, env0 :: old)
+      Exists(formals, _phi && dia(rest, break, post, env1, old))
 
     case If(test, left, right) :: rest =>
-      val _test = eval(test, env0, old, st)
-      val _left = _test && dia(left :: rest, break, post, env0, old, st)
-      val _right = !_test && dia(right :: rest, break, post, env0, old, st)
+      val _test = eval(test, env0, old)
+      val _left = _test && dia(left :: rest, break, post, env0, old)
+      val _right = !_test && dia(right :: rest, break, post, env0, old)
       _left || _right
 
     case While(test, body, after, term, phi, psi) :: rest =>
@@ -394,73 +396,73 @@ object Eval {
 
       val (formals, env1) = env0 havoc mod
 
-      val _test = eval(test, env1, env1 :: old, st)
+      val _test = eval(test, env1, env1 :: old)
       val decrease = test ==> (0 <= term && term < Old(term))
 
       val hyp = Spec(mod_, decrease && phi, /* !test && */ psi)
 
-      val _phi0 = eval(phi, env0, old, st)
-      val _psi0 = eval(psi, env1, env0 :: old, st)
+      val _phi0 = eval(phi, env0, old)
+      val _psi0 = eval(psi, env1, env0 :: old)
 
-      val _phi1 = eval(phi, env1, old, st)
-      val _psi1 = eval(psi, env1, env1 :: old, st)
+      val _phi1 = eval(phi, env1, old)
+      val _psi1 = eval(psi, env1, env1 :: old)
 
       error("loop rule for dia likely incorrect")
-      val use = _phi0 && Exists(formals, _psi0 && dia(rest, break, post, env1, old, st))
-      val base = Forall(formals, (!_test && _phi1) ==> dia(List(after), break, psi, env1, env1 :: old, st))
-      val step = Forall(formals, (_test && _phi1) ==> dia(List(body, hyp), Some(psi), psi, env1, env1 :: old, st))
+      val use = _phi0 && Exists(formals, _psi0 && dia(rest, break, post, env1, old))
+      val base = Forall(formals, (!_test && _phi1) ==> dia(List(after), break, psi, env1, env1 :: old))
+      val step = Forall(formals, (_test && _phi1) ==> dia(List(body, hyp), Some(psi), psi, env1, env1 :: old))
 
       use && base && step
 
     case Call(name, in, out) :: rest if st.procdefs contains name =>
-      val spec = contract(name, out, in, st)
-      dia(spec :: rest, break, post, env0, old, st)
+      val spec = contract(name, out, in)
+      dia(spec :: rest, break, post, env0, old)
 
     case Call(name, _, _) :: rest =>
       error("unknown procedure", name)
   }
 
-  def rel(body: Body, env0: Env, old: List[Env], st: State): List[Path] = {
+  def rel(body: Body, env0: Env, old: List[Env]): List[Path] = {
     val Body(locals, progs) = body
     val env1 = env0 bind locals
-    rel(progs, env1, old, st)
+    rel(progs, env1, old)
   }
 
-  def rel(progs: List[Prog], env0: Env, old: List[Env], st: State): List[Path] = progs match {
+  def rel(progs: List[Prog], env0: Env, old: List[Env]): List[Path] = progs match {
     case Nil =>
       List(Path(List.empty, List.empty, env0))
 
     case Break :: rest =>
-      error("break not within while", env0, st)
+      error("break not within while", env0)
 
     case Block(progs, withOld) :: rest =>
       val old_ = if (withOld) env0 :: old else old
-      rel(progs ++ rest, env0, old_, st)
+      rel(progs ++ rest, env0, old_)
 
     case Assign(lets) :: rest =>
-      val pairs = lets map (eval(_, env0, old, st))
+      val pairs = lets map (eval(_, env0, old))
       val (xs, _es) = pairs.unzip
       val env1 = env0 assign (xs, _es)
-      rel(rest, env1, old, st)
+      rel(rest, env1, old)
 
     case Spec(mod, phi, psi) :: rest =>
       val (formals, env1) = env0 havoc mod
-      val _phi = eval(phi, env0, old, st)
-      val _psi = eval(psi, env1, env0 :: old, st)
-      for (path <- rel(rest, env1, old, st))
+      val _phi = eval(phi, env0, old)
+      val _psi = eval(psi, env1, env0 :: old)
+      for (path <- rel(rest, env1, old))
         yield _phi :: _psi :: path bind formals
 
     case Choose(xs, phi) :: rest =>
       val (formals, env1) = env0 havoc xs
-      val _phi = eval(phi, env1, env0 :: old, st)
-      for (path <- rel(rest, env1, old, st))
+      val _phi = eval(phi, env1, env0 :: old)
+      for (path <- rel(rest, env1, old))
         yield _phi :: path bind formals
 
     case If(test, left, right) :: rest =>
-      val _test = eval(test, env0, old, st)
-      val _left = for (path <- rel(left :: rest, env0, old, st))
+      val _test = eval(test, env0, old)
+      val _left = for (path <- rel(left :: rest, env0, old))
         yield _test :: path
-      val _right = for (path <- rel(right :: rest, env0, old, st))
+      val _right = for (path <- rel(right :: rest, env0, old))
         yield !_test :: path
       _left ++ _right
 
@@ -468,11 +470,11 @@ object Eval {
       val mod = body.mod ++ after.mod
       val mod_ = mod.toList
       val spec = Spec(mod_, phi, /* !test && */ psi)
-      rel(spec :: rest, env0, old, st)
+      rel(spec :: rest, env0, old)
 
     case Call(name, in, out) :: rest if st.procdefs contains name =>
-      val spec = contract(name, out, in, st)
-      rel(spec :: rest, env0, old, st)
+      val spec = contract(name, out, in)
+      rel(spec :: rest, env0, old)
 
     case Call(name, _, _) :: rest =>
       error("unknown procedure", name)
@@ -484,7 +486,7 @@ object Eval {
    *  Return the instantiated precondition as well as the paths,
    *  which store constraints and variable assignments for xs1 in the successor states.
    */
-  def forward(proc: Proc, ps: List[Formal], in: List[Formal], out: List[Formal], init: List[Expr], st: State): List[(Expr, Path)] = {
+  def forward(proc: Proc, ps: List[Formal], in: List[Formal], out: List[Formal], init: List[Expr]): List[(Expr, Path)] = {
     val xs: List[Id] = ps
     val (pre, post, body) = proc call (ps, xs, in, out)
 
@@ -492,14 +494,14 @@ object Eval {
     val env1 = env0 bind (ps ++ in ++ out)
     val env2 = env1.assign(xs, init)
     val old = Nil
-    val _pre = Eval.eval(pre, env2, old, st)
-    val paths = Eval.rel(body, env2, old, st)
+    val _pre = eval(pre, env2, old)
+    val paths = rel(body, env2, old)
 
     for (path <- paths)
       yield (_pre, path)
   }
 
-  def paths(proc: Proc, ps: List[Formal], init: List[Expr], in: List[Expr], st: State): (Expr, List[Path]) = {
+  def paths(proc: Proc, ps: List[Formal], init: List[Expr], in: List[Expr]): (Expr, List[Path]) = {
     val (xi, xo, pre, post, body) = proc call ps
     var env = Env.empty
     env = env bind (ps ++ xi ++ xo)
@@ -507,8 +509,8 @@ object Eval {
     env = env assign (xi, in)
     val old = Nil
 
-    val _pre = Eval.eval(pre, env, old, st)
-    val paths = Eval.rel(body, env, old, st)
+    val _pre = eval(pre, env, old)
+    val paths = rel(body, env, old)
 
     (_pre, paths)
   }
