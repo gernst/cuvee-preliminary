@@ -57,6 +57,10 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
       config.printSuccess = flag.toBoolean
       Success
 
+    case List(":declare-implied", flag) =>
+      config.declareImplied = flag.toBoolean
+      Success
+
     case _ =>
       backend.setOption(args)
   }
