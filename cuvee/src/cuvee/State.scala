@@ -72,15 +72,15 @@ case class State(
   }
 
   def define(sort: Sort, args: List[Sort], body: Type): State = {
-    Check.checkType(body, this)
+    Check(this).checkType(body)
     declare(sort, args.length).copy(
       sortdefs = sortdefs + (sort -> (args, body)))
   }
 
   def declare(id: Id, args: List[Type], res: Type): State = {
     ensure(!(funs contains id), "function already defined", id)
-    args.foreach(Check.checkType(_, this))
-    Check.checkType(res, this)
+    args.foreach(Check(this).checkType(_))
+    Check(this).checkType(res)
     copy(
       funs = funs + (id -> (args, res)))
   }
@@ -88,7 +88,7 @@ case class State(
   def declareConstants(formals: List[Formal]): State = {
     for (Formal(id, res) <- formals) {
       ensure(!(funs contains id), "function already defined", id)
-      Check.checkType(res, this)
+      Check(this).checkType(res)
     }
     copy(
       funs = funs ++ formals.map(f => f.id -> (Nil, f.typ)))
@@ -99,7 +99,7 @@ case class State(
       fundefs = fundefs + (id -> (formals, body)))
 
     // check new state in case function is recursive
-    val bodyType = Check.infer(body, formals, newState)
+    val bodyType = Check(newState).infer(body, formals)
     ensure(bodyType == res, s"Expected type of $id to be $res but was $bodyType")
     newState
   }
@@ -114,14 +114,14 @@ case class State(
       procdefs = procdefs + (id -> proc))
 
     // check new state in case proc is recursive
-    Check.checkProc(id, proc, newState)
+    Check(newState).checkProc(id, proc)
     newState
   }
 
   def define(sort: Sort, obj: Obj): State = {
     ensure(!(objects contains sort), "object already defined", sort)
     // don't put procs in state => can't be recursive
-    Check.checkObj(sort, obj, this)
+    Check(this).checkObj(sort, obj)
     copy(
       objects = objects + (sort -> obj))
   }
@@ -156,7 +156,7 @@ case class State(
   }
 
   def assert(expr: Expr) = {
-    val typ = Check.infer(expr, Map.empty, this, Some(Sort.bool));
+    val typ = Check(this).infer(expr, Map.empty, Some(Sort.bool));
     ensure(typ == Sort.bool, s"Expected expression type to be boolean but was $typ")
     copy(
       rasserts = expr :: rasserts)

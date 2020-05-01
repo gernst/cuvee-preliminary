@@ -44,8 +44,8 @@ case class Prove(backend: Solver) {
 
     case Eq(left, right)
       // since we never have local variables, we do a type check based on globals
-      if Check.infer(left, Map.empty, st, None) == Sort.bool
-        && Check.infer(right, Map.empty, st, None) == Sort.bool =>
+      if Check(st).infer(left, Map.empty, None) == Sort.bool
+        && Check(st).infer(right, Map.empty, None) == Sort.bool =>
       prove(And(left ==> right, right ==> left), st)
 
     case Ite(test, left, right) =>

@@ -12,8 +12,8 @@ object CheckTest extends TestSuite {
   import Sort.int
 
   // local copies for convenience
-  def infer(expr: Expr, ty: Map[Id, Type] = Map.empty, st: State = State.default): Type = Check.infer(expr, ty, st)
-  def checkProg(prog: Prog, ty: Map[Id, Type] = Map.empty, st: State = State.default): Unit = Check.checkProg(prog, ty, st, false)
+  def infer(expr: Expr, ty: Map[Id, Type] = Map.empty, st: State = State.default): Type = Check(st).infer(expr, ty)
+  def checkProg(prog: Prog, ty: Map[Id, Type] = Map.empty, st: State = State.default): Unit = Check(st).checkProg(prog, ty, false)
 
     test("Standard constants") {
     assertEquals(infer(e"true"), bool)
