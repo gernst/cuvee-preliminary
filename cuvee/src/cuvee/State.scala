@@ -120,8 +120,8 @@ case class State(
 
   def define(sort: Sort, obj: Obj): State = {
     ensure(!(objects contains sort), "object already defined", sort)
-    // don't put procs in state => can't be recursive
-    Check(this).checkObj(sort, obj)
+    // Don't put procs in state. For the check, we'll pull them directly out of the object.
+    Check(this, Some(obj)).checkObj(obj)
     copy(
       objects = objects + (sort -> obj))
   }

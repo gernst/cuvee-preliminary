@@ -469,19 +469,13 @@ sealed trait Prog {
 
 object Prog extends Parsable(Parser.prog)
 
-case class Block(progs: List[Prog], withOld: Boolean = false) extends Prog {
+case class Block(progs: List[Prog], withOld: Boolean = false, context: Option[Option[Obj]] = None) extends Prog {
   def mod = Set(progs flatMap (_.mod): _*)
   def read = Set(progs flatMap (_.read): _*)
   def replace(re: Map[Id, Id]) = Block(progs map (_ replace re), withOld)
   def ++(that: Block) = Block(this.progs ++ that.progs, withOld)
   override def toString = sexpr("block", progs: _*)
 }
-
-/* object Block extends (List[Prog] => Block) {
-  def apply(progs: List[Prog]): Block = {
-    Block(progs, false)
-  }
-} */
 
 case object Break extends Prog {
   def mod = Set()
@@ -500,6 +494,8 @@ case class Assign(pairs: List[Pair]) extends Prog {
 
 object Assign extends (List[Pair] => Assign) {
   def from = (pairs: List[(Expr, Expr)]) => Assign(pairs map shift)
+
+  def zip(ids: List[Id], exprs: List[Expr]) = from(ids zip exprs)
 
   def shift(xe: (Expr, Expr)): Pair = xe match {
     case (x: Id, e) =>
@@ -575,7 +571,7 @@ case class Call(name: Id, in: List[Expr], out: List[Id]) extends Prog {
   def mod = out.toSet
   def read = in.flatMap(_.free).distinct.toSet
   def replace(re: Map[Id, Id]) = Call(name, in map (_ rename re), out map (_ rename re))
-  override def toString = sexpr("call", sexpr(in), sexpr(out))
+  override def toString = sexpr("call", name, sexpr(in), sexpr(out))
 }
 
 case class Refines(a: Sort, c: Sort, r: Id) extends Expr {

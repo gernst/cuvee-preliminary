@@ -295,9 +295,9 @@ object PrettyPrinter {
       case Bind(Forall, formals, body) => Binder("∀", formals map printFormal, apply(body))
       case Bind(Exists, formals, body) => Binder("∃", formals map printFormal, apply(body))
 
-      case WP(prog, post) => ???
-      case Box(prog, post) => ???
-      case Dia(prog, post) => ???
+      case WP(_, _) => ???
+      case Box(_, _) => ???
+      case Dia(_, _) => ???
     }
 
     case class PrettyIte(test: PrettyExpr, thenn: PrettyExpr, ellse: PrettyExpr) extends PrettyExpr {
@@ -350,7 +350,7 @@ object PrettyPrinter {
 
   object PrettyProg {
     def apply(prog: Prog): PrettyProg = prog match {
-      case Block(progs, withOld) => PrettyBlock(progs map apply)
+      case Block(progs, _, _) => PrettyBlock(progs map apply)
       case Break => ???
       case Assign(pairs) => PrettyAssign(pairs.map(pair => (mangle(pair.x), PrettyExpr(pair.e))))
       case Spec(xs, pre, post) => ???

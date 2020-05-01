@@ -77,7 +77,9 @@ object Eval {
   var inferInvariants = false
 }
 
-case class Eval(st: State) {
+case class Eval(st: State, context: Option[Obj]) {
+  def inContext(ctx: Option[Option[Obj]]): Eval = ctx.map(Eval(st, _)).getOrElse(this)
+
   def eval(expr: Expr): Expr = {
     val old = Nil
     val env = st.env
@@ -177,9 +179,9 @@ case class Eval(st: State) {
           error("break not within while", break, env0)
       }
 
-    case Block(progs, withOld) :: rest =>
+    case Block(progs, withOld, ctx) :: rest =>
       val old_ = if (withOld) env0 :: old else old
-      wp(progs ++ rest, break, post, env0, old_)
+      inContext(ctx).wp(progs ++ rest, break, post, env0, old_)
 
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old))
@@ -227,26 +229,55 @@ case class Eval(st: State) {
 
       use && base && step
 
-    case Call(name, in, out) :: rest if st.procdefs contains name =>
-      val spec = contract(name, out, in)
-      wp(spec :: rest, break, post, env0, old)
+    case Call(name, in, out) :: rest if isProcDefined(name) =>
+      val (formals, prog) = contract(name, out, in)
+      Forall(formals, wp(prog :: rest, break, post, env0 bind formals, old))
 
     case Call(name, _, _) :: _ =>
       error("unknown procedure", name)
   }
 
-  def contract(name: Id, out: List[Id], in: List[Expr]): Spec = {
-    val Proc(xs, ys, pre, post, body) = st procdefs name
+  private def isProcDefined(name: Id) = {
+    context.flatMap(ctx => ctx.op(name)).isDefined || (st.procdefs contains name)
+  }
 
-    ensure(in.length == xs.length, "wrong number of inputs", name, xs, in)
-    ensure(out.length == ys.length, "wrong number of outputs", name, ys, out)
+  def contract(name: Id, out: List[Id], in: List[Expr]): (List[Formal], Prog) = {
+    val (inObj, proc) = (context.flatMap(_.op(name)), st.procdefs.get(name)) match {
+      case (Some(objProc), _) => (true, objProc)
+      case (_, Some(globalProc)) => (false, globalProc)
+      case _ => ??? // we checked that this cannot be the case
+    }
+
+    val Proc(xs, ys, pre, post, body) = proc
 
     val su1 = Expr.subst(xs, in)
-    val su2 = Expr.subst(ys, out)
     val _pre = pre subst su1
-    val _post = post subst (su1 ++ su2)
+    post match {
+      case True =>
+        val Some(Body(locals, body_)) = body
 
-    Spec(out, _pre, _post)
+        // rename everything in body except for possibly class variables
+        val xs_ = xs.fresh
+        val locals_ = locals.fresh
+        val ys_ = ys.fresh
+        val oldVars: List[Id] = xs ++ locals ++ ys
+        val newVars: List[Id] = xs_ ++ locals_ ++ ys_
+        val re = oldVars zip newVars toMap
+        val body__ : List[Prog] = body_ map (_.replace(re))
+
+        // assign inputs before body and outputs after body
+        val assIn: List[Assign] = if(xs_.isEmpty) Nil else List(Assign.zip(xs_, in))
+        val assOut: List[Assign] = if(ys_.isEmpty) Nil else List(Assign.zip(out, ys_))
+
+        val inlined: List[Prog] = Spec.assert(_pre) :: assIn ++ body__ ++ assOut
+        val prog: Prog = Block(inlined, false, if (inObj) Some(context) else None)
+        (xs_ ++ locals_ ++ ys_, prog: Prog)
+      case post =>
+        val su2 = Expr.subst(ys, out)
+        val _post = post subst (su1 ++ su2)
+
+        (Nil, Spec(out, _pre, _post))
+    }
   }
 
   def box(progs: List[Prog], break: Option[Expr], post: Expr, env0: Env, old: List[Env]): Expr = progs match {
@@ -261,9 +292,9 @@ case class Eval(st: State) {
           error("break not within while", break, env0)
       }
 
-    case Block(progs, withOld) :: rest =>
+    case Block(progs, withOld, ctx) :: rest =>
       val old_ = if (withOld) env0 :: old else old
-      box(progs ++ rest, break, post, env0, old_)
+      inContext(ctx).box(progs ++ rest, break, post, env0, old_)
 
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old))
@@ -343,9 +374,9 @@ case class Eval(st: State) {
 
       use && base && step
 
-    case Call(name, in, out) :: rest if st.procdefs contains name =>
-      val spec = contract(name, out, in)
-      box(spec :: rest, break, post, env0, old)
+    case Call(name, in, out) :: rest if isProcDefined(name) =>
+      val (formals, prog) = contract(name, out, in)
+      Forall(formals, box(prog :: rest, break, post, env0 bind formals, old))
 
     case Call(name, _, _) :: rest =>
       error("unknown procedure", name)
@@ -363,9 +394,9 @@ case class Eval(st: State) {
           error("break not within while", break, env0)
       }
 
-    case Block(progs, withOld) :: rest =>
+    case Block(progs, withOld, ctx) :: rest =>
       val old_ = if (withOld) env0 :: old else old
-      dia(progs ++ rest, break, post, env0, old_)
+      inContext(ctx).dia(progs ++ rest, break, post, env0, old_)
 
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old))
@@ -414,9 +445,9 @@ case class Eval(st: State) {
 
       use && base && step
 
-    case Call(name, in, out) :: rest if st.procdefs contains name =>
-      val spec = contract(name, out, in)
-      dia(spec :: rest, break, post, env0, old)
+    case Call(name, in, out) :: rest if isProcDefined(name) =>
+      val (formals, prog) = contract(name, out, in)
+      Forall(formals, dia(prog :: rest, break, post, env0 bind formals, old))
 
     case Call(name, _, _) :: rest =>
       error("unknown procedure", name)
@@ -435,9 +466,9 @@ case class Eval(st: State) {
     case Break :: rest =>
       error("break not within while", env0)
 
-    case Block(progs, withOld) :: rest =>
+    case Block(progs, withOld, ctx) :: rest =>
       val old_ = if (withOld) env0 :: old else old
-      rel(progs ++ rest, env0, old_)
+      inContext(ctx).rel(progs ++ rest, env0, old_)
 
     case Assign(lets) :: rest =>
       val pairs = lets map (eval(_, env0, old))
@@ -472,9 +503,9 @@ case class Eval(st: State) {
       val spec = Spec(mod_, phi, /* !test && */ psi)
       rel(spec :: rest, env0, old)
 
-    case Call(name, in, out) :: rest if st.procdefs contains name =>
-      val spec = contract(name, out, in)
-      rel(spec :: rest, env0, old)
+    case Call(name, in, out) :: rest if isProcDefined(name) =>
+      val (formals, prog) = contract(name, out, in)
+      rel(prog :: rest, env0 bind formals, old).map(p => Path(p.fresh ++ formals, p.path, p.env))
 
     case Call(name, _, _) :: rest =>
       error("unknown procedure", name)

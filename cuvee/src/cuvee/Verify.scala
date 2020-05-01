@@ -37,7 +37,7 @@ object Verify {
     And(conds)
   }
 
-  def contract(proc: Proc, state: List[Formal]): Expr = {
+  def contract(proc: Proc, obj: Option[Obj]): Expr = {
     val Proc(in, out, pre, post, body) = proc
 
     body match {
@@ -45,15 +45,15 @@ object Verify {
         True
       case Some(Body(locals, progs)) =>
         Forall(
-          state ++ in ++ out ++ locals,
-          pre ==> WP(Block(progs, true), post))
+          obj.map(_.state).getOrElse(Nil) ++ in ++ out ++ locals,
+          pre ==> WP(Block(progs, true, Some(obj)), post))
     }
   }
 
   def contract(obj: Obj): Expr = {
-    val Obj(state, init, ops) = obj
+    val Obj(_, init, ops) = obj
 
-    And(init :: ops.map(_._2) map (contract(_, state)))
+    And(init :: ops.map(_._2) map (contract(_, Some(obj))))
   }
 
   def refine(A: Obj, as: List[Formal], C: Obj, cs: List[Formal], R: Expr) = {
@@ -93,8 +93,8 @@ object Verify {
     val ci_ = ci map (_.prime)
     val co_ = co map (_.prime)
 
-    val (apre, _, abody) = ap.call(A.state, as, ai, ao)
-    val (cpre, _, cbody) = cp.call(C.state, cs, ci_, co_)
+    val (apre, _, Body(alocals, abody)) = ap.call(A.state, as, ai, ao)
+    val (cpre, _, Body(clocals, cbody)) = cp.call(C.state, cs, ci_, co_)
 
     // declare as primed := unprimed so that simplification will removed primed variables
     val in = Eq(ci_, ai)
@@ -102,10 +102,10 @@ object Verify {
 
     val phi =
       ((in && apre && R0) ==>
-        (cpre && WP(cbody, Dia(abody, out && R1))))
+        (cpre && WP(Block(cbody, false, Some(Some(C))), Dia(Block(abody, false, Some(Some(A))), out && R1))))
 
     (aop, Forall(
-      as ++ ai ++ ao ++ cs ++ ci_ ++ co_,
+      as ++ ai ++ alocals ++ ao ++ cs ++ ci_ ++ clocals ++ co_,
       phi))
   }
 }

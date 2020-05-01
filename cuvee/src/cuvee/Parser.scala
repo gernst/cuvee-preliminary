@@ -97,7 +97,7 @@ object Parser {
   val prog: Parser[Prog] = P(parens(prog_))
   val progs = P(prog.*)
   val with_old = (":save-old" ~ ret(true)) | ret(false)
-  val block_ = P(Block("block" ~ progs ~ with_old))
+  val block_ = P(Block("block" ~ progs ~ with_old ~ ret(None)))
 
   val wp_ = P(WP("wp" ~ prog ~ expr))
   val box_ = P(Box("box" ~ prog ~ expr))

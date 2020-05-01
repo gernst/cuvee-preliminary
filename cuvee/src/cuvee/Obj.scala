@@ -65,11 +65,10 @@ object Proc extends ((List[Formal], List[Formal], Option[Body], Option[Expr], Op
 }
 
 case class Obj(state: List[Formal], init: Proc, ops: List[(Id, Proc)]) {
-  def op(id: Id) = id match {
+  def op(id: Id): Option[Proc] = id match {
     case Id.init =>
-      init
+      Some(init)
     case _ =>
-      val Some((_, proc)) = ops find (_._1 == id)
-      proc
+      ops find (_._1 == id) map (_._2)
   }
 }
