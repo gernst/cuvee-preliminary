@@ -304,7 +304,7 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     xs: List[Formal],
     init: List[Expr],
     in: List[Expr]) = {
-    val (pre, paths) = Eval.paths(proc, xs, init, in, state)
+    val (pre, paths) = Eval(state).paths(proc, xs, init, in)
 
     val _paths = for (Path(fresh, path, Env(su, _)) <- paths) yield {
       val fin = xs map (_ subst su)
