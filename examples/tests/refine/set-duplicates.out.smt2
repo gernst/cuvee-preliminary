@@ -61,8 +61,8 @@
           true)
         (and
           true
-          true
-          (R nil values0)))
+          (and true
+               (R nil values0))))
       (forall
         ((xs Lst) (x Elem) (values (Array Elem Bool)) (|x'| Elem))
         (=>
@@ -72,8 +72,8 @@
             (R xs values))
           (and
             true
-            true
-            (R (cons x xs) (store values |x'| true)))))
+            (and true
+                 (R (cons x xs) (store values |x'| true))))))
       (forall
         ((xs Lst) (x Elem) (values (Array Elem Bool)) (|x'| Elem))
         (=>
@@ -83,8 +83,8 @@
             (R xs values))
           (and
             true
-            true
-            (R (removeall x xs) (store values |x'| false)))))
+            (and true
+                 (R (removeall x xs) (store values |x'| false))))))
       (forall
         ((xs Lst) (x Elem) (values (Array Elem Bool)) (|x'| Elem))
         (=>
@@ -94,9 +94,7 @@
             (R xs values))
           (and
             true
-            (= (select values |x'|) (contains x xs))
-            (R xs values)))))))
+            (and (= (select values |x'|) (contains x xs))
+                 (R xs values))))))))
 (check-sat)
 (pop 1)
-(exit)
-(exit)
