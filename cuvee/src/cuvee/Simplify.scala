@@ -279,7 +279,11 @@ object Simplify {
               quant(formals, boolean)
             } else {
               val bound = args.filterNot(_.free.disjoint(bind.bound))
-              App(id, quant(formals, App(id, bound)) :: unbound)
+              val app: List[Expr] => Expr = id match {
+                case Id.and => Simplify.and
+                case Id.or => Simplify.or
+              }
+              App(id, quant(formals, app(bound)) :: unbound)
             }
           }
           case other => Simplify.bind(quant, formals, other)

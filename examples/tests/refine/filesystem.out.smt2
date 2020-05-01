@@ -101,7 +101,9 @@
   (and
     (forall
       ((name Name))
-      (= (select fs name) (select disk (select index name))))
+      (or
+        (= (select fs name) empty)
+        (= (select fs name) (select disk (select index name)))))
     (forall
       ((name Name))
       (or
