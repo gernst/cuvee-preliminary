@@ -48,7 +48,7 @@ case class Check(st: State) {
       tr
 
     case App(id, args) =>
-      val ts1 = args map ((expr: _root_.cuvee.Expr) => infer(expr, ty))
+      val ts1 = args map (infer(_, ty))
       declareFun(id, ts1, implied)
 
     case Bind(_, formals, body) =>
