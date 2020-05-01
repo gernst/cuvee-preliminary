@@ -98,9 +98,7 @@ case class DefineClass(sort: Sort, obj: Obj) extends Def {
   override def toString = Printer.define(sort, obj)
 }
 
-case class VerifyProc(id: Id) extends Cmd {
-  
-}
+case class VerifyProc(id: Id) extends Cmd
 
 sealed trait Sim
 object Sim {
@@ -108,9 +106,9 @@ object Sim {
   case class byExpr(as: List[Formal], cs: List[Formal], phi: Expr) extends Sim
 }
 
-case class VerifyRefinement(spec: Sort, impl: Sort, sim: Sim) extends Cmd {
-  
-}
+case class VerifyRefinement(spec: Sort, impl: Sort, sim: Sim) extends Cmd
+
+case class VerifyClass(obj: Sort) extends Cmd
 
 /*
 case class DeclareProc(id: Id, in: List[Type], ref: List[Type], out: List[Type]) extends Cmd {

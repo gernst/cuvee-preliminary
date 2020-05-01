@@ -172,6 +172,11 @@ object Solver {
       Ack.from(read())
     }
 
+    def verify(obj: Sort): Ack = {
+      write(Printer.verify(obj))
+      Ack.from(read())
+    }
+
     def write(line: String) {
       if (debug) println(pid + " < " + line)
       stdin.println(line)

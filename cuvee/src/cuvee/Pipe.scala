@@ -46,6 +46,7 @@ trait Sink {
 
   def verify(id: Id): Ack
   def verify(spec: Sort, impl: Sort, sim: Sim): Ack
+  def verify(obj: Sort): Ack
 
   def declare(arities: List[Arity], decls: List[Datatype]): Ack
 
@@ -116,6 +117,8 @@ trait Sink {
 
       case VerifyProc(id) =>
         Some(verify(id))
+      case VerifyClass(sort) =>
+        Some(verify(sort))
       case VerifyRefinement(spec, impl, sim) =>
         Some(verify(spec, impl, sim))
 
@@ -350,6 +353,11 @@ object Sink {
       Success
     }
 
+    def verify(obj: Sort): Ack = {
+      write(Printer.verify(obj))
+      Success
+    }
+
     def write(line: String) {
       stream.println(line)
       stream.flush()
@@ -359,8 +367,8 @@ object Sink {
   /**
    * Wraps around two solvers passing commands to both.
    *
-   * @param a the result of this solver will be returned
-   * @param b each command will be passed to this solver first. The result is ignored. Exceptions are not caught, however.
+   * @param primary the result of this solver will be returned
+   * @param others each command will be passed to this solver first. The result is ignored. Exceptions are not caught, however.
    */
   case class tee(primary: Sink, others: Sink*) extends Sink {
     def setLogic(logic: String): Ack = {
@@ -456,6 +464,11 @@ object Sink {
     def verify(spec: Sort, impl: Sort, sim: Sim): Ack = {
       for (solver <- others) solver.verify(spec, impl, sim)
       primary.verify(spec, impl, sim)
+    }
+
+    def verify(obj: Sort): Ack = {
+      for (solver <- others) solver.verify(obj)
+      primary.verify(obj)
     }
 
     def assert(expr: Expr): Ack = {
