@@ -37,7 +37,7 @@ object Verify {
     And(conds)
   }
 
-  def contract(proc: Proc) = {
+  def contract(proc: Proc, state: List[Formal]): Expr = {
     val Proc(in, out, pre, post, body) = proc
 
     body match {
@@ -45,9 +45,15 @@ object Verify {
         True
       case Some(Body(locals, progs)) =>
         Forall(
-          in ++ out ++ locals,
+          state ++ in ++ out ++ locals,
           pre ==> WP(Block(progs, true), post))
     }
+  }
+
+  def contract(obj: Obj): Expr = {
+    val Obj(state, init, ops) = obj
+
+    And(init :: ops.map(_._2) map (contract(_, state)))
   }
 
   def refine(A: Obj, as: List[Formal], C: Obj, cs: List[Formal], R: Expr) = {

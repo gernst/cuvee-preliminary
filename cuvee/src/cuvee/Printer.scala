@@ -109,6 +109,10 @@ object Printer {
       sexpr("verify-refinement", sexpr(spec, as: _*), sexpr(impl, cs: _*), phi)
   }
 
+  def verify(id: Sort) = {
+    sexpr("verify-class", id)
+  }
+
   def sat() = "sat"
   def unsat() = "unsat"
   def unknown() = "unknown"

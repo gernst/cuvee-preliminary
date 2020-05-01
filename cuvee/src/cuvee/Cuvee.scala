@@ -263,7 +263,13 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
 
   def verify(id: Id): Ack = {
     val proc = top procdefs id
-    val phi = Verify.contract(proc)
+    val phi = Verify.contract(proc, Nil)
+    assert(!phi)
+  }
+
+  def verify(sort: Sort): Ack = {
+    val obj = top objects sort
+    val phi = Verify.contract(obj)
     assert(!phi)
   }
 

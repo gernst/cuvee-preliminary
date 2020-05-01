@@ -122,7 +122,7 @@ object Parser {
 
   val cmd_ : Parser[Cmd] = P(set_logic_ | set_option_ | set_info_ | exit_ | reset_ | push_ | pop_ | check_sat_ | verify_ | assert_ | get_model_ | get_assertions_ |
     declare_sort_ | declare_const_ | define_const_ | declare_fun_ | define_fun_rec_ | define_fun_ | declare_dts_ |
-    define_proc_ | define_class_ | verify_proc_ | verify_refinement_)
+    define_proc_ | define_class_ | verify_proc_ | verify_refinement_ | verify_class_)
 
   val cmd: Parser[Cmd] = P(parens(cmd_))
 
@@ -181,6 +181,7 @@ object Parser {
   val define_class_ = P(DefineClass("define-class" ~ sort ~ obj_))
 
   val verify_proc_ = P(VerifyProc("verify-proc" ~ id))
+  val verify_class_ = P(VerifyClass("verify-class" ~ sort))
 
   val recipe = Recipe.output("output") | Recipe.precondition("precondition") | Recipe.consumer("consumer") | Recipe.producer("producer")
   val synth = ":synthesize" ~ recipe.*
