@@ -1,3 +1,5 @@
+import java.util.regex.Pattern
+
 package object cuvee {
   import scala.language.implicitConversions
   import scala.io.StdIn
@@ -109,20 +111,13 @@ package object cuvee {
     }
   }
 
-  def ok = "=-+<>"
-
-  def needsEscape(c: Char) = {
-    if ('0' <= c && c <= '9') false
-    else if ('a' <= c && c <= 'z') false
-    else if ('A' <= c && c <= 'Z') false
-    else if (ok contains c) false
-    else true
-  }
+  def ok = Pattern.compile(Parser.simplePattern)
 
   def mangle(id: Id) = {
     val Id(name, index) = id
-    if (name exists needsEscape) "|" + (name __ index) + "|"
-    else name __ index
+    val ni = name __ index
+    if (ok.matcher(ni).matches()) ni
+    else "|" + ni + "|"
   }
 
   def sexpr(arg0: Any, args: Any*): String = {

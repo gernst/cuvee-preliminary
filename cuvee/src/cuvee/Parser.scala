@@ -36,9 +36,10 @@ object Parser {
     "(" ~ p ~ ")"
   }
 
+  val simplePattern = "[a-zA-Z_~!@$%^&*+=<>.?/\\-][0-9a-zA-Z_~!@$%^&*+=<>.?/\\-]*"
   // https://github.com/smtlib/jSMTLIB
   // SMT/src/org/smtlib/sexpr/Lexer.java
-  val simple = S("[a-zA-Z_~!@$%^&*+=<>.?/\\-][0-9a-zA-Z_~!@$%^&*+=<>.?/\\-]*")
+  val simple = S(simplePattern)
     .filterNot(reservedWords)
   val quoted = S("\\|[0-9a-zA-Z_~!@$%^&*+=<>.?/\"'(),:;{}#`\\[\\] \t\r\n\\-]*\\|") map {
     str => str.substring(1, str.length - 1)
