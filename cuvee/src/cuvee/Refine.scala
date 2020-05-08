@@ -1,12 +1,33 @@
 package cuvee
 
+import scala.collection.immutable.ListMap
+import scala.collection.mutable
+
 sealed trait Recipe
 
 object Recipe {
   case object output extends Recipe
   case object precondition extends Recipe
+  case object abduct extends Recipe
   case object consumer extends Recipe
   case object producer extends Recipe
+}
+
+sealed trait Reftype
+
+object Reftype {
+  /*
+   * R(x) ==> P(x)
+   */
+  case object plain extends Reftype
+  /*
+   * R(f(x)) ==> P(x, R(x))
+   */
+  case object rec_consumer extends Reftype
+  /*
+   * R(x) ==> P(x, R(f(x)))
+   */
+  case object rec_producer extends Reftype
 }
 
 case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
@@ -20,42 +41,43 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
 
   def apply(recipes: List[Recipe]): List[Expr] = {
     val defs = recipes map apply
-    combineDefs(defs.flatten)
+    combineDefs(defs.flatten) map(_.simplify) map (_.toExpr)
   }
 
   /**
    * If multiple recipes are run and multiple recipes produce "R = ..." definitions,
    * those need to be combined into a single "R = And(...)" definition.
    */
-  private def combineDefs(defs: List[Expr]): List[Expr] = {
-    val bound = as ++ cs
-    val vars = bound.ids
+  private def combineDefs(defs: List[Reflet]): List[Reflet] = {
+    // These should be checked for _structural_ equality.
+    // For the time being we just check if the args are identical.
+    // This is, of course, sensitive to naming, and doesn't work for anything non-trivial
 
-    val (rhss, other) = partition(defs) {
-      case Forall(`bound`, Eq(App(R, `vars`), rhs)) => Left(rhs)
-      case other => Right(other)
+    // This monstrosity is there to preserve order. Otherwise tests get icky.
+    // I would love to have something more compact here.
+    var grouped = ListMap[(List[Formal], List[Expr], Reftype), List[Reflet]]()
+      .withDefault(_ => Nil)
+    for (deff <- defs) {
+      val key = (deff.bound, deff.args, deff.reftype)
+      grouped = grouped + (key -> (deff :: grouped(key)))
     }
+    grouped = grouped.mapValues(_.reverse)
 
-    val iff = if (rhss.nonEmpty) {
-      val rhs = And(And.flatten(rhss))
-      val def_ = Forall(bound, Eq(App(R, bound), rhs))
-      List(def_)
-    } else {
-      Nil
+    val reflets = for (((bound, args, reftype), defs) <- grouped) yield {
+      Reflet(bound, args, And(defs.map(_.expr)), reftype)
     }
-
-    iff ++ other
+    reflets toList
   }
 
-  def apply(recipe: Recipe): List[Expr] = {
+  def apply(recipe: Recipe): List[Reflet] = {
     val cs = candidates(recipe)
     ensure(cs.nonEmpty, "no candidates")
     cs.head
   }
 
-  def candidates(recipe: Recipe): List[List[Expr]] = recipe match {
+  def candidates(recipe: Recipe): List[List[Reflet]] = recipe match {
     case Recipe.output | Recipe.precondition =>
-      outputs(recipe)
+      List(outputs(recipe))
 
     case Recipe.producer | Recipe.consumer =>
       induct(recipe)
@@ -68,7 +90,7 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
    *
    * result is different candidates
    */
-  def induct(recipe: Recipe): List[List[Expr]] = {
+  def induct(recipe: Recipe): List[List[Reflet]] = {
     for ((sort, dt, pos) <- inductivePositions(as)) yield {
       induct(sort, dt, pos, recipe)
     }
@@ -78,7 +100,7 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
    * Perform induction over a given data type
    * pos is the inductive position in A.state
    */
-  def induct(sort: Sort, dt: Datatype, pos: Int, recipe: Recipe): List[Expr] = {
+  def induct(sort: Sort, dt: Datatype, pos: Int, recipe: Recipe): List[Reflet] = {
     val ai = ax(pos)
 
     for ((constr, args, hyps) <- dt.induction(ai, sort)) yield {
@@ -90,20 +112,18 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
       val bound = as_args ++ cs
 
       val ax0 = ax updated (pos, pat)
-      val lhs = App(R, ax0 ++ cx)
 
       if (hyps.isEmpty) {
-        define(bound, lhs,
-          base(bound, ax0, cx))
+        Reflet(bound, ax0 ++ cx,
+          base(bound, ax0, cx), Reftype.plain)
       } else {
         val cases = for (hyp <- hyps) yield {
           val arg = vs(hyp)
           rec(bound, pos, arg, ax0, cx, recipe)
         }
 
-        define(
-          bound,
-          lhs, And(cases))
+        Reflet(bound, ax0 ++ cx,
+          And(cases), recipe match { case Recipe.consumer => Reftype.rec_consumer })
       }
     }
   }
@@ -114,10 +134,10 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
    * as0, cs0 are the initial states (left-hand side of definition)
    * consider those operations only that can take as0 resp. cs0 as input (i.e. precondition is not falsified)
    */
-  def outputs(recipe: Recipe): List[List[Expr]] = {
+  def outputs(recipe: Recipe): List[Reflet] = {
     val ops = A.ops zip C.ops
 
-    val phis = for (((aname, aproc), (cname, cproc)) <- ops
+    for (((aname, aproc), (cname, cproc)) <- ops
                     if recipe != Recipe.output || aproc.out.nonEmpty) yield {
       ensure(aname == cname, "operations must occur in same order", A.ops, C.ops, aname, cname)
       val in: List[Id] = aproc.in
@@ -129,17 +149,11 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
           val outs = for (step <- steps) yield {
             step ensures step.outputsEq
           }
-          Forall(bound, apre ==> And(outs))
+          Reflet(as ++ cs, as ++ cs, Forall(bound, apre ==> And(outs)), Reftype.plain)
         case Recipe.precondition =>
-          Forall(bound, apre ==> cpre)
+          Reflet(as ++ cs, as ++ cs, Forall(bound, apre ==> cpre), Reftype.plain)
       }
     }
-
-    val lhs = App(R, ax ++ cx)
-    val rhs = And(phis)
-    val psi = define(as ++ cs, lhs, rhs)
-
-    List(List(psi))
   }
 
   /**
@@ -372,6 +386,26 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     for ((Formal(_, sort: Sort), i) <- xs.zipWithIndex if state.datatypes contains sort) yield {
       val dt = state datatypes sort
       (sort, dt, i)
+    }
+  }
+
+  /**
+   * Defines an atom of the refinement: "forall bound. R(args) ? expr" where ? currently means ==>
+   *
+   * @param bound the bound variables. as ++ cs in the simple case, more variables if a constructor of an algebraic datatypes is used
+   * @param args args of R. as ++ cs in the simple case, more complex expressions if a constructor of an algebraic datatypes is used
+   * @param expr the
+   */
+  case class Reflet(bound: List[Formal], args: List[Expr], expr: Expr, reftype: Reftype) {
+    def toExpr: Expr = Forall(bound, App(R, args) === expr)
+
+    def simplify: Reflet = {
+      val simplify = Simplify(solver)
+      val expr_ = solver.scoped {
+        solver.bind(bound)
+        simplify(expr)
+      }
+      Reflet(bound, args, expr_, reftype)
     }
   }
 }
