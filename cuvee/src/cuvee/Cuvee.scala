@@ -143,7 +143,7 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
   }
 
   def check() = backend.scoped {
-    val rasserts = top.rasserts map eval
+    val rasserts = ((top.rasserts reverse) map eval) reverse
 
     val actual = rasserts match {
       case Not(phi) :: rest if config.prove =>

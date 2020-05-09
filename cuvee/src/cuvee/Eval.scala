@@ -22,6 +22,10 @@ case class Env(su: Map[Id, Expr], ty: Map[Id, Type]) {
 
   def bind(fs: List[Formal]): Env = {
     val xs = fs map (_.id)
+    val bound = xs filter su.contains
+    if (bound.nonEmpty) {
+      error(s"already bound: $bound")
+    }
     val ts = fs map (_.typ)
     val re = Expr.id(xs)
     val xt = xs zip ts
@@ -148,7 +152,9 @@ case class Eval(st: State, context: Option[Obj]) {
     case App(id, args) =>
       error("unknown function", id, expr, env)
 
-    case expr @ Bind(quant, formals, body) =>
+    case bind@Bind(_, _, _) =>
+      val avoid = bind.avoid(env.su.keySet)
+      val Bind(quant, formals, body) = bind.rename(avoid, avoid)
       quant(formals, eval(body, env bind formals, old))
 
     case expr @ Match(arg, cases) =>
