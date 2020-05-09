@@ -1,36 +1,36 @@
 package cuvee
 
-case class Prove(backend: Solver) {
+case class Prove(backend: Solver, st: State) {
 
   import Simplify._
 
-  def apply(phi: Expr, st: State): Expr = {
-    prove(phi, st)
+  def apply(phi: Expr): Expr = {
+    prove(phi)
   }
 
-  def prove(todo: List[Expr], neg: Boolean, st: State): List[Expr] = todo match {
+  def prove(todo: List[Expr], neg: Boolean): List[Expr] = todo match {
     case Nil =>
       Nil
     case phi :: rest =>
-      val _phi = prove(phi, st)
+      val _phi = prove(phi)
       val __phi = if (neg) !_phi else _phi
       val _rest = backend.asserting(__phi) {
-        prove(rest, neg, st)
+        prove(rest, neg)
       }
       _phi :: _rest
   }
 
-  def prove(phi: Expr, st: State): Expr = phi match {
+  def prove(phi: Expr): Expr = phi match {
     case t@(True | False) => t
 
     case Imp(phi, psi) =>
       val _psi = backend.asserting(phi) {
-        prove(psi, st)
+        prove(psi)
       }
       imp(phi, _psi)
 
     case And(args) =>
-      val _args = prove(args, neg = false, st)
+      val _args = prove(args, neg = false)
       and(_args)
 
     case f@Forall(bound, _) =>
@@ -38,7 +38,7 @@ case class Prove(backend: Solver) {
       val fresh = Expr.fresh(bound.ids.toSet & st.constants.ids.toSet)
       val Forall(bound_, body_) = f.rename(fresh, fresh)
       val _body = backend.binding(bound_) {
-        prove(body_, st.declareConstants(bound_))
+        Prove(backend, st.declareConstants(bound_)).prove(body_)
       }
       forall(bound_, _body)
 
@@ -46,37 +46,37 @@ case class Prove(backend: Solver) {
       // since we never have local variables, we do a type check based on globals
       if Check(st).infer(left, Map.empty, None) == Sort.bool
         && Check(st).infer(right, Map.empty, None) == Sort.bool =>
-      prove(And(left ==> right, right ==> left), st)
+      prove(And(left ==> right, right ==> left))
 
     case Ite(test, left, right) =>
-      prove(And(test ==> left, !test ==> right), st)
+      prove(And(test ==> left, !test ==> right))
 
     case App(Id("iff", None), List(left, right)) =>
-      prove(And(left ==> right, right ==> left), st)
+      prove(And(left ==> right, right ==> left))
 
     case App(r, args) if (st.fundefs contains r)
       // do not substitute recursive functions
       && !(evaluations(st.fundefs(r)._2) contains r) =>
       val (formals, body) = st.fundefs(r)
-      prove(body.subst(Expr.subst(formals, args)), st)
+      prove(body.subst(Expr.subst(formals, args)))
 
     case _ =>
       val cs = cases(phi)
-      qualify(cs.distinct, phi, st)
+      qualify(cs.distinct, phi)
   }
 
-  def qualify(cs: List[Expr], phi: Expr, st: State): Expr = cs match {
+  def qualify(cs: List[Expr], phi: Expr): Expr = cs match {
     case _ if backend isTrue phi =>
       True
     case Nil =>
       phi
     case pre :: rest =>
-      println("qualifying: " + pre + "==> " + phi)
+      System.err.println("qualifying: " + pre + " ==> " + phi)
       val phi1 = backend.asserting(pre) {
-        imp(pre, qualify(rest, phi, st))
+        imp(pre, qualify(rest, phi))
       }
       val phi2 = backend.asserting(!pre) {
-        imp(not(pre), qualify(rest, phi, st))
+        imp(not(pre), qualify(rest, phi))
       }
       and(List(phi1, phi2))
   }
@@ -110,10 +110,10 @@ case class Prove(backend: Solver) {
   def cases(expr: Expr): List[Expr] = expr match {
     case Ite(test, left, right) =>
       List(test) ++ cases(left) ++ cases(right)
-    case Select(Store(array, index, value), index_) =>
+    case Select(Store(array, index, _), index_) =>
       List(index === index_) ++ cases(array)
     case Eq(left, right) => cases(left) ++ cases(right)
-    case App(fun, args) => args flatMap cases
+    case App(_, args) => args flatMap cases
     case _ => List()
   }
 }

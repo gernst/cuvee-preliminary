@@ -153,8 +153,8 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
         // val conj = And.flatten(_phi)
         // val unknown = conj filterNot solver.isTrue
 
-        val prove = Prove(solver)
-        val _phi = prove(phi, top)
+        val prove = Prove(solver, top)
+        val _phi = prove(phi)
 
         if (_phi == True) {
           Unsat

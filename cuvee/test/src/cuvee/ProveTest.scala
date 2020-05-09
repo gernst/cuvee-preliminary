@@ -9,7 +9,7 @@ object ProveTest extends TestSuite {
     withSolver(Solver.default, solver => {
       solver.declare(("a", "Bool"))
       solver.declare(("b", "Bool"))
-      val expr = Prove(solver).prove(Eq("a", And("b", True)), st)
+      val expr = Prove(solver, st).prove(Eq("a", And("b", True)))
       assertEquals(expr, Imp("a", "b") && Imp(And("b", True), "a"))
     })
   }
@@ -18,7 +18,7 @@ object ProveTest extends TestSuite {
     val st = State.default.define("R", List(("x", "Int"), ("y", "Int")), "Bool",
       "x" === "y" && "x" === "x") // x = x will be discharged
     withSolver(Solver.default, solver => {
-      val expr = Prove(solver).prove(Forall(List(("x", "Int"), ("y", "Int")), App("R", "x", "y")), st)
+      val expr = Prove(solver, st).prove(Forall(List(("x", "Int"), ("y", "Int")), App("R", "x", "y")))
       assertEquals(expr, Forall(List(("x", "Int"), ("y", "Int")), "x" === "y"))
     })
   }
@@ -29,7 +29,7 @@ object ProveTest extends TestSuite {
     withSolver(Solver.default, solver => {
       solver.declare("R", List("Int","Int"), "Bool")
       val initial = Forall(List(("x", "Int"), ("y", "Int")), App("R", "x", "y"))
-      val expr = Prove(solver).prove(initial, st)
+      val expr = Prove(solver, st).prove(initial)
       assertEquals(expr, initial)
     })
   }
