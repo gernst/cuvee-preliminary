@@ -226,8 +226,8 @@ object Simplify {
     case Le(a, b) => linear(le, poly(a), poly(b))
     case Eq(a, b) => maybeLinear(eq, poly(a), poly(b))
 
-    case Head(Cons(x, xs)) => norm(x)
-    case Tail(Cons(x, xs)) => norm(xs)
+    case Head(Cons(x, _)) => norm(x)
+    case Tail(Cons(_, xs)) => norm(xs)
 
     case Distinct(List(Cons(_, _), Id.nil)) =>
       True
@@ -239,6 +239,14 @@ object Simplify {
 
     case App(fun, args) =>
       App(fun, norm(args))
+
+    case Select(Store(_, index, value), index2) if index == index2 =>
+      norm(value)
+
+    case s@Select(array, index) =>
+      // norm arguments to attempt the shortcut above but prevent infinite recursion
+      val s_ = Select(norm(array), norm(index))
+      if (s != s_) norm(s_) else s
 
     case _ =>
       expr
@@ -260,7 +268,7 @@ object Simplify {
   }
 
   def norm(exprs: List[Expr]): List[Expr] = {
-    exprs map (norm(_))
+    exprs map norm
   }
 
   private def normQuant(bind: Bind): Expr = {
@@ -273,22 +281,22 @@ object Simplify {
           return norm(quant(formals, body_))
         }
         body_ match {
-          case boolean@App(id@(Id.and | Id.or), args) => {
-            val unbound = args.filter(_.free.disjoint(bind.bound))
-            if (unbound.isEmpty) {
-              quant(formals, boolean)
-            } else {
-              val bound = args.filterNot(_.free.disjoint(bind.bound))
-              val app: List[Expr] => Expr = id match {
-                case Id.and => Simplify.and
-                case Id.or => Simplify.or
-              }
-              App(id, quant(formals, app(bound)) :: unbound)
-            }
-          }
+          case And(args) => extractUnbound(bind, args, Simplify.and)
+          case Or(args) => extractUnbound(bind, args, Simplify.or)
           case other => Simplify.bind(quant, formals, other)
         }
       case other => norm(other)
+    }
+  }
+
+  private def extractUnbound(bind: Bind, args: List[Expr], app: List[Expr] => Expr) = {
+    val Bind(quant, formals, _) = bind
+    val unbound = args.filter(_.free.disjoint(bind.bound))
+    if (unbound.isEmpty) {
+      quant(formals, app(args))
+    } else {
+      val bound = args.filterNot(_.free.disjoint(bind.bound))
+      app(quant(formals, app(bound)) :: unbound)
     }
   }
 
