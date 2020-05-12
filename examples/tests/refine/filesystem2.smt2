@@ -71,7 +71,6 @@
      (index (Array Name Address))
      (disk (Array Address File)))
     Bool
-    ; disk[null] = empty abduzieren!
     (and (= (select disk null) empty)
          (forall ((name Name)) (and
                  (=> (distinct (select fs name) undef_f)
@@ -91,10 +90,9 @@
   (check-sat)
 (pop)
 
-; we can't do that yet :(
-;(push)
-;  (verify-refinement AbstractFS FlashFS R :synthesize output precondition)
-;
-;  (set-info :status unsat)
-;  (check-sat)
-;(pop)
+(push)
+  (verify-refinement AbstractFS FlashFS R :synthesize output precondition abduct)
+
+  (set-info :status unsat)
+  (check-sat)
+(pop)

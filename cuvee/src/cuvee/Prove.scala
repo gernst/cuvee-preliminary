@@ -76,7 +76,6 @@ case class Prove(backend: Solver, st: State) {
     case Nil =>
       phi
     case pre :: rest =>
-      System.err.println("qualifying: " + pre + " ==> " + phi)
       val phi1 = backend.asserting(pre) {
         imp(pre, qualify(rest, phi))
       }
@@ -115,9 +114,12 @@ case class Prove(backend: Solver, st: State) {
   def cases(expr: Expr): List[Expr] = expr match {
     case Ite(test, left, right) =>
       List(test) ++ cases(left) ++ cases(right)
-    case Select(Store(array, index, _), index_) =>
-      List(index === index_) ++ cases(array)
+    case Select(Store(array, index, _), index_) if index != index_ =>
+      List(index === index_) ++ cases(array) ++ cases(index) ++ cases(index_)
+    case Select(array, index) =>
+      cases(array) ++ cases(index)
     case Eq(left, right) => cases(left) ++ cases(right)
+    case Distinct(args) => args flatMap cases
     case App(_, args) => args flatMap cases
     case _ => List()
   }

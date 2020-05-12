@@ -115,9 +115,7 @@
         (not
           (= (select fs name) empty))
         (= file empty)
-        (and
-          (= (select index name) null)
-          (distinct file empty))))))
+        (= (select index name) null)))))
 (push 1)
 (assert
   (forall

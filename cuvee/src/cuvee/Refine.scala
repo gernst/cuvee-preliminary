@@ -1,7 +1,6 @@
 package cuvee
 
 import scala.collection.immutable.ListMap
-import scala.collection.mutable
 
 sealed trait Recipe
 
@@ -40,8 +39,35 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
   val cx: List[Id] = cs
 
   def apply(recipes: List[Recipe]): List[Expr] = {
-    val defs = recipes map apply
-    combineDefs(defs.flatten) map(_.simplify) map (_.toExpr)
+    val defs = recipes filterNot (_ == Recipe.abduct) map apply
+    val direct = combineDefs(defs.flatten distinct) map (_.simplify)
+    val abducted = if (recipes contains Recipe.abduct) {
+      // look for the one with the fewest remaining goals and prefer fewer additions
+      val candidates = abduct(direct) sortBy (_._2.size) sortBy (_._1)
+      candidates.headOption.map(_._2).getOrElse(Nil)
+    } else Nil
+    combineDefs(direct ++ abducted) map (_.toExpr)
+  }
+
+  def abduct(base: List[Reflet], rcandidate: List[Reflet] = Nil, depth: Integer = 2): List[(Integer, List[Reflet])] = {
+    val remaining = this.remaining(base ++ (rcandidate reverse)) filterNot (_ == True)
+    if (remaining.isEmpty || depth == 0) {
+      return List((remaining.size, rcandidate reverse))
+    }
+    (for (suc <- remaining) yield {
+      val add = suc match {
+        case False =>
+          // we've created a non-refinement :( abort this path
+          return Nil
+        case Or(args) =>
+          // try individual parts of the disjunction
+          suc :: args
+        case _ => List(suc)
+      }
+      val reflets: List[Reflet] = add map (Reflet(as ++ cs, as ++ cs, _, Reftype.plain))
+      val rcandidates = reflets flatMap (r => abduct(base, r :: rcandidate, depth - 1))
+      rcandidates
+    }) flatten
   }
 
   /**
@@ -152,6 +178,45 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
           Reflet(as ++ cs, as ++ cs, Forall(bound, apre ==> And(outs)), Reftype.plain)
         case Recipe.precondition =>
           Reflet(as ++ cs, as ++ cs, Forall(bound, apre ==> cpre), Reftype.plain)
+      }
+    }
+  }
+
+  def remaining(candidate: List[Reflet]): List[Expr] = {
+    val simple = candidate filter (deff => deff.reftype == Reftype.plain && deff.args == (as ++ cs).ids)
+    if (simple.isEmpty) {
+      return Nil
+    }
+    val List(one) = combineDefs(simple)
+    val (init, ops) = Verify.refine(A, as, C, cs, True, one.expr)
+    val goals = init :: ops
+    val state_ = state.declareConstants(as ++ cs)
+    val simplify = Simplify(solver)
+    val prove = Prove(solver, state_)
+    solver.scoped {
+      Printer.format = true
+      solver.assert(state.asserts.reverse)
+      state.asserts.reverse.foreach(a => println(Printer.assert(a)))
+      solver.bind(as ++ cs)
+      solver.assert(one.expr)
+      println(Printer.assert(one.expr))
+
+      for ((name, goal) <- goals) yield solver.scoped {
+        println(s"PRESERVING: $name")
+        val Forall(bound, body) = goal
+        val goal_ = Forall(bound.filterNot((as ++ cs) toSet), body)
+        val env = state_.env
+        val goal__ = Eval(state_, None).eval(goal_, env, List(env))
+        println("GOAL:")
+        println(Printer.assert(goal__))
+        val remaining = prove(goal__)
+
+        println("REMAINING:")
+        println(Printer.assert(remaining))
+        val phi = simplify(remaining)
+        println("SIMPLIFIED:")
+        println(Printer.assert(phi))
+        phi
       }
     }
   }
@@ -400,10 +465,12 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     def toExpr: Expr = Forall(bound, App(R, args) === expr)
 
     def simplify: Reflet = {
+      val state_ = state.declareConstants(bound)
+      val prove = Prove(solver, state_)
       val simplify = Simplify(solver)
       val expr_ = solver.scoped {
         solver.bind(bound)
-        simplify(expr)
+        simplify(prove(expr))
       }
       Reflet(bound, args, expr_, reftype)
     }
