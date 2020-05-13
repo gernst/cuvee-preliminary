@@ -3,7 +3,7 @@ package cuvee
 import cuvee.Sort.{bool, int}
 import cuvee.Type.array
 
-case class Check(st: State) {
+case class Check(st: State, obj: Option[Obj] = None) {
   def infer(expr: Expr, ty: Map[Id, Type], implied: Option[Type] = None): Type = try {
     doInfer(expr, ty, implied)
   } catch {
@@ -189,9 +189,9 @@ case class Check(st: State) {
    * @param loop true if this program is in a loop. This allows the break statement.
    */
   private def doCheckProg(prog: Prog, ty: Map[Id, Type], loop: Boolean): Unit = prog match {
-    case Block(progs, _) =>
+    case Block(progs, _, ctx) =>
       for (prog <- progs)
-        checkProg(prog, ty, loop)
+        ctx.map(Check(st, _)).getOrElse(this).checkProg(prog, ty, loop)
 
     case Break =>
       ensure(loop, "break must only occur in while")
@@ -242,14 +242,15 @@ case class Check(st: State) {
       val postt = infer(post, ty, Some(bool))
       ensure(postt == Sort.bool, s"post-condition must be boolean but was $postt", post)
 
+    case Call(name, in, out) if obj.exists(o => o.ops.toMap.contains(name)) =>
+      val Some(Proc(xs, ys, _, _, _)) = obj.get.op(name)
+      checkCall(ty, name, in, out, xs, ys)
+
+    // obj procs ^ take precedence over global function calls v
+
     case Call(name, in, out) if st.procs contains name =>
       val (xs, ys) = st.procs(name)
-      ensure(in.length == xs.length, s"wrong number of arguments in procedure call to $name. " +
-        s"Expected ${xs.length} but got ${in.length}.")
-      val args = (in zip xs) map (p => infer(p._1, ty, Some(p._2)))
-      val ass = out map (infer(_, ty))
-      ensure(xs == args, s"procedure call arguments do not math function signature. Expected ${sig(xs)} but was ${sig(args)}")
-      ensure(ys == ass, s"procedure return values do not math function signature. Expected ${sig(ys)} but was ${sig(ass)}")
+      checkCall(ty, name, in, out, xs, ys)
 
     case Call(name, _, _) =>
       error(s"call to undefined procedure $name")
@@ -262,7 +263,19 @@ case class Check(st: State) {
       ensure(typ == Sort.bool, s"condition of choose must be boolean but was $typ", phi)
   }
 
-  def checkObj(sort: Sort, obj: Obj): Unit = {
+  private def checkCall(ty: Map[Id, Type], name: Id, callIn: List[Expr], callOut: List[Id], procIn: List[Type], procOut: List[Type]) = {
+    ensure(callIn.length == procIn.length, s"wrong number of arguments in procedure call to $name. " +
+      s"Expected ${procIn.length} but got ${callIn.length}.")
+    val args = (callIn zip procIn) map (p => infer(p._1, ty, Some(p._2)))
+    val ass = callOut map (infer(_, ty))
+    ensure(procIn == args, s"procedure call arguments do not match function signature. Expected ${sig(procIn)} but was ${sig(args)}")
+    ensure(procOut == ass, s"procedure return values do not match function signature. Expected ${sig(procOut)} but was ${sig(ass)}")
+  }
+
+  def checkObj(obj: Obj): Unit = {
+    // make sure this is called correctly
+    ensure(this.obj.contains(obj))
+
     val Obj(xs, init, ops) = obj
     obj.state.foreach(f => checkType(f.typ))
     checkProc(Id.init, init, xs)
@@ -270,15 +283,14 @@ case class Check(st: State) {
   }
 
   /**
-   * Does some basic checks on a procedure w.r.t. well-definedness. This exludes anything that requires knowledge about
-   * the state.
+   * Does some basic checks on a procedure w.r.t. well-definedness.
    *
    * @param id name of the procedure for error messages
    * @param xs (optional) state of the surrounding object if this procedure is defined on an object
    */
   def checkProc(id: Id, proc: Proc, xs: List[Formal] = Nil): Unit = {
     val Proc(in, out, pre, post, body) = proc
-    (in ++ out).types.foreach(checkType(_))
+    (in ++ out).types.foreach(checkType)
     val inVars: List[Id] = in
     val duplicateInputDeclarations = inVars.groupBy(identity).filter(_._2.size > 1)
     ensure(duplicateInputDeclarations.isEmpty, s"The method $id declares duplicate input parameters ${duplicateInputDeclarations.keys.mkString(", ")}")
@@ -288,9 +300,7 @@ case class Check(st: State) {
     val nonUniqueAgruments = (in ++ out).groupBy(_.id).filter(_._2.map(_.typ).distinct.size > 1)
     ensure(nonUniqueAgruments.isEmpty, "The method $id declares non-unique type for argument ${nonUniqueAgruments.keys.mkString(", ")}")
 
-    for (body <- body) {
-      checkBody(id, body, in, out, xs)
-    }
+    body.foreach(checkBody(id, _, in, out, xs))
 
     ensure(infer(pre, xs ++ in, Some(bool)) == bool, "precondition must be boolean")
     ensure(infer(post, xs ++ in ++ out, Some(bool)) == bool, "postcondition must be boolean")

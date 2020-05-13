@@ -57,6 +57,10 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
       config.printSuccess = flag.toBoolean
       Success
 
+    case List(":declare-implied", flag) =>
+      config.declareImplied = flag.toBoolean
+      Success
+
     case _ =>
       backend.setOption(args)
   }
@@ -129,13 +133,13 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
   def eval(expr: Expr): Expr = {
     val env = top.env
     val old = Nil
-    Eval(top).eval(expr, env, old)
+    Eval(top, None).eval(expr, env, old)
   }
 
   def eval(formals: List[Formal], expr: Expr): Expr = {
     val env = top.env
     val old = Nil
-    Eval(top).eval(expr, env bind formals, old)
+    Eval(top, None).eval(expr, env bind formals, old)
   }
 
   def check() = backend.scoped {
@@ -263,7 +267,7 @@ case class Cuvee(sink: Sink, config: Config) extends Solver {
 
   def verify(id: Id): Ack = {
     val proc = top procdefs id
-    val phi = Verify.contract(proc, Nil)
+    val phi = Verify.contract(proc, None)
     assert(!phi)
   }
 

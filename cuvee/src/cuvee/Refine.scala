@@ -235,8 +235,8 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     as0: List[Expr], cs0: List[Expr],
     in0: List[Expr]) = {
 
-    val aproc = A op name
-    val cproc = C op name
+    val Some(aproc) = A op name
+    val Some(cproc) = C op name
 
     val (apre, cpre, steps) = locksteps(aproc, cproc, as0, cs0, in0)
   }
@@ -300,11 +300,12 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
    * the final state and the resulting outputs
    */
   def steps(
+    obj: Obj,
     proc: Proc,
     xs: List[Formal],
     init: List[Expr],
     in: List[Expr]) = {
-    val (pre, paths) = Eval(state).paths(proc, xs, init, in)
+    val (pre, paths) = Eval(state, Some(obj)).paths(proc, xs, init, in)
 
     val _paths = for (Path(fresh, path, Env(su, _)) <- paths) yield {
       val fin = xs map (_ subst su)
@@ -333,8 +334,8 @@ case class Refine(A: Obj, C: Obj, R: Id, state: State, solver: Solver) {
     in0: List[Expr]) = {
 
     ensure(aproc.in.types == cproc.in.types, "incompatible signatures", aproc, cproc)
-    val (apre, asteps) = steps(aproc, as, as0, in0)
-    val (cpre, csteps) = steps(cproc, cs, cs0, in0)
+    val (apre, asteps) = steps(A, aproc, as, as0, in0)
+    val (cpre, csteps) = steps(C, cproc, cs, cs0, in0)
 
     val _steps = for (
       astep <- asteps; cstep <- csteps

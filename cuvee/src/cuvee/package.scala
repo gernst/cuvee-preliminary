@@ -33,7 +33,6 @@ package object cuvee {
   implicit def toTypes(formals: List[Formal]) = formals map (_.typ)
   implicit def toTyping(formals: List[Formal]): List[(Id, Type)] = formals map (f => (f.id, f.typ))
   implicit def toTypeMap(formals: List[Formal]): Map[Id, Type] = formals map (f => f.id -> f.typ) toMap
-  implicit def tpTypeMap(pairs: List[(Id, Type)]): Map[Id, Type] = pairs.map(p => p._1 -> p._2) toMap
 
   def partition[A, B, C](as: List[A])(f: A => Either[B, C]): (List[B], List[C]) = {
     import scala.collection.mutable
@@ -140,6 +139,7 @@ package object cuvee {
     def priming = formals map (_.id) map (id => id -> id.prime) toMap
     def ids = toIds(formals)
     def types = toTypes(formals)
+    def fresh = formals map (f => Formal(Expr.fresh(f.id), f.typ))
   }
 
   implicit class ExprList(exprs: List[Expr]) {
