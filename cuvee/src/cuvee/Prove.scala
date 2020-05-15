@@ -20,6 +20,11 @@ case class Prove(backend: Solver, st: State) {
       _phi :: _rest
   }
 
+  def provePreservingShape(phi: Expr, original: Expr) = {
+    val phi_ = prove(phi)
+    if (phi_ != phi) phi_ else original
+  }
+
   def prove(phi: Expr): Expr = phi match {
     case t@(True | False) => t
 
@@ -46,19 +51,19 @@ case class Prove(backend: Solver, st: State) {
       // since we never have local variables, we do a type check based on globals
       if Check(st).infer(left, Map.empty, None) == Sort.bool
         && Check(st).infer(right, Map.empty, None) == Sort.bool =>
-      prove(And(left ==> right, right ==> left))
+      provePreservingShape(And(left ==> right, right ==> left), phi)
 
     case Ite(test, left, right) =>
-      prove(And(test ==> left, !test ==> right))
+      provePreservingShape(And(test ==> left, !test ==> right), phi)
 
     case App(Id("iff", None), List(left, right)) =>
-      prove(And(left ==> right, right ==> left))
+      provePreservingShape(And(left ==> right, right ==> left), phi)
 
     case App(r, args) if (st.fundefs contains r)
       // do not substitute recursive functions
       && !(evaluations(st.fundefs(r)._2) contains r) =>
       val (formals, body) = st.fundefs(r)
-      prove(body.subst(Expr.subst(formals, args)))
+      provePreservingShape(body.subst(Expr.subst(formals, args)), phi)
 
     case _ =>
       val cs = cases(phi)
