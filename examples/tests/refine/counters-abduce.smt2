@@ -1,5 +1,5 @@
 ;! Cuvee -format -z3
-; This a simple example where the refinement can simply be abducted
+; This a simple example where the refinement can simply be abduced
 
 (define-class Counter ((counter Int))
     (init () () (assign (counter 0)))
