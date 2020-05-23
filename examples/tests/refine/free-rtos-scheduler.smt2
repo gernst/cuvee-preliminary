@@ -64,7 +64,7 @@
 (declare-const priority0 (Array Task Int))
 (assert (forall ((t Task)) (= (select priority0 t) 0)))
 
-(define-class Impl
+(define-class Scheduler
   ((tasks (Array Task Bool))
    (running_task Task)
    (state (Array Task State))
@@ -172,6 +172,6 @@
                         (transition_inv (old state) state)))
 )
 
-(verify-class Impl)
+(verify-class Scheduler)
 (set-info :status unsat)
 (check-sat)
