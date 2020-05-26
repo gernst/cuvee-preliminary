@@ -1,14 +1,14 @@
 ;! Cuvee -format -z3
 
 ; This example is based on:
-; Shu Cheng, Jim Woodcock, and Deepak D’Souza. Using formal reasoning
-; on a model of tasks for FreeRTOS. Formal Aspects of Computing, 27(1):167–192, 2015.
+; Shu Cheng, Jim Woodcock, and Deepak D’Souza. Using formal reasoning on a model
+; of tasks for FreeRTOS. Formal Aspects of Computing, 27(1):167–192, 2015.
 ;
 ; https://doi.org/10.1007/s00165-014-0308-9
 ; https://www-users.cs.york.ac.uk/~jw524/papers/ChengWD15.pdf
 
-(declare-sort Context)
 (declare-sort Task)
+(declare-sort Context)
 
 ;special values
 (declare-const bare_context Context)
@@ -21,13 +21,18 @@
   ((l State) (r State))
   Bool
   (and
-    (=> (= l blocked) (or (= r nonexistent) (= r ready) (= r running) (= r suspended)))
-    (=> (= l nonexistent) (or (= r ready) (= r running)))
-    (=> (= l ready) (or (= r nonexistent) (= r running) (= r suspended)))
-    (=> (= l running) (or (= r blocked) (= r nonexistent) (= r ready) (= r suspended)))
-    (=> (= l suspended) (or (= r nonexistent) (= r ready) (= r running)))))
+    (=> (= l blocked)
+        (or (= r nonexistent) (= r ready) (= r running) (= r suspended)))
+    (=> (= l nonexistent)
+        (or (= r ready) (= r running)))
+    (=> (= l ready)
+        (or (= r nonexistent) (= r running) (= r suspended)))
+    (=> (= l running)
+        (or (= r blocked) (= r nonexistent) (= r ready) (= r suspended)))
+    (=> (= l suspended)
+        (or (= r nonexistent) (= r ready) (= r running)))))
 
-(define-fun transition_inv
+(define-fun transitions
   ((state (Array Task State))
    (|state'| (Array Task State)))
   Bool
@@ -47,16 +52,21 @@
        (select tasks idle)
        (or (= (select state idle) running) (= (select state idle) ready))
        (= (select priority idle) 0)
-       (forall ((t Task)) (= (select tasks t) (distinct (select state t) nonexistent)))
+       (forall ((t Task)) (>= (select priority t) 0))
+       (forall ((t Task)) (= (select tasks t)
+                             (distinct (select state t) nonexistent)))
        (forall ((t Task)) (= (= (select state t) running) (= t running_task)))
-       (forall ((pt Task)) (=> (= (select state pt) ready) (>= (select priority running_task) (select priority pt))))))
+       (forall ((pt Task))
+         (=> (= (select state pt) ready)
+             (>= (select priority running_task) (select priority pt))))))
 
 ;initial values
 (declare-const tasks0 (Array Task Bool))
 (assert (forall ((t Task)) (= (select tasks0 t) (= t idle))))
 
 (declare-const state0 (Array Task State))
-(assert (forall ((t Task)) (= (select state0 t) (ite (= t idle) running nonexistent))))
+(assert (forall ((t Task)) (= (select state0 t)
+                              (ite (= t idle) running nonexistent))))
 
 (declare-const log_context0 (Array Task Context))
 (assert (forall ((t Task)) (= (select log_context0 t) bare_context)))
@@ -79,7 +89,8 @@
             (phys_context bare_context)
             (log_context log_context0)
             (priority priority0))
-    :postcondition (inv tasks running_task state phys_context log_context priority))
+    :postcondition
+      (inv tasks running_task state phys_context log_context priority))
 
   ; "private" procedure. No postcondition => inlined
   (reschedule ((target Task) (st State)) ()
@@ -93,13 +104,15 @@
     (assign ((select tasks target) true)
             ((select state target) ready)
             ((select priority target) newpri))
-    (if (< (select priority running_task) newpri) (block
-      (call reschedule (target ready) ())
-    ))
-    :precondition (and (inv tasks running_task state phys_context log_context priority)
-                       (= (select state target) nonexistent))
-    :postcondition (and (inv tasks running_task state phys_context log_context priority)
-                        (transition_inv (old state) state)))
+    (if (< (select priority running_task) newpri)
+      (call reschedule (target ready) ()))
+    :precondition (and
+      (inv tasks running_task state phys_context log_context priority)
+      (= (select state target) nonexistent)
+      (>= newpri 0))
+    :postcondition (and
+      (inv tasks running_task state phys_context log_context priority)
+      (transitions (old state) state)))
 
   (delete_task ((target Task)) ()
     (local (topReady Task))
@@ -116,11 +129,13 @@
                                                      (>= (select priority topReady) (select priority t))))))
       (call reschedule (topReady nonexistent) ())
     ))
-    :precondition (and (inv tasks running_task state phys_context log_context priority)
-                       (select tasks target)
-                       (distinct target idle))
-    :postcondition (and (inv tasks running_task state phys_context log_context priority)
-                        (transition_inv (old state) state)))
+    :precondition (and
+      (inv tasks running_task state phys_context log_context priority)
+      (select tasks target)
+      (distinct target idle))
+    :postcondition (and
+      (inv tasks running_task state phys_context log_context priority)
+      (transitions (old state) state)))
 
   (suspend_task ((target Task)) ()
     (local (topReady Task))
@@ -134,21 +149,24 @@
                                                (>= (select priority topReady) (select priority t))))))
       (call reschedule (topReady suspended) ())
     ))
-    :precondition (and (inv tasks running_task state phys_context log_context priority)
-                       (distinct target idle)
-                       (select tasks target))
-    :postcondition (and (inv tasks running_task state phys_context log_context priority)
-                        (transition_inv (old state) state)))
+    :precondition (and
+      (inv tasks running_task state phys_context log_context priority)
+      (distinct target idle)
+      (select tasks target))
+    :postcondition (and
+      (inv tasks running_task state phys_context log_context priority)
+      (transitions (old state) state)))
 
   (resume_task ((target Task)) ()
     (assign ((select state target) ready))
-    (if (< (select priority running_task) (select priority target)) (block
-      (call reschedule (target ready) ())
-    ))
-    :precondition (and (inv tasks running_task state phys_context log_context priority)
-                       (= (select state target) suspended))
-    :postcondition (and (inv tasks running_task state phys_context log_context priority)
-                        (transition_inv (old state) state)))
+    (if (< (select priority running_task) (select priority target))
+      (call reschedule (target ready) ()))
+    :precondition (and
+      (inv tasks running_task state phys_context log_context priority)
+      (= (select state target) suspended))
+    :postcondition (and
+      (inv tasks running_task state phys_context log_context priority)
+      (transitions (old state) state)))
 
   (change_task_priority ((target Task) (newpri Int)) ()
     (local (topReady Task))
@@ -165,11 +183,14 @@
       (call reschedule (topReady ready) ()))
       ; else
       (if (< (select priority running_task) newpri) (call reschedule (target ready) ())))
-    :precondition (and (inv tasks running_task state phys_context log_context priority)
-                       (distinct target idle)
-                       (select tasks target))
-    :postcondition (and (inv tasks running_task state phys_context log_context priority)
-                        (transition_inv (old state) state)))
+    :precondition (and
+      (inv tasks running_task state phys_context log_context priority)
+      (distinct target idle)
+      (select tasks target)
+      (>= newpri 0))
+    :postcondition (and
+      (inv tasks running_task state phys_context log_context priority)
+      (transitions (old state) state)))
 )
 
 (verify-class Scheduler)
