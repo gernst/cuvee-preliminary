@@ -96,9 +96,9 @@
   (reschedule ((target Task) (st State)) ()
     (assign ((select state target) running))
     (assign ((select state running_task) st))
-    (assign ((select log_context running_task) phys_context))
-    (assign (phys_context (select log_context target)))
-    (assign (running_task target) (target running_task)))
+    (assign ((select log_context running_task) phys_context)
+            (phys_context (select log_context target))
+            (running_task target)))
 
   (create_task ((target Task) (newpri Int)) ()
     (assign ((select tasks target) true)
@@ -114,19 +114,32 @@
       (inv tasks running_task state phys_context log_context priority)
       (transitions (old state) state)))
 
+  ; "private" procedure. No postcondition => inlined
+  (choose_top_ready () ((topReady Task))
+    (assume (exists ((topReady Task)) (and
+      (= (select state topReady) ready)
+      (forall ((t Task)) (=> (= (select state t) ready)
+                             (>= (select priority topReady)
+                                 (select priority t)))))))
+    (choose (topReady) (and
+      (= (select state topReady) ready)
+      (forall ((t Task)) (=> (= (select state t) ready)
+                             (>= (select priority topReady)
+                                 (select priority t))))))
+    ; TODO make postcondition "true" for inlining
+    :postcondition (and
+      (= (select state topReady) ready)
+      (forall ((t Task)) (=> (= (select state t) ready)
+                             (>= (select priority topReady)
+                                 (select priority t))))))
+
   (delete_task ((target Task)) ()
     (local (topReady Task))
     (assign ((select tasks target) false)
             ((select state target) nonexistent)
             ((select log_context target) bare_context))
     (if (= running_task target) (block
-      ; TODO create choose_topReady procedure, but currently bugs out
-      (assume (exists ((topReady Task)) (and (= (select state topReady) ready)
-                                             (forall ((t Task)) (=> (= (select state t) ready)
-                                                                    (>= (select priority topReady) (select priority t)))))))
-      (choose (topReady) (and (= (select state topReady) ready)
-                              (forall ((t Task)) (=> (= (select state t) ready)
-                                                     (>= (select priority topReady) (select priority t))))))
+      (call choose_top_ready () (topReady))
       (call reschedule (topReady nonexistent) ())
     ))
     :precondition (and
@@ -141,12 +154,7 @@
     (local (topReady Task))
     (assign ((select state target) suspended))
     (if (= running_task target) (block
-      (assume (exists ((topReady Task)) (and (= (select state topReady) ready)
-                                             (forall ((t Task)) (=> (= (select state t) ready)
-                                                                    (>= (select priority topReady) (select priority t)))))))
-      (choose (topReady) (and (= (select state topReady) ready)
-                        (forall ((t Task)) (=> (= (select state t) ready)
-                                               (>= (select priority topReady) (select priority t))))))
+      (call choose_top_ready () (topReady))
       (call reschedule (topReady suspended) ())
     ))
     :precondition (and
@@ -174,12 +182,7 @@
     (if (and (= running_task target)
              (exists ((t Task)) (and (= (select state t) ready)
                                      (< newpri (select priority t))))) (block
-      (assume (exists ((topReady Task)) (and (= (select state topReady) ready)
-                                    (forall ((t Task)) (=> (= (select state t) ready)
-                                                           (>= (select priority topReady) (select priority t)))))))
-      (choose (topReady) (and (= (select state topReady) ready)
-                         (forall ((t Task)) (=> (= (select state t) ready)
-                                                (>= (select priority topReady) (select priority t))))))
+      (call choose_top_ready () (topReady))
       (call reschedule (topReady ready) ()))
       ; else
       (if (< (select priority running_task) newpri) (call reschedule (target ready) ())))
