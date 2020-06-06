@@ -279,7 +279,12 @@ case class Check(st: State, obj: Option[Obj] = None) {
     val Obj(xs, init, ops) = obj
     obj.state.foreach(f => checkType(f.typ))
     checkProc(Id.init, init, xs)
-    ops.foreach(proc => checkProc(proc._1, proc._2, xs))
+    ops.foreach(proc => {
+      ensure(proc._1 != Id.init, "Procedure init must be defined first and only once")
+      checkProc(proc._1, proc._2, xs)
+    })
+    val duplicateProcs = ops.groupBy(_._1).filter(_._2.size > 1).keys
+    ensure(duplicateProcs.isEmpty, s"Duplicate procedures: ${duplicateProcs.mkString(",")}")
   }
 
   /**
