@@ -35,8 +35,7 @@
   (write ((name Name) (file File)) ()
      (assign ((select fs name) file))
      :precondition (and (distinct (select fs name) undef_f)
-                        (distinct file undef_f)))
-  )
+                        (distinct file undef_f))))
 
 (define-class
   FlashFS
@@ -57,13 +56,13 @@
      :postcondition (distinct file undef_f))
   (write ((name Name) (file File)) ()
      (local (addr Address))
-     (assume (exists ((addr Address)) (and (= (select disk addr) undef_f) (distinct addr undef_a))))
+     (assume (exists ((addr Address)) (and (= (select disk addr) undef_f)
+                                           (distinct addr undef_a))))
      (choose (addr) (and (= (select disk addr) undef_f) (distinct addr undef_a)))
      (assign ((select disk addr) file))
      (assign ((select index name) addr))
      :precondition (and (distinct (select index name) undef_a)
-                        (distinct file undef_f)))
-  )
+                        (distinct file undef_f))))
 
 (push)
   (define-fun R
@@ -79,9 +78,7 @@
                           (= (select fs name)
                              (select disk (select index name)))))
                  (=> (= (select fs name) undef_f)
-                     (= (select index name) undef_a)))))
-
-   )
+                     (= (select index name) undef_a))))))
   (set-info :status sat)
   ; prove that refinement relation is well-defined
   (check-sat)
