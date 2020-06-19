@@ -519,7 +519,7 @@ case class Spec(xs: List[Id], pre: Expr, post: Expr) extends Prog {
  */
 case class Choose(xs: List[Id], phi: Expr) extends Prog {
   def mod = xs.toSet
-  def read = phi.free -- mod
+  def read = phi.free
   def replace(re: Map[Id, Id]) = Choose(xs map (_ rename re), phi rename re)
   override def toString = sexpr("choose", sexpr(xs), phi)
 }

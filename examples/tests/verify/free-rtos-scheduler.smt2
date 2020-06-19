@@ -125,13 +125,7 @@
       (= (select state topReady) ready)
       (forall ((t Task)) (=> (= (select state t) ready)
                              (>= (select priority topReady)
-                                 (select priority t))))))
-    ; TODO make postcondition "true" for inlining
-    :postcondition (and
-      (= (select state topReady) ready)
-      (forall ((t Task)) (=> (= (select state t) ready)
-                             (>= (select priority topReady)
-                                 (select priority t))))))
+                                 (select priority t)))))))
 
   (delete_task ((target Task)) ()
     (local (topReady Task))
