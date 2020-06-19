@@ -74,25 +74,25 @@
             true
             (=>
               (exists
-                ((addr Address))
+                ((addr1 Address))
                 (and
-                  (distinct addr null)
-                  (= (select disk addr) empty)))
+                  (distinct addr1 null)
+                  (= (select disk addr1) empty)))
               (and
                 (exists
-                  ((addr1 Address))
+                  ((addr2 Address))
                   (and
-                    (distinct addr1 null)
-                    (= (select disk addr1) empty)))
+                    (distinct addr2 null)
+                    (= (select disk addr2) empty)))
                 (forall
-                  ((addr1 Address))
+                  ((addr2 Address))
                   (=>
                     (and
-                      (distinct addr1 null)
-                      (= (select disk addr1) empty))
+                      (distinct addr2 null)
+                      (= (select disk addr2) empty))
                     (and
                       true
-                      (R (store fs name file) (store index |name'| addr1) (store disk addr1 |file'|)))))))))))))
+                      (R (store fs name file) (store index |name'| addr2) (store disk addr2 |file'|)))))))))))))
 (check-sat)
 (pop 1)
 (pop 1)
@@ -115,9 +115,7 @@
         (not
           (= (select fs name) empty))
         (= file empty)
-        (and
-          (= (select index name) null)
-          (distinct file empty))))))
+        (= (select index name) null)))))
 (push 1)
 (assert
   (forall
@@ -171,25 +169,25 @@
             true
             (=>
               (exists
-                ((addr Address))
+                ((addr5 Address))
                 (and
-                  (distinct addr null)
-                  (= (select disk addr) empty)))
+                  (distinct addr5 null)
+                  (= (select disk addr5) empty)))
               (and
                 (exists
-                  ((addr3 Address))
+                  ((addr6 Address))
                   (and
-                    (distinct addr3 null)
-                    (= (select disk addr3) empty)))
+                    (distinct addr6 null)
+                    (= (select disk addr6) empty)))
                 (forall
-                  ((addr3 Address))
+                  ((addr6 Address))
                   (=>
                     (and
-                      (distinct addr3 null)
-                      (= (select disk addr3) empty))
+                      (distinct addr6 null)
+                      (= (select disk addr6) empty))
                     (and
                       true
-                      (R (store fs name file) (store index |name'| addr3) (store disk addr3 |file'|)))))))))))))
+                      (R (store fs name file) (store index |name'| addr6) (store disk addr6 |file'|)))))))))))))
 (check-sat)
 (pop 1)
 (pop 1)

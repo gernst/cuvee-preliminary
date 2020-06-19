@@ -31,7 +31,7 @@ object Verify {
   }
 
   private def refinementCondition(A: Obj, C: Obj, as: List[Formal], cs: List[Formal], phi: Expr): Expr = {
-    val (init, ops) = refine(A, as, C, cs, phi)
+    val (init, ops) = refine(A, as, C, cs, phi, phi)
     val diag = init :: ops
     val (_, conds) = diag.unzip
     And(conds)
@@ -56,7 +56,7 @@ object Verify {
     And(init :: ops.map(_._2) map (contract(_, Some(obj))))
   }
 
-  def refine(A: Obj, as: List[Formal], C: Obj, cs: List[Formal], R: Expr) = {
+  def refine(A: Obj, as: List[Formal], C: Obj, cs: List[Formal], R0: Expr, R1: Expr) = {
     val ax: List[Id] = as
     val cx: List[Id] = cs
     val common = ax.toSet intersect cx.toSet
@@ -65,13 +65,13 @@ object Verify {
     val init = diagram(
       A, as, Id.init -> A.init,
       C, cs, Id.init -> C.init,
-      True, R)
+      True, R1)
 
     val ops = for ((aproc, cproc) <- (A.ops zip C.ops)) yield {
       diagram(
         A, as, aproc,
         C, cs, cproc,
-        R, R)
+        R0, R1)
     }
 
     (init, ops)

@@ -472,8 +472,8 @@ object Prog extends Parsable(Parser.prog)
 case class Block(progs: List[Prog], withOld: Boolean = false, context: Option[Option[Obj]] = None) extends Prog {
   def mod = Set(progs flatMap (_.mod): _*)
   def read = Set(progs flatMap (_.read): _*)
-  def replace(re: Map[Id, Id]) = Block(progs map (_ replace re), withOld)
-  def ++(that: Block) = Block(this.progs ++ that.progs, withOld)
+  def replace(re: Map[Id, Id]) = Block(progs map (_ replace re), withOld, context)
+  def ++(that: Block) = Block(this.progs ++ that.progs, withOld, context)
   override def toString = sexpr("block", progs: _*)
 }
 

@@ -32,6 +32,19 @@ object SimplifyTest extends TestSuite {
     assertEquals(Simplify.norm(e"(= 0 (f (- a b)))"), e"(= 0 (f (- a b)))")
   }
 
+  test("extract from bind") {
+    val nested =
+      e"""(forall ((name Name) (|name'| Name)) (=>
+        (and (= |name'| name) (= (select fs name) |undef_f|) true)
+        (forall ((name3 Name)) (=> (= name name3)
+          (=> (= |name'| name3)
+            (or
+              (= (select (store fs name empty) name3) |undef_f|)
+              (= (select (store fs name empty) name3) (select disk (select (store index |name'| null) name3)))))))))"""
+    val normed = Simplify.norm(nested)
+    assertEquals(normed, e"(or (or (forall ((name Name)) (not (= (select fs name) |undef_f|))) (= empty |undef_f|)) (= empty (select disk null)))")
+  }
+
   private def simplifyInt(phi: Expr): Expr = {
     val formals = phi.free.map(Formal(_, Sort.int)).toList
     simplify(phi, formals)
