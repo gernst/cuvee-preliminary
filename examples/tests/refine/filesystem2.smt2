@@ -29,6 +29,7 @@
      (assign ((select fs name) undef_f))
      :precondition (distinct (select fs name) undef_f))
   (read ((name Name)) ((file File))
+     (assert (distinct (select fs name) undef_f)) ; ensure valid array access
      (assign (file (select fs name)))
      :precondition (distinct (select fs name) undef_f)
      :postcondition (distinct file undef_f))
@@ -51,6 +52,8 @@
      (assign ((select index name) undef_a))
      :precondition (distinct (select index name) undef_a))
   (read ((name Name)) ((file File))
+     (assert (distinct (select index name) undef_a)) ; ensure valid array access
+     (assert (distinct (select disk (select index name)) undef_f)) ; ensure valid array access
      (assign (file (select disk (select index name))))
      :precondition (distinct (select index name) undef_a)
      :postcondition (distinct file undef_f))
