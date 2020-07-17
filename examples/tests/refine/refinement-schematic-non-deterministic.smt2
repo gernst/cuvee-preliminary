@@ -10,20 +10,14 @@
 (declare-const a0 As)
 (declare-const c0 Cs)
 
-(define-class
-  A
-  ((a As))
-  (init () ()
-    (assign (a a0)))
+(define-class A ((a As))
+  (init () () (choose (a) (Ainit a)))
   (op ((in In)) ((out Out))
     (choose (a out) (Aop in (old a) a out))
     :precondition (Apre a in)))
 
-(define-class
-  C
-  ((c Cs))
-  (init () ()
-    (assign (c c0)))
+(define-class C ((c Cs))
+  (init () () (choose (c) (Cinit c)))
   (op ((in In)) ((out Out))
     (choose (c out) (Cop in (old c) c out))
     :precondition (Cpre c in)))
@@ -31,7 +25,10 @@
 (assert (not
   (= (refines A C R)
      (forall ((a As) (in In) (c Cs) (in In))
-       (and (R a0 c0)
+       (and (exists ((c Cs)) (Cinit c))
+            (forall ((c Cs))
+              (=> (Cinit c)
+                  (exists ((a As)) (and (Ainit a) (R a c)))))
             (forall ((a As) (in In) (c Cs))
               (=> (and (Apre a in) (R a c))
                   (and (Cpre c in)
