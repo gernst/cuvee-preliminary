@@ -1,16 +1,16 @@
 ; (set-option :produce-models true)
 (declare-sort Elem)
-(declare-const A (Array Int Elem))
-
-(declare-const x Elem)
-(declare-const r Bool)
-(declare-const i Int)
-(declare-const n Int)
 
 (define-fun
     contains ((x Elem) (m Int) (n Int) (A (Array Int Elem))) Bool
         (exists ((i Int))
             (and (<= m i) (< i n) (= (select A i) x))))
+
+(declare-const A (Array Int Elem))
+(declare-const x Elem)
+(declare-const r Bool)
+(declare-const i Int)
+(declare-const n Int)
 
 (assert-counterexample
     (and (<= 0 i) (<= i n))
