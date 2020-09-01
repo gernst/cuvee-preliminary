@@ -60,7 +60,16 @@ object FileTest extends TestSuite {
     if (outFile.exists()) {
       val expected = VerifyTest.runUnwrappingErrors(Script.from(outFile))
       val actual = Script.from(given)
-      assertEquals(actual, expected)
+      assertEquals(actual.length, expected.length)
+      for((a,b) <- actual zip expected) {
+
+        if(a != b) {
+          println("not equal")
+          println(a)
+          println(b)
+        }
+        assertEquals(a, b)
+      }
     }
   }
 }

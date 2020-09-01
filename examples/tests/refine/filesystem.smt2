@@ -1,4 +1,8 @@
-;! Cuvee -format -declare-implied -z3
+;! Cuvee -z3
+
+(declare-sort File)
+(declare-sort Address)
+(declare-sort Name)
 
 (declare-const empty File)
 (declare-const null  Address)

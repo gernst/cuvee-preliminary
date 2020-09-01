@@ -1,4 +1,4 @@
-;! Cuvee -format -declare-implied -z3
+;! Cuvee -format -z3
 
 ; The abstract refinement schema between an abstract and a concrete class
 ; where the procedures have a functional dependency between input and output.
@@ -6,6 +6,27 @@
 ; "as" (abstract state) is a reserved keyword and Z3 doesn't allow it even if we escape it.
 ; we use "a" instead of "as" and "c" instead of "cs" for consistency
 
+(declare-sort As)
+(declare-sort Cs)
+(declare-fun Ainitpost (As) Bool)
+(declare-sort In)
+(declare-fun Ainonly (As In) As)
+(declare-fun Ainonlypre (As In) Bool)
+(declare-fun Ainonlypost (As) Bool)
+(declare-sort Out)
+(declare-fun Athrougha (As In) As)
+(declare-fun Athroughout (As In) Out)
+(declare-fun Athroughpre (As In) Bool)
+(declare-fun Athroughpost (As Out) Bool)
+(declare-fun Cinitpost (Cs) Bool)
+(declare-fun Cinonly (Cs In) Cs)
+(declare-fun Cinonlypre (Cs In) Bool)
+(declare-fun Cinonlypost (Cs) Bool)
+(declare-fun Cthroughc (Cs In) Cs)
+(declare-fun Cthroughout (Cs In) Out)
+(declare-fun Cthroughpre (Cs In) Bool)
+(declare-fun Cthroughpost (Cs Out) Bool)
+(declare-fun R (As Cs) Bool)
 (declare-const a0 As)
 (declare-const c0 Cs)
 
