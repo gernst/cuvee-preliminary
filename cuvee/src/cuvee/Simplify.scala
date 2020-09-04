@@ -134,7 +134,7 @@ object Simplify {
 
   def plus(args: List[Expr]): Expr = {
     val _args = Plus.flatten(args)
-    Plus(_args.distinct filter (_ != Num.zero))
+    Plus(_args filter (_ != Num.zero))
   }
 
 
@@ -325,11 +325,23 @@ object Simplify {
     val l2 = pl ++ mr
     val r2 = pr ++ ml
 
-    // Symmetric difference
-    val l3 = l2 filterNot r2.contains
-    val r3 = r2 filterNot l2.contains
+    // count occurrences
+    val l3 = l2 groupBy identity mapValues (_.size)
+    val r3 = r2 groupBy identity mapValues (_.size)
 
-    op(plus(l3), plus(r3))
+    // find common occurrences
+    val common: Map[Expr, Int] = ((l3.keys ++ r3.keys) toList).distinct map
+      ((k: Expr) => k -> Math.min(l3 getOrElse(k, 0), r3 getOrElse(k, 0))) toMap
+
+    // subtract common occurences on both sides
+    val l4 = l3 map (e => e._1 -> (e._2 - common(e._1)))
+    val r4 = r3 map (e => e._1 -> (e._2 - common(e._1)))
+
+    // repeat terms according to occurrences
+    val l5 = l4 flatMap (e => List.fill(e._2)(e._1)) toList
+    val r5 = r4 flatMap (e => List.fill(e._2)(e._1)) toList
+
+    op(plus(l5), plus(r5))
   }
 
   def eliminateBindings(phi: Bind): Expr = phi match {
