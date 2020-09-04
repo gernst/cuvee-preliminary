@@ -24,6 +24,11 @@ object SimplifyTest extends TestSuite {
     assertEquals(Simplify.norm(e"(= (+ balance (- 0 amount)) (+ credit (- 0 (+ debit amount))))"), e"(= (+ balance debit) credit)")
   }
 
+  test("simplify linear") {
+    val simplified = Simplify.norm(e"(= (+ x x) x)")
+    assertEquals(simplified, e"(= x 0)")
+  }
+
   test("don't replace minus without equation") {
     assertEquals(Simplify.norm(e"(- a b)"), e"(- a b)")
   }
