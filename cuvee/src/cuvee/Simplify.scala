@@ -272,9 +272,8 @@ object Simplify {
   }
 
   private def normQuant(bind: Bind): Expr = {
-    val Bind(quant, _, _) = bind
     (if (Simplify.qe) eliminateBindings(bind) else bind) match {
-      case Bind(_, formals, body) =>
+      case Bind(quant, formals, body) =>
         val body_ = norm(body)
         if (Simplify.qe && body_ != body) {
           // might have to eliminate bindings again
@@ -355,14 +354,20 @@ object Simplify {
   def eliminateBindingsFromNary(formals: List[Formal], args: List[Expr], neg: Boolean): List[Expr] = {
     for (arg <- args) {
       arg match {
-        case Not(Eq(id: Id, expr)) if neg && formals.ids.contains(id) =>
+        case Not(Eq(id: Id, expr)) if neg && formals.ids.contains(id) && !expr.free.contains(id) =>
           return eliminateBindingsFromNary(formals, args filter (_ != arg) map (_.subst(Map(id -> expr))), neg)
-        case Not(Eq(expr, id: Id)) if neg && formals.ids.contains(id) =>
+        case Not(Eq(expr, id: Id)) if neg && formals.ids.contains(id) && !expr.free.contains(id) =>
           return eliminateBindingsFromNary(formals, args filter (_ != arg) map (_.subst(Map(id -> expr))), neg)
-        case Eq(id: Id, right) if !neg && formals.ids.contains(id) =>
-          return eliminateBindingsFromNary(formals, args filter (_ != arg) map (_.subst(Map(id -> right))), neg)
-        case Eq(left, id: Id) if !neg && formals.ids.contains(id) =>
-          return eliminateBindingsFromNary(formals, args filter (_ != arg) map (_.subst(Map(id -> left))), neg)
+        case Eq(id: Id, expr) if !neg && formals.ids.contains(id) && !expr.free.contains(id) =>
+          val newArgs = args map (a => if (a == arg) a else a.subst(Map(id -> expr)))
+          if (newArgs != args) {
+            return eliminateBindingsFromNary(formals, newArgs, neg)
+          }
+        case Eq(expr, id: Id) if !neg && formals.ids.contains(id) && !expr.free.contains(id) =>
+          val newArgs = args map (a => if (a == arg) a else a.subst(Map(id -> expr)))
+          if (newArgs != args) {
+            return eliminateBindingsFromNary(formals, newArgs, neg)
+          }
         case _ =>
       }
     }

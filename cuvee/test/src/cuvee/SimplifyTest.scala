@@ -50,6 +50,21 @@ object SimplifyTest extends TestSuite {
     assertEquals(normed, e"(or (or (forall ((name Name)) (not (= (select fs name) |undef_f|))) (= empty |undef_f|)) (= empty (select disk null)))")
   }
 
+  test(name = "eliminate quantifier") {
+    val simplified = Simplify.norm(e"""(forall ((x Int)) (=> (= x y) (f x)))""")
+    assertEquals(simplified, e"""(f y)""")
+  }
+
+  test(name = "don't substitute self-referencing definition") {
+    val simplified = Simplify.norm(e"""(forall ((x Int)) (=> (= x (g x)) (f x)))""")
+    assertEquals(simplified, e"""(forall ((x Int)) (or (not (= x (g x))) (f x)))""")
+  }
+
+  test(name = "substitute in quantified and") {
+    val simplified = Simplify.norm(e"""(forall ((x Int)) (and (= x y) (f x)))""")
+    assertEquals(simplified, e"""(and (forall ((x Int)) (= x y)) (f y))""")
+  }
+
   private def simplifyInt(phi: Expr): Expr = {
     val formals = phi.free.map(Formal(_, Sort.int)).toList
     simplify(phi, formals)
