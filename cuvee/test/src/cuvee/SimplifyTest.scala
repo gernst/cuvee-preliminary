@@ -50,8 +50,13 @@ object SimplifyTest extends TestSuite {
     assertEquals(normed, e"(or (or (forall ((name Name)) (not (= (select fs name) |undef_f|))) (= empty |undef_f|)) (= empty (select disk null)))")
   }
 
-  test(name = "eliminate quantifier") {
+  test(name = "eliminate quantifier forall") {
     val simplified = Simplify.norm(e"""(forall ((x Int)) (=> (= x y) (f x)))""")
+    assertEquals(simplified, e"""(f y)""")
+  }
+
+  test(name = "eliminate quantifier exists") {
+    val simplified = Simplify.norm(e"""(exists ((x Int)) (and (= x y) (f x)))""")
     assertEquals(simplified, e"""(f y)""")
   }
 

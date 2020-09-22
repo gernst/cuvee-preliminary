@@ -345,30 +345,34 @@ object Simplify {
 
   def eliminateBindings(phi: Bind): Expr = phi match {
     case Bind(quant, formals, body) => body match {
-      case And(args) => quant(formals, And(eliminateBindingsFromNary(formals, args, false)))
-      case Or(args) => quant(formals, Or(eliminateBindingsFromNary(formals, args, true)))
+      case And(args) => quant(formals, And(eliminateBindingsFromNary(formals, args, false, quant == Exists)))
+      case Or(args) => quant(formals, Or(eliminateBindingsFromNary(formals, args, true, quant == Forall)))
       case _ => phi
     }
   }
 
-  def eliminateBindingsFromNary(formals: List[Formal], args: List[Expr], neg: Boolean): List[Expr] = {
+  def eliminateBindingsFromNary(formals: List[Formal], args: List[Expr], neg: Boolean, remove: Boolean): List[Expr] = {
     for (arg <- args) {
-      arg match {
+      val subst: Option[(Id, Expr)] = arg match {
         case Not(Eq(id: Id, expr)) if neg && formals.ids.contains(id) && !expr.free.contains(id) =>
-          return eliminateBindingsFromNary(formals, args filter (_ != arg) map (_.subst(Map(id -> expr))), neg)
+          Some((id, expr))
         case Not(Eq(expr, id: Id)) if neg && formals.ids.contains(id) && !expr.free.contains(id) =>
-          return eliminateBindingsFromNary(formals, args filter (_ != arg) map (_.subst(Map(id -> expr))), neg)
+          Some((id, expr))
         case Eq(id: Id, expr) if !neg && formals.ids.contains(id) && !expr.free.contains(id) =>
-          val newArgs = args map (a => if (a == arg) a else a.subst(Map(id -> expr)))
-          if (newArgs != args) {
-            return eliminateBindingsFromNary(formals, newArgs, neg)
-          }
+          Some((id, expr))
         case Eq(expr, id: Id) if !neg && formals.ids.contains(id) && !expr.free.contains(id) =>
-          val newArgs = args map (a => if (a == arg) a else a.subst(Map(id -> expr)))
-          if (newArgs != args) {
-            return eliminateBindingsFromNary(formals, newArgs, neg)
+          Some((id, expr))
+        case _ => None
+      }
+
+      subst match {
+        case Some((id, expr)) =>
+          // when not removing, arg needs to be preserved
+          val newArgs = args filter (!remove || _ != arg) map (a => if (a == arg) a else a.subst(Map(id -> expr)))
+          if (newArgs != args) { // always true with remove
+            return eliminateBindingsFromNary(formals, newArgs, neg, remove)
           }
-        case _ =>
+        case None => // continue search
       }
     }
     args
