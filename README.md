@@ -4,7 +4,7 @@
 
 ## Installation
 
-- Install Java 8
+- Install Java 11
 - Run `make`
 - Run `make test` (optional)
 
@@ -17,6 +17,7 @@
 ## Command Line Arguments
 
 - `-simplify`: apply some normalization and simplification (unstable)
+- `-prove`: reduce the last assertion to its unprovable parts
 - `-format`: format output script with indentation and lots of newlines
 - `-timeout <ms>`: timeout per solver query (default: 1000)
 - `-test`: honor `(set-info :status <...>)` and rise error on mismatch
