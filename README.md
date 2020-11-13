@@ -4,7 +4,7 @@
 
 ## Installation
 
-- Install Java 8
+- Install Java 9
 - Run `make`
 - Run `make test` (optional)
 
