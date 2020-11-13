@@ -4,7 +4,7 @@
 
 ## Installation
 
-- Install Java 9
+- Install Java 11
 - Run `make`
 - Run `make test` (optional)
 
